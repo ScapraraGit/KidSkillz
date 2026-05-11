@@ -63,8 +63,9 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
     try {
       await api("/auth/onboarded", { method: "POST" });
       if (user) setUser({ ...user, onboardedAt: new Date().toISOString() });
-    } catch {
-      // best-effort; if it fails the user just sees the tour again next session
+      me.refetch();
+    } catch (e) {
+      console.error("[onboarded] failed", e);
     }
   }
 

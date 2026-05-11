@@ -8,8 +8,8 @@ import type { AuthUserDTO, AvatarConfig, FamilySettings } from "@chorechamps/sha
 
 type Mode = "PARENT" | "CHILD" | "SIGNUP";
 
-export function Login() {
-  const [mode, setMode] = useState<Mode>("PARENT");
+export function Login({ initialMode = "PARENT" }: { initialMode?: Mode } = {}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4">

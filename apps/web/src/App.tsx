@@ -1,7 +1,8 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./store/auth";
 import { AppLayout } from "./components/AppLayout";
 import { Login } from "./pages/Login";
+import { Landing } from "./pages/Landing";
 import { ParentDashboard } from "./pages/parent/Dashboard";
 import { ParentApprovals } from "./pages/parent/Approvals";
 import { ParentTasks } from "./pages/parent/Tasks";
@@ -16,14 +17,14 @@ import { ChildActivity } from "./pages/child/Activity";
 
 export default function App() {
   const { token, user } = useAuth();
-  const loc = useLocation();
 
   if (!token || !user) {
-    if (loc.pathname !== "/login") return <Navigate to="/login" replace />;
     return (
       <Routes>
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/signup" element={<Login initialMode="SIGNUP" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }

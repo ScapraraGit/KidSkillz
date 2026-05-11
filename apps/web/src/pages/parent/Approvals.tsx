@@ -1,0 +1,210 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { api, uploadUrl } from "../../lib/api";
+import { Avatar, Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import type {
+  InitiativeRequestDTO,
+  RedemptionDTO,
+  TaskCompletionDTO,
+} from "@chorechamps/shared";
+
+export function ParentApprovals() {
+  const qc = useQueryClient();
+  const completionsQ = useQuery({
+    queryKey: ["completions", "PENDING"],
+    queryFn: () => api<{ completions: TaskCompletionDTO[] }>("/completions?status=PENDING"),
+  });
+  const initiativeQ = useQuery({
+    queryKey: ["initiative", "PENDING"],
+    queryFn: () => api<{ initiative: InitiativeRequestDTO[] }>("/initiative?status=PENDING"),
+  });
+  const redemptionsQ = useQuery({
+    queryKey: ["redemptions", "PENDING"],
+    queryFn: () => api<{ redemptions: RedemptionDTO[] }>("/redemptions?status=PENDING"),
+  });
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["completions"] });
+    qc.invalidateQueries({ queryKey: ["initiative"] });
+    qc.invalidateQueries({ queryKey: ["redemptions"] });
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
+    qc.invalidateQueries({ queryKey: ["ledger"] });
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Approvals" subtitle="Review what your kids submitted." />
+
+      <Card>
+        <h3 className="font-semibold mb-3">Task completions</h3>
+        {completionsQ.data?.completions.length === 0 ? (
+          <EmptyState title="No completions waiting." />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {completionsQ.data?.completions.map((c) => (
+              <CompletionRow key={c.id} completion={c} onChange={refresh} />
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <h3 className="font-semibold mb-3">Initiative requests</h3>
+        {initiativeQ.data?.initiative.length === 0 ? (
+          <EmptyState title="No initiative submissions." />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {initiativeQ.data?.initiative.map((i) => (
+              <InitiativeRow key={i.id} initiative={i} onChange={refresh} />
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <h3 className="font-semibold mb-3">Reward redemptions</h3>
+        {redemptionsQ.data?.redemptions.length === 0 ? (
+          <EmptyState title="No reward requests." />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {redemptionsQ.data?.redemptions.map((r) => (
+              <RedemptionRow key={r.id} redemption={r} onChange={refresh} />
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO; onChange: () => void }) {
+  const [override, setOverride] = useState<string>("");
+  const approve = useMutation({
+    mutationFn: () =>
+      api(`/completions/${completion.id}/approve`, {
+        body: override ? { creditOverride: Number(override) } : {},
+      }),
+    onSuccess: onChange,
+  });
+  const reject = useMutation({
+    mutationFn: (reason: string) => api(`/completions/${completion.id}/reject`, { body: { reason } }),
+    onSuccess: onChange,
+  });
+  const photoUrl = uploadUrl(completion.photoKey);
+  const suggested = completion.suggestedAward;
+  const fullCredit = completion.task!.creditValue;
+  const isReduced = !!suggested && suggested.deadline && suggested.credits < fullCredit;
+  const tierBadge =
+    suggested?.tier === "LATE"
+      ? <Badge color="amber">Late · {formatLateness(suggested.lateMinutes)}</Badge>
+      : suggested?.tier === "SEVERE"
+      ? <Badge color="rose">Very late · {formatLateness(suggested.lateMinutes)}</Badge>
+      : suggested?.deadline
+      ? <Badge color="emerald">On time</Badge>
+      : null;
+
+  return (
+    <li className="py-3 flex flex-wrap items-center gap-3">
+      <Avatar name={completion.child!.name} color={completion.child!.avatarColor} size={32} />
+      <div className="flex-1 min-w-[200px]">
+        <div className="text-sm flex items-center gap-2 flex-wrap">
+          <strong>{completion.child!.name}</strong> finished <strong>{completion.task!.title}</strong>
+          {tierBadge}
+        </div>
+        {completion.notes && <div className="text-xs text-slate-500 italic">"{completion.notes}"</div>}
+        {photoUrl && <a className="text-xs text-brand-700 underline" href={photoUrl} target="_blank" rel="noreferrer">View photo</a>}
+        {isReduced && (
+          <div className="text-xs text-slate-500 mt-1">
+            Suggested award: <strong>{suggested!.credits}</strong> (full: {fullCredit}). Override below to change.
+          </div>
+        )}
+      </div>
+      <input
+        className={`${inputCls} w-24`}
+        type="number"
+        min={0}
+        placeholder={`${suggested?.credits ?? fullCredit}`}
+        value={override}
+        onChange={(e) => setOverride(e.target.value)}
+        title="Override the suggested award"
+      />
+      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      <Button variant="ghost" size="sm" onClick={() => reject.mutate("")} disabled={reject.isPending}>Reject</Button>
+    </li>
+  );
+}
+
+function formatLateness(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+function InitiativeRow({ initiative, onChange }: { initiative: InitiativeRequestDTO; onChange: () => void }) {
+  const [override, setOverride] = useState<string>("");
+  const approve = useMutation({
+    mutationFn: () =>
+      api(`/initiative/${initiative.id}/approve`, {
+        body: override ? { creditOverride: Number(override) } : {},
+      }),
+    onSuccess: onChange,
+  });
+  const reject = useMutation({
+    mutationFn: () => api(`/initiative/${initiative.id}/reject`, { body: {} }),
+    onSuccess: onChange,
+  });
+
+  return (
+    <li className="py-3 flex flex-wrap items-center gap-3">
+      <Avatar name={initiative.child!.name} color={initiative.child!.avatarColor} size={32} />
+      <div className="flex-1 min-w-[200px]">
+        <div className="text-sm flex items-center gap-2 flex-wrap">
+          <strong>{initiative.child!.name}</strong>
+          <Badge color={initiative.kind === "PLANNED" ? "brand" : "slate"}>
+            {initiative.kind === "PLANNED" ? "📅 Planned (eligible for bonus)" : "✍️ Already done"}
+          </Badge>
+          <span>{initiative.title}</span>
+        </div>
+        {initiative.description && <div className="text-xs text-slate-500">{initiative.description}</div>}
+      </div>
+      <input
+        className={`${inputCls} w-24`}
+        type="number"
+        min={0}
+        placeholder={`${initiative.suggestedCredits}`}
+        value={override}
+        onChange={(e) => setOverride(e.target.value)}
+      />
+      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+    </li>
+  );
+}
+
+function RedemptionRow({ redemption, onChange }: { redemption: RedemptionDTO; onChange: () => void }) {
+  const approve = useMutation({
+    mutationFn: () => api(`/redemptions/${redemption.id}/approve`, { body: {} }),
+    onSuccess: onChange,
+  });
+  const reject = useMutation({
+    mutationFn: () => api(`/redemptions/${redemption.id}/reject`, { body: {} }),
+    onSuccess: onChange,
+  });
+
+  return (
+    <li className="py-3 flex flex-wrap items-center gap-3">
+      <Avatar name={redemption.child!.name} color={redemption.child!.avatarColor} size={32} />
+      <div className="flex-1 min-w-[200px]">
+        <div className="text-sm">
+          <strong>{redemption.child!.name}</strong> wants <strong>{redemption.reward!.name}</strong>
+          {redemption.quantity > 1 && ` ×${redemption.quantity}`}
+        </div>
+        {redemption.notes && <div className="text-xs text-slate-500 italic">"{redemption.notes}"</div>}
+      </div>
+      <CreditChip amount={-redemption.creditCost} />
+      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+    </li>
+  );
+}

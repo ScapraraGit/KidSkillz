@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PARENT
+  CHILD
+}
+
+enum ProofRequirement {
+  NONE
+  NOTES_OPTIONAL
+  NOTES_REQUIRED
+  PHOTO_OPTIONAL
+  PHOTO_REQUIRED
+  PHOTO_AND_NOTES
+}
+
+enum TaskKind {
+  ONE_TIME
+  RECURRING
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InitiativeKind {
+  PLANNED
+  WRITE_IN
+}
+
+enum RewardType {
+  SCREEN_TIME
+  GAME_TIME
+  MOVIE_NIGHT
+  MONEY
+  TREAT
+  ACTIVITY
+  CUSTOM
+}
+
+enum LedgerKind {
+  TASK
+  INITIATIVE
+  INITIATIVE_BONUS
+  REDEMPTION
+  ADJUSTMENT_POSITIVE
+  ADJUSTMENT_NEGATIVE
+}
+
+model Family {
+  id        String   @id @default(uuid())
+  name      String
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  childProfiles   ChildProfile[]
+  tasks           Task[]
+  rewards         Reward[]
+  initiatives     InitiativeRequest[]
+  ledger          LedgerEntry[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  familyId     String
+  family       Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  role         Role
+  name         String
+  email        String?  @unique
+  passwordHash String?
+  pin          String?  // 4-digit, child individual mode
+  avatarColor  String   @default("#6366f1")
+  isActive     Boolean  @default(true)
+  onboardedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  childProfile        ChildProfile?
+  assignedTasks       Task[]                @relation("AssignedTasks")
+  taskCompletions     TaskCompletion[]      @relation("CompletionChild")
+  reviewedCompletions TaskCompletion[]      @relation("CompletionReviewer")
+  initiatives         InitiativeRequest[]   @relation("InitiativeChild")
+  reviewedInitiatives InitiativeRequest[]   @relation("InitiativeReviewer")
+  redemptions         Redemption[]          @relation("RedemptionChild")
+  reviewedRedemptions Redemption[]          @relation("RedemptionReviewer")
+  ledgerEntries       LedgerEntry[]         @relation("LedgerChild")
+  createdLedger       LedgerEntry[]         @relation("LedgerCreator")
+
+  @@index([familyId])
+}
+
+model ChildProfile {
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId                 String
+  family                   Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  redemptionPaused         Boolean  @default(false)
+  earningPaused            Boolean  @default(false)
+  proofRequirementOverride ProofRequirement?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([familyId])
+}
+
+model Task {
+  id               String           @id @default(uuid())
+  familyId         String
+  family           Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  creditValue      Int
+  category         String?
+  kind             TaskKind         @default(ONE_TIME)
+  recurrence       Json?            // { frequency, daysOfWeek, expiresAt }
+  dueAt            DateTime?
+  dueByTime        String?          // HH:MM in family TZ; only meaningful for RECURRING tasks
+  proofRequirement ProofRequirement @default(NOTES_OPTIONAL)
+  isActive         Boolean          @default(true)
+  assignedToId     String
+  assignedTo       User             @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  completions TaskCompletion[]
+
+  @@index([familyId])
+  @@index([assignedToId])
+}
+
+model TaskCompletion {
+  id              String         @id @default(uuid())
+  taskId          String
+  task            Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  childId         String
+  child           User           @relation("CompletionChild", fields: [childId], references: [id], onDelete: Cascade)
+  status          ApprovalStatus @default(PENDING)
+  notes           String?
+  photoKey        String?
+  occurrenceDate  String?        // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  submittedAt     DateTime       @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewer        User?          @relation("CompletionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  creditAwarded   Int?
+
+  @@unique([taskId, childId, occurrenceDate])
+  @@index([childId])
+  @@index([status])
+}
+
+model InitiativeRequest {
+  id               String         @id @default(uuid())
+  familyId         String
+  family           Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  childId          String
+  child            User           @relation("InitiativeChild", fields: [childId], references: [id], onDelete: Cascade)
+  kind             InitiativeKind
+  title            String
+  description      String?
+  suggestedCredits Int
+  status           ApprovalStatus @default(PENDING)
+  notes            String?
+  photoKey         String?
+  submittedAt      DateTime       @default(now())
+  reviewedAt       DateTime?
+  reviewedById     String?
+  reviewer         User?          @relation("InitiativeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  creditAwarded    Int?
+  bonusApplied     Int?
+
+  @@index([familyId])
+  @@index([childId])
+  @@index([status])
+}
+
+model Reward {
+  id               String     @id @default(uuid())
+  familyId         String
+  family           Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  creditCost       Int
+  type             RewardType
+  requiresApproval Boolean    @default(true)
+  isActive         Boolean    @default(true)
+  weeklyLimit      Int?
+  dailyLimit       Int?
+  metadata         Json       @default("{}")
+  eligibleChildIds String[]   @default([])
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  redemptions Redemption[]
+
+  @@index([familyId])
+}
+
+model Redemption {
+  id            String         @id @default(uuid())
+  rewardId      String
+  reward        Reward         @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  childId       String
+  child         User           @relation("RedemptionChild", fields: [childId], references: [id], onDelete: Cascade)
+  status        ApprovalStatus @default(PENDING)
+  creditCost    Int
+  quantity      Int            @default(1)
+  notes         String?
+  requestedAt   DateTime       @default(now())
+  reviewedAt    DateTime?
+  reviewedById  String?
+  reviewer      User?          @relation("RedemptionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([childId])
+  @@index([rewardId])
+  @@index([status])
+}
+
+model LedgerEntry {
+  id           String      @id @default(uuid())
+  familyId     String
+  family       Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  childId      String
+  child        User        @relation("LedgerChild", fields: [childId], references: [id], onDelete: Cascade)
+  amount       Int
+  kind         LedgerKind
+  reason       String
+  sourceType   String?
+  sourceId     String?
+  createdById  String?
+  createdBy    User?       @relation("LedgerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+
+  @@index([familyId])
+  @@index([childId])
+  @@index([createdAt])
+}

@@ -1,0 +1,17 @@
+{
+  "name": "chorechamps",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.7.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "docker compose up --build",
+    "down": "docker compose down -v",
+    "db:migrate": "pnpm --filter @chorechamps/api prisma migrate dev",
+    "db:seed": "pnpm --filter @chorechamps/api seed",
+    "build": "pnpm -r build"
+  }
+}

@@ -39,6 +39,11 @@ app.use("/uploads", uploadsRouter);
 app.use((_req, res) => res.status(404).json({ error: "NOT_FOUND" }));
 app.use(errorHandler);
 
+const dbHost = (() => {
+  try { return new URL(env.DATABASE_URL).host; } catch { return "INVALID_URL"; }
+})();
+console.log(`[chorechamps-api] DB host: ${dbHost}`);
+
 app.listen(env.PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`[chorechamps-api] listening on :${env.PORT}`);

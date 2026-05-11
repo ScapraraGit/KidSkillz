@@ -6,7 +6,7 @@ import { Button, Card, Field, inputCls } from "../components/ui";
 import { KidAvatar } from "../components/KidAvatar";
 import type { AuthUserDTO, AvatarConfig, FamilySettings } from "@chorechamps/shared";
 
-type Mode = "PARENT" | "CHILD";
+type Mode = "PARENT" | "CHILD" | "SIGNUP";
 
 export function Login() {
   const [mode, setMode] = useState<Mode>("PARENT");
@@ -35,23 +35,29 @@ export function Login() {
             >
               Kid
             </Button>
+            <Button
+              variant={mode === "SIGNUP" ? "primary" : "ghost"}
+              className="flex-1"
+              onClick={() => setMode("SIGNUP")}
+            >
+              New family
+            </Button>
           </div>
-          {mode === "PARENT" ? <ParentLogin /> : <ChildLogin />}
+          {mode === "PARENT" && <ParentLogin onSignup={() => setMode("SIGNUP")} />}
+          {mode === "CHILD" && <ChildLogin />}
+          {mode === "SIGNUP" && <ParentSignup onCancel={() => setMode("PARENT")} />}
         </Card>
-        <p className="text-center text-xs text-slate-500 mt-4">
-          Demo: dad@example.com / password123 · Kids PIN: Ava 1234, Leo 4321
-        </p>
       </div>
     </div>
   );
 }
 
-function ParentLogin() {
+function ParentLogin({ onSignup }: { onSignup: () => void }) {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
   const nav = useNavigate();
-  const [email, setEmail] = useState("dad@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -85,6 +91,118 @@ function ParentLogin() {
       </Field>
       {err && <div className="text-sm text-rose-600">{err}</div>}
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</Button>
+      <p className="text-xs text-center text-slate-500 pt-1">
+        New here?{" "}
+        <button type="button" className="text-brand-600 hover:underline" onClick={onSignup}>
+          Create a family
+        </button>
+      </p>
+    </form>
+  );
+}
+
+function ParentSignup({ onCancel }: { onCancel: () => void }) {
+  const setSession = useAuth((s) => s.setSession);
+  const setSettings = useAuth((s) => s.setSettings);
+  const nav = useNavigate();
+  const [familyName, setFamilyName] = useState("");
+  const [parentName, setParentName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setErr(null);
+        if (password !== confirm) {
+          setErr("Passwords don't match");
+          return;
+        }
+        if (password.length < 8) {
+          setErr("Password must be at least 8 characters");
+          return;
+        }
+        setLoading(true);
+        try {
+          const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/register", {
+            body: { familyName, parentName, email, password },
+          });
+          setSession(r.token, r.user);
+          const me = await api<{ settings: FamilySettings }>("/auth/me");
+          setSettings(me.settings);
+          nav("/parent");
+        } catch (e: any) {
+          setErr(e.message ?? "Signup failed");
+        } finally {
+          setLoading(false);
+        }
+      }}
+      className="space-y-3"
+    >
+      <Field label="Family name">
+        <input
+          className={inputCls}
+          placeholder="The Smith Family"
+          value={familyName}
+          onChange={(e) => setFamilyName(e.target.value)}
+          required
+          minLength={2}
+          maxLength={80}
+        />
+      </Field>
+      <Field label="Your name">
+        <input
+          className={inputCls}
+          placeholder="Alex"
+          value={parentName}
+          onChange={(e) => setParentName(e.target.value)}
+          required
+          maxLength={80}
+        />
+      </Field>
+      <Field label="Email">
+        <input
+          className={inputCls}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </Field>
+      <Field label="Password">
+        <input
+          className={inputCls}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={8}
+        />
+      </Field>
+      <Field label="Confirm password">
+        <input
+          className={inputCls}
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+          minLength={8}
+        />
+      </Field>
+      {err && <div className="text-sm text-rose-600">{err}</div>}
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Creating family..." : "Create family"}
+      </Button>
+      <p className="text-xs text-center text-slate-500 pt-1">
+        Already have an account?{" "}
+        <button type="button" className="text-brand-600 hover:underline" onClick={onCancel}>
+          Sign in
+        </button>
+      </p>
     </form>
   );
 }

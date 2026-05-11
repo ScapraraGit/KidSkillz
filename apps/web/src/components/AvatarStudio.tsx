@@ -42,7 +42,8 @@ const CLOTHES_COLORS = [
   "e6e6e6", "ff488e", "ff5c5c", "ffafb9", "ffffb1", "ffffff",
 ];
 
-const SKIN_COLORS = ["tanned", "yellow", "pale", "light", "brown", "darkBrown", "black"];
+// DiceBear avataaars skinColor schema requires 6-char hex (not keyword names).
+const SKIN_COLORS = ["fd9841", "f8d25c", "ffdbb4", "edb98a", "d08b5b", "ae5d29", "614335"];
 
 const BACKGROUND_COLORS = [
   "b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf", "fbe0e2", "c9eed8", "fff1b0", "ffe1a8", "e0f2fe",
@@ -103,7 +104,7 @@ export function defaultAvatarConfig(): AvatarConfig {
     eyes: ["happy"],
     eyebrows: ["default"],
     mouth: ["smile"],
-    skinColor: ["light"],
+    skinColor: ["edb98a"],
     accessoriesProbability: 0,
     facialHairProbability: 0,
     clothing: ["hoodie"],
@@ -252,7 +253,7 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
           name={name}
           config={config}
           field="skinColor"
-          options={SKIN_COLORS.map((v) => ({ value: v, swatch: SKIN_SWATCH[v] }))}
+          options={SKIN_COLORS.map((v) => ({ value: v, swatch: `#${v}` }))}
           onChange={onChange}
         />
       );
@@ -335,17 +336,6 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
       return null;
   }
 }
-
-// Approximate display colors for avataaars skin-tone keys.
-const SKIN_SWATCH: Record<string, string> = {
-  tanned: "#fd9841",
-  yellow: "#f8d25c",
-  pale: "#ffdbb4",
-  light: "#edb98a",
-  brown: "#d08b5b",
-  darkBrown: "#ae5d29",
-  black: "#614335",
-};
 
 function PreviewPicker({
   name,

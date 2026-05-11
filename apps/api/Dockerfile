@@ -20,4 +20,4 @@ WORKDIR /app/apps/api
 RUN pnpm prisma generate
 
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm prisma db push --skip-generate --accept-data-loss && pnpm seed && pnpm dev"]
+CMD ["sh", "-c", "pnpm prisma db push --skip-generate --accept-data-loss && pnpm seed && pnpm start"]

@@ -29,7 +29,38 @@ export function ParentDashboard() {
         }
       />
 
-      <section id="tile-children" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {data.children.length === 0 && (
+        <Card id="tile-children" className="text-center">
+          <div className="text-4xl mb-2">👋</div>
+          <h3 className="font-semibold text-lg">Welcome to ChoreChamps!</h3>
+          <p className="text-sm text-slate-600 max-w-md mx-auto mt-1">
+            Get started by adding your first kid. You'll set their name, PIN, and avatar — then you
+            can create tasks and rewards for them.
+          </p>
+          <div className="flex justify-center gap-2 mt-4 flex-wrap">
+            <Link
+              to="/parent/children"
+              className="px-4 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700"
+            >
+              Add a kid →
+            </Link>
+            <Link
+              to="/parent/tasks"
+              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200"
+            >
+              Create tasks
+            </Link>
+            <Link
+              to="/parent/rewards"
+              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200"
+            >
+              Create rewards
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      <section id={data.children.length === 0 ? undefined : "tile-children"} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {data.children.map((c, idx) => {
           const week = data.weeklyTotals.find((w) => w.childId === c.id);
           return (

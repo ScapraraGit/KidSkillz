@@ -2,14 +2,46 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
-import { comparePassword, signToken } from "../lib/auth.js";
+import { comparePassword, hashPassword, signToken } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
 import { avatarConfigSchema } from "./children.js";
-import type { AvatarConfig } from "@chorechamps/shared";
+import { DEFAULT_FAMILY_SETTINGS, type AvatarConfig } from "@chorechamps/shared";
 
 export const authRouter = Router();
+
+const parentRegisterSchema = z.object({
+  familyName: z.string().trim().min(2).max(80),
+  parentName: z.string().trim().min(1).max(80),
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+});
+
+authRouter.post("/parent/register", async (req, res) => {
+  const { familyName, parentName, email, password } = parentRegisterSchema.parse(req.body);
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) throw HttpError.badRequest("Email already in use");
+  const passwordHash = await hashPassword(password);
+  const family = await prisma.family.create({
+    data: {
+      name: familyName,
+      settings: { ...DEFAULT_FAMILY_SETTINGS } as object,
+    },
+  });
+  const user = await prisma.user.create({
+    data: {
+      familyId: family.id,
+      role: "PARENT",
+      name: parentName,
+      email,
+      passwordHash,
+      avatarColor: "#2563eb",
+    },
+  });
+  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
+  res.json({ token, user: serializeUser(user) });
+});
 
 const parentLoginSchema = z.object({
   email: z.string().email(),

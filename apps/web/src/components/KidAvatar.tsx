@@ -21,7 +21,7 @@ export function KidAvatar({ name, color, config, size = 40, className }: KidAvat
 
   return (
     <div
-      className={"rounded-full overflow-hidden shrink-0 ring-1 ring-slate-200 bg-white " + (className ?? "")}
+      className={"rounded-full overflow-hidden shrink-0 ring-1 ring-slate-200 bg-white [&>svg]:w-full [&>svg]:h-full [&>svg]:block " + (className ?? "")}
       style={{ width: size, height: size }}
       role="img"
       aria-label={`${name}'s avatar`}

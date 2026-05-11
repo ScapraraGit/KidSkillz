@@ -2,7 +2,11 @@ import "dotenv/config";
 
 function req(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
-  if (v === undefined) throw new Error(`Missing env: ${name}`);
+  if (v === undefined) {
+    const dbKeys = Object.keys(process.env).filter((k) => /DATA|URL|PG|POSTGRES/i.test(k));
+    console.error("env keys matching DATA/URL/PG/POSTGRES:", dbKeys);
+    throw new Error(`Missing env: ${name}`);
+  }
   return v;
 }
 

@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../store/auth";
 import { api } from "../lib/api";
-import { Avatar } from "./ui";
+import { KidAvatar } from "./KidAvatar";
+import { AvatarStudio } from "./AvatarStudio";
 import { OnboardingTour } from "./OnboardingTour";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
@@ -50,6 +51,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const dashboardPath = role === "PARENT" ? "/parent" : "/me";
   const onDashboard = loc.pathname === dashboardPath;
   const [tourActive, setTourActive] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   useEffect(() => {
     if (!me.data) return;
@@ -94,10 +96,15 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
           </div>
           <div className="flex items-center gap-3">
             {user && (
-              <div className="flex items-center gap-2">
-                <Avatar name={user.name} color={user.avatarColor} size={32} />
+              <button
+                type="button"
+                onClick={() => setStudioOpen(true)}
+                title="Edit your avatar"
+                className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
+              >
+                <KidAvatar name={user.name} color={user.avatarColor} config={user.avatarConfig} size={32} />
                 <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
-              </div>
+              </button>
             )}
             <button
               onClick={() => {
@@ -133,6 +140,9 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       </main>
       {tourActive && (
         <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
+      )}
+      {studioOpen && user && (
+        <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />
       )}
     </div>
   );

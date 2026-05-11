@@ -10,6 +10,31 @@ import {
 import { childStats } from "../services/stats.js";
 import { HttpError } from "../errors.js";
 
+const stringArray = z.array(z.string().max(40)).max(40);
+
+export const avatarConfigSchema = z
+  .object({
+    top: stringArray.optional(),
+    topProbability: z.number().min(0).max(100).optional(),
+    hairColor: stringArray.optional(),
+    hatColor: stringArray.optional(),
+    accessories: stringArray.optional(),
+    accessoriesColor: stringArray.optional(),
+    accessoriesProbability: z.number().min(0).max(100).optional(),
+    facialHair: stringArray.optional(),
+    facialHairColor: stringArray.optional(),
+    facialHairProbability: z.number().min(0).max(100).optional(),
+    clothing: stringArray.optional(),
+    clothesColor: stringArray.optional(),
+    clothingGraphic: stringArray.optional(),
+    eyes: stringArray.optional(),
+    eyebrows: stringArray.optional(),
+    mouth: stringArray.optional(),
+    skinColor: stringArray.optional(),
+    backgroundColor: stringArray.optional(),
+  })
+  .strict();
+
 export const childrenRouter = Router();
 
 childrenRouter.use(requireAuth);
@@ -26,6 +51,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(60),
   pin: z.string().regex(/^\d{4,8}$/).nullish(),
   avatarColor: z.string().optional(),
+  avatarConfig: avatarConfigSchema.nullable().optional(),
 });
 
 childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
@@ -38,6 +64,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(60).optional(),
   pin: z.string().regex(/^\d{4,8}$/).nullable().optional(),
   avatarColor: z.string().optional(),
+  avatarConfig: avatarConfigSchema.nullable().optional(),
   redemptionPaused: z.boolean().optional(),
   earningPaused: z.boolean().optional(),
   proofRequirementOverride: z

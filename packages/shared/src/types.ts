@@ -73,6 +73,31 @@ export interface RewardMetadata {
   notes?: string;
 }
 
+/**
+ * Customizable avatar (DiceBear "avataaars" style). Arrays are option pools the
+ * renderer picks from; a one-element array pins the value. Unset = library default.
+ */
+export interface AvatarConfig {
+  top?: string[];
+  topProbability?: number;
+  hairColor?: string[];
+  hatColor?: string[];
+  accessories?: string[];
+  accessoriesColor?: string[];
+  accessoriesProbability?: number;
+  facialHair?: string[];
+  facialHairColor?: string[];
+  facialHairProbability?: number;
+  clothing?: string[];
+  clothesColor?: string[];
+  clothingGraphic?: string[];
+  eyes?: string[];
+  eyebrows?: string[];
+  mouth?: string[];
+  skinColor?: string[];
+  backgroundColor?: string[];
+}
+
 export interface AuthUserDTO {
   id: string;
   familyId: string;
@@ -80,6 +105,7 @@ export interface AuthUserDTO {
   name: string;
   email?: string | null;
   avatarColor?: string;
+  avatarConfig?: AvatarConfig | null;
   onboardedAt?: string | null;
 }
 
@@ -94,6 +120,7 @@ export interface ChildDTO {
   familyId: string;
   name: string;
   avatarColor: string;
+  avatarConfig?: AvatarConfig | null;
   redemptionPaused: boolean;
   earningPaused: boolean;
   proofRequirementOverride?: ProofRequirement | null;

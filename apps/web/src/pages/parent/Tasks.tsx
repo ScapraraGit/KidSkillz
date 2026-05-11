@@ -8,11 +8,8 @@ import type { ChildDTO, TaskDTO } from "@chorechamps/shared";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Sentinel values for the Assigned filter URL param:
-//   absent / ""  → all tasks
-//   "anyone"     → tasks with assignedToId === null
-//   "<uuid>"     → tasks assigned to that child
-type AssignedFilter = "all" | "anyone" | string;
+// Assigned filter URL param: absent/"" = all tasks; otherwise a child UUID.
+type AssignedFilter = "all" | string;
 
 export function ParentTasks() {
   const qc = useQueryClient();
@@ -28,6 +25,15 @@ export function ParentTasks() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const duplicate = useMutation({
+    mutationFn: (taskId: string) =>
+      api<{ created: number }>(`/tasks/${taskId}/duplicate-across-kids`, { method: "POST", body: {} }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      alert(r.created === 0 ? "Every kid already has this task." : `Created ${r.created} copies.`);
+    },
+  });
+
   function setAssignedFilter(v: AssignedFilter) {
     const next = new URLSearchParams(params);
     if (v === "all") next.delete("childId");
@@ -37,12 +43,11 @@ export function ParentTasks() {
 
   const visibleTasks = (tasksQ.data?.tasks ?? []).filter((t) => {
     if (assignedFilter === "all") return true;
-    if (assignedFilter === "anyone") return t.assignedToId == null;
     return t.assignedToId === assignedFilter;
   });
 
   const filteredChild =
-    assignedFilter !== "all" && assignedFilter !== "anyone"
+    assignedFilter !== "all"
       ? childrenQ.data?.children.find((c) => c.id === assignedFilter)
       : undefined;
 
@@ -53,8 +58,6 @@ export function ParentTasks() {
         subtitle={
           filteredChild
             ? `Showing tasks for ${filteredChild.name}.`
-            : assignedFilter === "anyone"
-            ? "Showing tasks anyone can do."
             : "One-time and recurring assignments."
         }
         right={<Button onClick={() => setEditing("new")}>New task</Button>}
@@ -78,7 +81,6 @@ export function ParentTasks() {
                       onChange={(e) => setAssignedFilter(e.target.value as AssignedFilter)}
                     >
                       <option value="all">All</option>
-                      <option value="anyone">Anyone</option>
                       {childrenQ.data?.children.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -130,10 +132,21 @@ export function ParentTasks() {
                         </div>
                       )}
                     </td>
-                    <td className="p-3">{child?.name ?? <span className="text-slate-400">Anyone</span>}</td>
+                    <td className="p-3">{child?.name ?? <span className="text-slate-400">Unknown</span>}</td>
                     <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
                     <td className="p-3 text-right whitespace-nowrap">
                       <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>Edit</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Copy "${t.title}" to all other kids?`)) duplicate.mutate(t.id);
+                        }}
+                        disabled={duplicate.isPending}
+                        title="Create a copy of this task for every other kid"
+                      >
+                        Copy to all kids
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(t.id)}>
                         Delete
                       </Button>
@@ -198,7 +211,7 @@ function TaskFormModal({
         kind,
         proofRequirement,
         isActive,
-        assignedToId: assignedToId || null,
+        assignedToId,
       };
       if (kind === "RECURRING") {
         body.recurrence = {
@@ -226,7 +239,7 @@ function TaskFormModal({
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !title}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !title || !assignedToId}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>
         </>
@@ -254,9 +267,9 @@ function TaskFormModal({
               <option value="RECURRING">Recurring</option>
             </select>
           </Field>
-          <Field label="Assigned to">
-            <select className={inputCls} value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
-              <option value="">Anyone</option>
+          <Field label="Assigned to" hint="Tasks always belong to one kid. Use 'Copy to all kids' from the table for shared chores.">
+            <select className={inputCls} value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)} required>
+              <option value="" disabled>Select a kid…</option>
               {kids.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

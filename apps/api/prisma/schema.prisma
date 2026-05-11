@@ -81,6 +81,7 @@ model User {
   passwordHash String?
   pin          String?  // 4-digit, child individual mode
   avatarColor  String   @default("#6366f1")
+  avatarConfig Json?
   isActive     Boolean  @default(true)
   onboardedAt  DateTime?
   createdAt    DateTime @default(now())

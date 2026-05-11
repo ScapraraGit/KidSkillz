@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { comparePassword, signToken } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
+import { avatarConfigSchema } from "./children.js";
+import type { AvatarConfig } from "@chorechamps/shared";
 
 export const authRouter = Router();
 
@@ -72,7 +75,7 @@ authRouter.get("/families/lookup", async (req, res) => {
       settings: true,
       users: {
         where: { role: "CHILD", isActive: true },
-        select: { id: true, name: true, avatarColor: true },
+        select: { id: true, name: true, avatarColor: true, avatarConfig: true },
       },
     },
   });
@@ -98,6 +101,28 @@ authRouter.post("/onboarded", requireAuth, async (req, res) => {
   res.json({ user: serializeUser(user) });
 });
 
+const updateAvatarSchema = z.object({
+  avatarColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  avatarConfig: avatarConfigSchema.nullable().optional(),
+});
+
+authRouter.patch("/me/avatar", requireAuth, async (req, res) => {
+  const input = updateAvatarSchema.parse(req.body);
+  if (input.avatarColor === undefined && input.avatarConfig === undefined) {
+    throw HttpError.badRequest("Nothing to update");
+  }
+  const user = await prisma.user.update({
+    where: { id: req.auth!.sub },
+    data: {
+      ...(input.avatarColor !== undefined && { avatarColor: input.avatarColor }),
+      ...(input.avatarConfig !== undefined && {
+        avatarConfig: input.avatarConfig === null ? Prisma.JsonNull : (input.avatarConfig as object),
+      }),
+    },
+  });
+  res.json({ user: serializeUser(user) });
+});
+
 function serializeUser(u: import("@prisma/client").User) {
   return {
     id: u.id,
@@ -106,6 +131,7 @@ function serializeUser(u: import("@prisma/client").User) {
     name: u.name,
     email: u.email,
     avatarColor: u.avatarColor,
+    avatarConfig: (u.avatarConfig as AvatarConfig | null) ?? null,
     onboardedAt: u.onboardedAt?.toISOString() ?? null,
   };
 }

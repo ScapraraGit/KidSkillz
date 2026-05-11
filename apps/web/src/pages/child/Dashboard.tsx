@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, uploadProof } from "../../lib/api";
-import { Avatar, Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
+import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
+import { KidAvatar } from "../../components/KidAvatar";
+import { AvatarStudio } from "../../components/AvatarStudio";
+import { useAuth } from "../../store/auth";
 import type { ChildDashboardDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
 
 export function ChildDashboard() {
@@ -14,6 +17,8 @@ export function ChildDashboard() {
 
   const [completing, setCompleting] = useState<TodayTaskOccurrenceDTO | null>(null);
   const [celebrate, setCelebrate] = useState<number | null>(null);
+  const [studioOpen, setStudioOpen] = useState(false);
+  const user = useAuth((s) => s.user);
   const qc = useQueryClient();
 
   if (dash.isLoading || !dash.data) return <div>Loading…</div>;
@@ -23,7 +28,20 @@ export function ChildDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${greeting}, ${d.child.name}!`}
+        title={
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStudioOpen(true)}
+              className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
+              title="Design your avatar"
+            >
+              <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
+              <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">✏️</span>
+            </button>
+            <span>{greeting}, {d.child.name}!</span>
+          </span>
+        }
         subtitle={d.child.redemptionPaused ? "Heads up: redemption is paused right now." : "Earn credits and crush your day."}
       />
 
@@ -180,6 +198,10 @@ export function ChildDashboard() {
             <div className="text-sm text-slate-500">A grown-up will review it soon.</div>
           </div>
         </div>
+      )}
+
+      {studioOpen && user && (
+        <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />
       )}
     </div>
   );

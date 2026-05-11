@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
-import { Avatar, Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
-import type { ChildDTO } from "@chorechamps/shared";
+import { KidAvatar } from "../../components/KidAvatar";
+import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
+import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
 
 export function ParentChildren() {
   const qc = useQueryClient();
@@ -32,7 +34,7 @@ export function ParentChildren() {
         {childrenQ.data?.children.map((c) => (
           <Card key={c.id} className="space-y-3">
             <div className="flex items-center gap-3">
-              <Avatar name={c.name} color={c.avatarColor} size={48} />
+              <KidAvatar name={c.name} color={c.avatarColor} config={c.avatarConfig} size={48} />
               <div className="flex-1">
                 <div className="font-semibold text-lg">{c.name}</div>
                 <div className="flex gap-1 mt-1">
@@ -56,7 +58,7 @@ export function ParentChildren() {
       {creating && (
         <CreateChildModal
           onClose={() => setCreating(false)}
-          onCreated={(c) => {
+          onCreated={() => {
             refresh();
             setCreating(false);
           }}
@@ -91,8 +93,9 @@ function CreateChildModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [avatarColor, setAvatarColor] = useState("#22c55e");
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
   const save = useMutation({
-    mutationFn: () => api<{ child: ChildDTO }>("/children", { body: { name, pin: pin || null, avatarColor } }),
+    mutationFn: () => api<{ child: ChildDTO }>("/children", { body: { name, pin: pin || null, avatarColor, avatarConfig } }),
     onSuccess: (r) => {
       onCreated(r.child);
       nav(`/parent/tasks?childId=${r.child.id}`);
@@ -122,8 +125,17 @@ function CreateChildModal({ onClose, onCreated }: { onClose: () => void; onCreat
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
           />
         </Field>
-        <Field label="Avatar color">
+        <Field label="Avatar color (fallback)">
           <input className={inputCls} type="color" value={avatarColor} onChange={(e) => setAvatarColor(e.target.value)} />
+        </Field>
+        <Field label="Avatar" hint="Pick a random starter avatar — the kid can fully customize it later.">
+          <div className="flex items-center gap-3">
+            <KidAvatar name={name || "?"} color={avatarColor} config={avatarConfig} size={56} />
+            <Button type="button" variant="secondary" onClick={() => setAvatarConfig(randomAvatarConfig())}>🎲 Randomize</Button>
+            {avatarConfig && (
+              <Button type="button" variant="ghost" onClick={() => setAvatarConfig(null)}>Clear</Button>
+            )}
+          </div>
         </Field>
       </div>
     </Modal>
@@ -144,6 +156,7 @@ function EditChildModal({
   const [avatarColor, setAvatarColor] = useState(child.avatarColor);
   const [redemptionPaused, setRedemptionPaused] = useState(child.redemptionPaused);
   const [earningPaused, setEarningPaused] = useState(child.earningPaused);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   const save = useMutation({
     mutationFn: () =>
@@ -161,44 +174,62 @@ function EditChildModal({
   });
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Edit ${child.name}`}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <Field label="Name">
-          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
-        </Field>
-        <Field label="New PIN (leave empty to keep current)">
-          <input
-            className={inputCls}
-            inputMode="numeric"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          />
-        </Field>
-        <Field label="Avatar color">
-          <input className={inputCls} type="color" value={avatarColor} onChange={(e) => setAvatarColor(e.target.value)} />
-        </Field>
-        <div className="space-y-2 text-sm">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={redemptionPaused} onChange={(e) => setRedemptionPaused(e.target.checked)} />
-            Pause redemption (kid can earn but not spend)
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={earningPaused} onChange={(e) => setEarningPaused(e.target.checked)} />
-            Pause earning (kid cannot submit completions)
-          </label>
+    <>
+      <Modal
+        open
+        onClose={onClose}
+        title={`Edit ${child.name}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="Avatar">
+            <div className="flex items-center gap-3">
+              <KidAvatar name={child.name} color={child.avatarColor} config={child.avatarConfig} size={56} />
+              <Button type="button" variant="secondary" size="sm" onClick={() => setStudioOpen(true)}>
+                Design avatar
+              </Button>
+            </div>
+          </Field>
+          <Field label="Name">
+            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="New PIN (leave empty to keep current)">
+            <input
+              className={inputCls}
+              inputMode="numeric"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            />
+          </Field>
+          <Field label="Avatar color (fallback)">
+            <input className={inputCls} type="color" value={avatarColor} onChange={(e) => setAvatarColor(e.target.value)} />
+          </Field>
+          <div className="space-y-2 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={redemptionPaused} onChange={(e) => setRedemptionPaused(e.target.checked)} />
+              Pause redemption (kid can earn but not spend)
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={earningPaused} onChange={(e) => setEarningPaused(e.target.checked)} />
+              Pause earning (kid cannot submit completions)
+            </label>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+      {studioOpen && (
+        <AvatarStudio
+          user={{ id: child.id, name: child.name, avatarColor: child.avatarColor, avatarConfig: child.avatarConfig }}
+          childId={child.id}
+          onClose={() => setStudioOpen(false)}
+          onSaved={onSaved}
+        />
+      )}
+    </>
   );
 }
 

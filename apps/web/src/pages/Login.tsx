@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Button, Card, Field, inputCls } from "../components/ui";
-import type { AuthUserDTO, FamilySettings } from "@chorechamps/shared";
+import { KidAvatar } from "../components/KidAvatar";
+import type { AuthUserDTO, AvatarConfig, FamilySettings } from "@chorechamps/shared";
 
 type Mode = "PARENT" | "CHILD";
 
@@ -92,7 +93,7 @@ interface FamilyLookup {
   id: string;
   name: string;
   settings: FamilySettings;
-  users: { id: string; name: string; avatarColor: string }[];
+  users: { id: string; name: string; avatarColor: string; avatarConfig?: AvatarConfig | null }[];
 }
 
 function ChildLogin() {
@@ -160,12 +161,7 @@ function ChildLogin() {
                 onClick={() => setChildId(u.id)}
                 className="p-4 rounded-xl border border-slate-200 hover:bg-slate-50 flex flex-col items-center gap-2"
               >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: u.avatarColor }}
-                >
-                  {u.name[0]}
-                </div>
+                <KidAvatar name={u.name} color={u.avatarColor} config={u.avatarConfig} size={56} />
                 <div className="font-medium">{u.name}</div>
               </button>
             ))}
@@ -200,12 +196,9 @@ function ChildLogin() {
           className="space-y-3"
         >
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-              style={{ backgroundColor: child?.avatarColor }}
-            >
-              {child?.name[0]}
-            </div>
+            {child && (
+              <KidAvatar name={child.name} color={child.avatarColor} config={child.avatarConfig} size={40} />
+            )}
             <div className="font-medium">{child?.name}</div>
             <button className="text-xs text-slate-500 ml-auto" onClick={() => setChildId(null)} type="button">change</button>
           </div>

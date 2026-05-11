@@ -39,7 +39,7 @@ const createTaskSchema = z.object({
     .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
     .optional(),
   isActive: z.boolean().optional(),
-  assignedToId: z.string().uuid().nullable().optional(),
+  assignedToId: z.string().uuid(),
 });
 
 tasksRouter.get("/", async (req, res) => {
@@ -74,6 +74,11 @@ tasksRouter.patch("/:id", requireRole("PARENT"), async (req, res) => {
 tasksRouter.delete("/:id", requireRole("PARENT"), async (req, res) => {
   await deleteTask(req.auth!.fid, req.params.id);
   res.status(204).end();
+});
+
+tasksRouter.post("/:id/duplicate-across-kids", requireRole("PARENT"), async (req, res) => {
+  const result = await duplicateAcrossKids(req.auth!.fid, req.params.id);
+  res.json({ created: result.created, tasks: result.tasks.map(serializeTask) });
 });
 
 tasksRouter.get("/:id", async (req, res) => {

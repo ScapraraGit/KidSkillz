@@ -1,8 +1,9 @@
 import { prisma } from "../db.js";
+import { Prisma } from "@prisma/client";
 import { hashPassword } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { getBalance } from "./ledger.js";
-import type { ChildDTO } from "@chorechamps/shared";
+import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
 
 export async function listChildren(familyId: string): Promise<ChildDTO[]> {
   const kids = await prisma.user.findMany({
@@ -17,6 +18,7 @@ export async function listChildren(familyId: string): Promise<ChildDTO[]> {
       familyId: k.familyId,
       name: k.name,
       avatarColor: k.avatarColor,
+      avatarConfig: (k.avatarConfig as AvatarConfig | null) ?? null,
       redemptionPaused: k.childProfile?.redemptionPaused ?? false,
       earningPaused: k.childProfile?.earningPaused ?? false,
       proofRequirementOverride: k.childProfile?.proofRequirementOverride ?? null,
@@ -36,6 +38,7 @@ export async function getChild(familyId: string, childId: string): Promise<Child
     familyId: k.familyId,
     name: k.name,
     avatarColor: k.avatarColor,
+    avatarConfig: (k.avatarConfig as AvatarConfig | null) ?? null,
     redemptionPaused: k.childProfile?.redemptionPaused ?? false,
     earningPaused: k.childProfile?.earningPaused ?? false,
     proofRequirementOverride: k.childProfile?.proofRequirementOverride ?? null,
@@ -47,6 +50,7 @@ export interface CreateChildInput {
   name: string;
   pin?: string | null;
   avatarColor?: string;
+  avatarConfig?: AvatarConfig | null;
 }
 
 export async function createChild(familyId: string, input: CreateChildInput) {
@@ -56,6 +60,7 @@ export async function createChild(familyId: string, input: CreateChildInput) {
       role: "CHILD",
       name: input.name,
       avatarColor: input.avatarColor ?? "#22c55e",
+      avatarConfig: (input.avatarConfig ?? undefined) as object | undefined,
       pin: input.pin ?? null,
       childProfile: { create: { familyId } },
     },
@@ -67,6 +72,7 @@ export async function createChild(familyId: string, input: CreateChildInput) {
 export interface UpdateChildInput {
   name?: string;
   avatarColor?: string;
+  avatarConfig?: AvatarConfig | null;
   pin?: string | null;
   redemptionPaused?: boolean;
   earningPaused?: boolean;
@@ -80,6 +86,9 @@ export async function updateChild(familyId: string, childId: string, input: Upda
     data: {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.avatarColor !== undefined && { avatarColor: input.avatarColor }),
+      ...(input.avatarConfig !== undefined && {
+        avatarConfig: input.avatarConfig === null ? Prisma.JsonNull : (input.avatarConfig as object),
+      }),
       ...(input.pin !== undefined && { pin: input.pin }),
       childProfile: {
         update: {

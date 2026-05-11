@@ -49,6 +49,20 @@ async function main() {
       name: "Ava",
       pin: "1234",
       avatarColor: "#22c55e",
+      avatarConfig: {
+        top: ["straight02"],
+        topProbability: 100,
+        hairColor: ["a55728"],
+        eyes: ["happy"],
+        eyebrows: ["defaultNatural"],
+        mouth: ["smile"],
+        skinColor: ["light"],
+        accessoriesProbability: 0,
+        facialHairProbability: 0,
+        clothing: ["hoodie"],
+        clothesColor: ["ff488e"],
+        backgroundColor: ["ffd5dc"],
+      },
       childProfile: { create: { familyId: family.id } },
     },
   });
@@ -59,25 +73,46 @@ async function main() {
       name: "Leo",
       pin: "4321",
       avatarColor: "#f59e0b",
+      avatarConfig: {
+        top: ["shortRound"],
+        topProbability: 100,
+        hairColor: ["2c1b18"],
+        eyes: ["wink"],
+        eyebrows: ["raisedExcited"],
+        mouth: ["twinkle"],
+        skinColor: ["light"],
+        accessoriesProbability: 100,
+        accessories: ["round"],
+        facialHairProbability: 0,
+        clothing: ["graphicShirt"],
+        clothesColor: ["65c9ff"],
+        backgroundColor: ["b6e3f4"],
+      },
       childProfile: { create: { familyId: family.id } },
     },
   });
 
-  // Tasks
-  const t1 = await prisma.task.create({
-    data: {
-      familyId: family.id,
-      title: "Make your bed",
-      description: "Pillows fluffed, sheets pulled tight.",
-      creditValue: 2,
-      category: "Morning",
-      kind: "RECURRING",
-      recurrence: { frequency: "DAILY" },
-      dueByTime: "08:00",
-      proofRequirement: "NONE",
-    },
-  });
-  const t2 = await prisma.task.create({
+  // Tasks — every task belongs to a specific kid. "Make your bed" is seeded for both kids to
+  // demonstrate that shared chores get duplicated per kid (try the "Copy to all kids" action).
+  const bedTask: Record<string, string> = {};
+  for (const kid of [ava, leo]) {
+    const t = await prisma.task.create({
+      data: {
+        familyId: family.id,
+        title: "Make your bed",
+        description: "Pillows fluffed, sheets pulled tight.",
+        creditValue: 2,
+        category: "Morning",
+        kind: "RECURRING",
+        recurrence: { frequency: "DAILY" },
+        dueByTime: "08:00",
+        proofRequirement: "NONE",
+        assignedToId: kid.id,
+      },
+    });
+    bedTask[kid.id] = t.id;
+  }
+  const dishwasher = await prisma.task.create({
     data: {
       familyId: family.id,
       title: "Empty the dishwasher",
@@ -86,9 +121,10 @@ async function main() {
       kind: "RECURRING",
       recurrence: { frequency: "CUSTOM", daysOfWeek: [1, 3, 5] }, // Mon/Wed/Fri
       proofRequirement: "NOTES_OPTIONAL",
+      assignedToId: ava.id,
     },
   });
-  const t3 = await prisma.task.create({
+  await prisma.task.create({
     data: {
       familyId: family.id,
       title: "Take out the trash",
@@ -97,6 +133,7 @@ async function main() {
       kind: "RECURRING",
       recurrence: { frequency: "WEEKLY", daysOfWeek: [0] }, // Sundays
       proofRequirement: "PHOTO_OPTIONAL",
+      assignedToId: leo.id,
     },
   });
   const t4 = await prisma.task.create({
@@ -225,9 +262,9 @@ async function main() {
 
   const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const dayBefore = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
-  await approve(t1.id, ava.id, yest, 2, dad.id);
-  await approve(t1.id, leo.id, yest, 2, mom.id);
-  await approve(t2.id, ava.id, dayBefore, 5, dad.id);
+  await approve(bedTask[ava.id], ava.id, yest, 2, dad.id);
+  await approve(bedTask[leo.id], leo.id, yest, 2, mom.id);
+  await approve(dishwasher.id, ava.id, dayBefore, 5, dad.id);
   await approve(t6.id, leo.id, yest, 2, mom.id);
 
   // Initiative example (planned, pending)

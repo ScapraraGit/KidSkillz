@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
+import { Tooltip } from "../../components/Tooltip";
 import type { CaregiverScope, InvitationDTO } from "@chorechamps/shared";
 
 const DEFAULT_SCOPE: CaregiverScope = {
@@ -47,9 +48,15 @@ export function FamilyMembers() {
         right={
           mode === "NONE" ? (
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => { setMode("CO_PARENT"); setLastResult(null); }}>Add Parent</Button>
-              <Button variant="secondary" onClick={() => { setMode("CAREGIVER"); setLastResult(null); }}>Invite caregiver</Button>
-              <Button onClick={() => { setMode("CAREGIVER_PIN"); setLastResult(null); }}>Generate PIN</Button>
+              <Tooltip label="Invite a co-parent with full access (email link)">
+                <Button variant="secondary" onClick={() => { setMode("CO_PARENT"); setLastResult(null); }}>Add Parent</Button>
+              </Tooltip>
+              <Tooltip label="Invite a grandparent or sitter with scoped, time-boxed access">
+                <Button variant="secondary" onClick={() => { setMode("CAREGIVER"); setLastResult(null); }}>Invite caregiver</Button>
+              </Tooltip>
+              <Tooltip label="Generate a one-time PIN for a sitter — no email needed">
+                <Button onClick={() => { setMode("CAREGIVER_PIN"); setLastResult(null); }}>Generate PIN</Button>
+              </Tooltip>
             </div>
           ) : (
             <Button variant="ghost" onClick={() => { setMode("NONE"); setLastResult(null); }}>Cancel</Button>
@@ -120,9 +127,11 @@ export function FamilyMembers() {
                     {inv.kind === "CAREGIVER_PIN" && `PIN handoff · expires ${new Date(inv.expiresAt).toLocaleString()}`}
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => revoke.mutate(inv.id)} disabled={revoke.isPending}>
-                  Revoke
-                </Button>
+                <Tooltip label="Cancel this invitation. PIN/link stops working immediately.">
+                  <Button size="sm" variant="ghost" onClick={() => revoke.mutate(inv.id)} disabled={revoke.isPending}>
+                    Revoke
+                  </Button>
+                </Tooltip>
               </li>
             ))}
           </ul>

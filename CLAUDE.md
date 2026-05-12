@@ -53,6 +53,7 @@ pnpm db:seed              # seed.ts
 - Touching the schema? Generate a migration (`pnpm db:migrate`) — don't rely on `db push` for anything that needs history.
 - Adding an endpoint? Route file stays thin: validate with Zod, call service, serialize. Tenant scope (`familyId`) is non-negotiable.
 - Adding a ledger-affecting flow? Route it through `postLedger()`. Don't write `LedgerEntry` rows directly.
+- Adding a web feature (new page, button, modal, control)? See the `chorechamps-web-feature` skill — every primary action and non-obvious icon needs a `<Tooltip>` from `apps/web/src/components/Tooltip.tsx`. Don't use the native `title=""` attribute.
 
 ## Don't
 

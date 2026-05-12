@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
+import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import type { ChildDTO, RewardDTO } from "@chorechamps/shared";
 
@@ -64,13 +65,23 @@ export function ChildRewards() {
                   {affordable ? "You can afford this!" : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
                 </div>
               </div>
-              <Button
-                className="w-full mt-3"
-                disabled={!affordable || me.redemptionPaused || !r.isActive}
-                onClick={() => setRequesting(r)}
+              <Tooltip
+                label={
+                  me.redemptionPaused
+                    ? "Redemption paused — ask a parent"
+                    : !affordable
+                    ? `Need ${r.creditCost - me.balance} more credits`
+                    : "Request this reward (parent approves)"
+                }
               >
-                {affordable ? "Redeem" : "Keep saving"}
-              </Button>
+                <Button
+                  className="w-full mt-3"
+                  disabled={!affordable || me.redemptionPaused || !r.isActive}
+                  onClick={() => setRequesting(r)}
+                >
+                  {affordable ? "Redeem" : "Keep saving"}
+                </Button>
+              </Tooltip>
             </Card>
           );
         })}

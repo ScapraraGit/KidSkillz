@@ -6,6 +6,7 @@ import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, Progres
 import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio } from "../../components/AvatarStudio";
+import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import type { ChildDashboardDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
 
@@ -30,15 +31,16 @@ export function ChildDashboard() {
       <PageHeader
         title={
           <span className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setStudioOpen(true)}
-              className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
-              title="Design your avatar"
-            >
-              <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
-              <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">✏️</span>
-            </button>
+            <Tooltip label="Design your avatar">
+              <button
+                type="button"
+                onClick={() => setStudioOpen(true)}
+                className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
+              >
+                <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
+                <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">✏️</span>
+              </button>
+            </Tooltip>
             <span>{greeting}, {d.child.name}!</span>
           </span>
         }
@@ -150,9 +152,11 @@ export function ChildDashboard() {
                 ) : occ.completionStatus === "APPROVED" ? (
                   <Badge color="emerald">✓ Done</Badge>
                 ) : (
-                  <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
-                    Mark done
-                  </Button>
+                  <Tooltip label={d.child.earningPaused ? "Earning is paused — ask a parent" : "Submit this task for parent approval"}>
+                    <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
+                      Mark done
+                    </Button>
+                  </Tooltip>
                 )}
               </li>
             ))}

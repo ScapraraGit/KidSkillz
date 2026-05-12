@@ -76,11 +76,15 @@ describe("<resource>", () => {
 
 Prefer pure-logic tests (no DB). For DB tests, use the `__tests__` folder and a real Postgres via a test schema; do not mock Prisma.
 
-## 6. Shared types
+## 6. Web side (if any)
+
+If the new endpoint surfaces UI, invoke the `chorechamps-web-feature` skill while wiring up the page. Every primary action and non-obvious icon needs a `<Tooltip>` — that skill has the rules and the wrapper import.
+
+## 7. Shared types
 
 If the response shape is consumed by the web app, add a DTO to [packages/shared/src/types.ts](packages/shared/src/types.ts) and import from `@chorechamps/shared` on both sides.
 
-## Checklist before declaring done
+## 8. Checklist before declaring done
 
 - [ ] Zod validates every input field.
 - [ ] Service signature starts with `familyId`.
@@ -89,3 +93,4 @@ If the response shape is consumed by the web app, add a DTO to [packages/shared/
 - [ ] Serializer returns only intended fields.
 - [ ] At least one `it.todo` or real test added.
 - [ ] Router wired in `index.ts`.
+- [ ] If endpoint is consumed by new UI: every new button/control has a `<Tooltip>` (see `chorechamps-web-feature`).

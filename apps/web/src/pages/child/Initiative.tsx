@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import type { InitiativeRequestDTO } from "@chorechamps/shared";
 
@@ -44,20 +45,24 @@ export function ChildInitiative() {
 
       <Card>
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-4">
-          <Button
-            variant={kind === "PLANNED" ? "primary" : "ghost"}
-            className="flex-1"
-            onClick={() => setKind("PLANNED")}
-          >
-            📅 Plan ahead
-          </Button>
-          <Button
-            variant={kind === "WRITE_IN" ? "primary" : "ghost"}
-            className="flex-1"
-            onClick={() => setKind("WRITE_IN")}
-          >
-            ✍️ Already did it
-          </Button>
+          <Tooltip label="Tell us before you start — eligible for bonus credits when approved">
+            <Button
+              variant={kind === "PLANNED" ? "primary" : "ghost"}
+              className="flex-1"
+              onClick={() => setKind("PLANNED")}
+            >
+              📅 Plan ahead
+            </Button>
+          </Tooltip>
+          <Tooltip label="Log work you already finished. No bonus, but still earns credit.">
+            <Button
+              variant={kind === "WRITE_IN" ? "primary" : "ghost"}
+              className="flex-1"
+              onClick={() => setKind("WRITE_IN")}
+            >
+              ✍️ Already did it
+            </Button>
+          </Tooltip>
         </div>
 
         {kind === "PLANNED" && bonus?.enabled && (
@@ -92,9 +97,11 @@ export function ChildInitiative() {
         </div>
 
         <div className="mt-4 flex justify-end">
-          <Button onClick={() => submit.mutate()} disabled={submit.isPending || !title}>
-            {submit.isPending ? "Sending…" : "Submit for approval"}
-          </Button>
+          <Tooltip label="Send to a parent to review. Credits post when approved.">
+            <Button onClick={() => submit.mutate()} disabled={submit.isPending || !title}>
+              {submit.isPending ? "Sending…" : "Submit for approval"}
+            </Button>
+          </Tooltip>
         </div>
         {success && <div className="text-sm text-emerald-700 mt-2">Submitted! 🎉</div>}
       </Card>

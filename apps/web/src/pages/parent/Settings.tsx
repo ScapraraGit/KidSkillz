@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
+import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechamps/shared";
 
@@ -213,9 +214,11 @@ export function ParentSettings() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={() => save.mutate(s)} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save settings"}
-        </Button>
+        <Tooltip label="Persist these settings family-wide. Takes effect immediately.">
+          <Button onClick={() => save.mutate(s)} disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save settings"}
+          </Button>
+        </Tooltip>
       </div>
     </div>
   );

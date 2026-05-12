@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
+import { Tooltip } from "../../components/Tooltip";
 import type { ChildDTO, TaskDTO } from "@chorechamps/shared";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -60,7 +61,11 @@ export function ParentTasks() {
             ? `Showing tasks for ${filteredChild.name}.`
             : "One-time and recurring assignments."
         }
-        right={<Button onClick={() => setEditing("new")}>New task</Button>}
+        right={
+          <Tooltip label="Create a new chore template (one-time or recurring)">
+            <Button onClick={() => setEditing("new")}>New task</Button>
+          </Tooltip>
+        }
       />
 
       <Card className="p-0 overflow-hidden">
@@ -135,21 +140,26 @@ export function ParentTasks() {
                     <td className="p-3">{child?.name ?? <span className="text-slate-400">Unknown</span>}</td>
                     <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>Edit</Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`Copy "${t.title}" to all other kids?`)) duplicate.mutate(t.id);
-                        }}
-                        disabled={duplicate.isPending}
-                        title="Create a copy of this task for every other kid"
-                      >
-                        Copy to all kids
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(t.id)}>
-                        Delete
-                      </Button>
+                      <Tooltip label="Edit task fields, schedule, proof requirement">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>Edit</Button>
+                      </Tooltip>
+                      <Tooltip label="Create a copy of this task for every other kid">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Copy "${t.title}" to all other kids?`)) duplicate.mutate(t.id);
+                          }}
+                          disabled={duplicate.isPending}
+                        >
+                          Copy to all kids
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Permanently delete this task (history preserved on ledger)">
+                        <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(t.id)}>
+                          Delete
+                        </Button>
+                      </Tooltip>
                     </td>
                   </tr>
                 );

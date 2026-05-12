@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
+import { Tooltip } from "../../components/Tooltip";
 import type { ChildDTO, RewardDTO, RewardType } from "@chorechamps/shared";
 
 const TYPES: RewardType[] = ["SCREEN_TIME", "GAME_TIME", "MOVIE_NIGHT", "MONEY", "TREAT", "ACTIVITY", "CUSTOM"];
@@ -23,7 +24,11 @@ export function ParentRewards() {
       <PageHeader
         title="Reward catalog"
         subtitle="What kids can spend their credits on."
-        right={<Button onClick={() => setEditing("new")}>New reward</Button>}
+        right={
+          <Tooltip label="Add a reward kids can redeem credits for">
+            <Button onClick={() => setEditing("new")}>New reward</Button>
+          </Tooltip>
+        }
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -49,10 +54,14 @@ export function ParentRewards() {
               </p>
             )}
             <div className="mt-3 flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>Edit</Button>
-              <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(r.id)}>
-                Delete
-              </Button>
+              <Tooltip label="Edit name, cost, limits, eligibility">
+                <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>Edit</Button>
+              </Tooltip>
+              <Tooltip label="Permanently delete this reward">
+                <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(r.id)}>
+                  Delete
+                </Button>
+              </Tooltip>
             </div>
           </Card>
         ))}

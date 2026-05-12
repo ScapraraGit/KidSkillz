@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Avatar, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
+import { Tooltip } from "../../components/Tooltip";
 import type { ChildDTO, LedgerEntryDTO } from "@chorechamps/shared";
 
 export function ParentLedger() {
@@ -19,7 +20,9 @@ export function ParentLedger() {
         title="Ledger"
         subtitle="Every credit movement, audit-trail style."
         right={
+          <Tooltip label="Filter ledger entries to one kid">
           <select
+            aria-label="Filter ledger by kid"
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             value={childId}
             onChange={(e) => setChildId(e.target.value)}
@@ -29,6 +32,7 @@ export function ParentLedger() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          </Tooltip>
         }
       />
 

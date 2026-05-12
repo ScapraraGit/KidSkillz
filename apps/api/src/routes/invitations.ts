@@ -14,8 +14,17 @@ import {
 } from "../lib/invitations.js";
 import { sendInvitationEmail } from "../lib/email.js";
 import { env } from "../env.js";
+import type { Request } from "express";
 
 export const invitationsRouter = Router();
+
+// Prefer the browser-supplied Origin (matches the domain the parent is on),
+// fall back to a configured APP_URL for non-browser callers / cron / tests.
+function resolveAppUrl(req: Request): string {
+  const origin = req.header("origin");
+  if (origin && /^https?:\/\//.test(origin)) return origin.replace(/\/$/, "");
+  return env.APP_URL.replace(/\/$/, "");
+}
 
 const scopeSchema = z.object({
   canApproveTasks: z.boolean(),
@@ -116,7 +125,7 @@ invitationsRouter.post("/", requireRole("PARENT"), async (req, res) => {
   };
 
   const inv = await prisma.invitation.create({ data });
-  const acceptUrl = `${env.APP_URL}/invite/${token}`;
+  const acceptUrl = `${resolveAppUrl(req)}/invite/${token}`;
   await sendInvitationEmail({
     to: data.email,
     inviterName: inviter.name,

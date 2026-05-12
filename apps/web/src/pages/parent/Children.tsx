@@ -6,6 +6,7 @@ import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "..
 import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
+import { Tooltip } from "../../components/Tooltip";
 import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
 
 export function ParentChildren() {
@@ -26,7 +27,11 @@ export function ParentChildren() {
       <PageHeader
         title="Kids"
         subtitle="Manage profiles, balances, and pause flags."
-        right={<Button onClick={() => setCreating(true)}>Add kid</Button>}
+        right={
+          <Tooltip label="Create a new kid profile with name, PIN, and avatar">
+            <Button onClick={() => setCreating(true)}>Add kid</Button>
+          </Tooltip>
+        }
       />
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -48,8 +53,12 @@ export function ParentChildren() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>Edit</Button>
-              <Button variant="secondary" size="sm" onClick={() => setAdjusting(c)}>Adjust credits</Button>
+              <Tooltip label="Edit name, PIN, avatar, pause flags">
+                <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>Edit</Button>
+              </Tooltip>
+              <Tooltip label="Manually add or subtract credits with a reason (posts to ledger)">
+                <Button variant="secondary" size="sm" onClick={() => setAdjusting(c)}>Adjust credits</Button>
+              </Tooltip>
             </div>
           </Card>
         ))}

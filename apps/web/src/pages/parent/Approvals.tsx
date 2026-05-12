@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, uploadUrl } from "../../lib/api";
 import { Avatar, Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import { Tooltip } from "../../components/Tooltip";
 import type {
   InitiativeRequestDTO,
   RedemptionDTO,
@@ -119,17 +120,22 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
           </div>
         )}
       </div>
-      <input
-        className={`${inputCls} w-24`}
-        type="number"
-        min={0}
-        placeholder={`${suggested?.credits ?? fullCredit}`}
-        value={override}
-        onChange={(e) => setOverride(e.target.value)}
-        title="Override the suggested award"
-      />
-      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
-      <Button variant="ghost" size="sm" onClick={() => reject.mutate("")} disabled={reject.isPending}>Reject</Button>
+      <Tooltip label="Override the suggested credit award. Leave blank to use suggested.">
+        <input
+          className={`${inputCls} w-24`}
+          type="number"
+          min={0}
+          placeholder={`${suggested?.credits ?? fullCredit}`}
+          value={override}
+          onChange={(e) => setOverride(e.target.value)}
+        />
+      </Tooltip>
+      <Tooltip label="Award credits and clear from queue">
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      </Tooltip>
+      <Tooltip label="Deny without penalty (no credit posted)">
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate("")} disabled={reject.isPending}>Reject</Button>
+      </Tooltip>
     </li>
   );
 }
@@ -168,16 +174,22 @@ function InitiativeRow({ initiative, onChange }: { initiative: InitiativeRequest
         </div>
         {initiative.description && <div className="text-xs text-slate-500">{initiative.description}</div>}
       </div>
-      <input
-        className={`${inputCls} w-24`}
-        type="number"
-        min={0}
-        placeholder={`${initiative.suggestedCredits}`}
-        value={override}
-        onChange={(e) => setOverride(e.target.value)}
-      />
-      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
-      <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+      <Tooltip label="Override the suggested credits. Planned items earn a bonus over write-ins.">
+        <input
+          className={`${inputCls} w-24`}
+          type="number"
+          min={0}
+          placeholder={`${initiative.suggestedCredits}`}
+          value={override}
+          onChange={(e) => setOverride(e.target.value)}
+        />
+      </Tooltip>
+      <Tooltip label="Award credits for this initiative">
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      </Tooltip>
+      <Tooltip label="Deny without posting credit">
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+      </Tooltip>
     </li>
   );
 }
@@ -203,8 +215,12 @@ function RedemptionRow({ redemption, onChange }: { redemption: RedemptionDTO; on
         {redemption.notes && <div className="text-xs text-slate-500 italic">"{redemption.notes}"</div>}
       </div>
       <CreditChip amount={-redemption.creditCost} />
-      <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
-      <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+      <Tooltip label="Approve redemption and deduct held credits">
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+      </Tooltip>
+      <Tooltip label="Reject and refund held credits to the kid">
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+      </Tooltip>
     </li>
   );
 }

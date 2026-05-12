@@ -6,7 +6,10 @@
   "scripts": {
     "record": "tsx record.ts",
     "gif": "tsx build-gif.ts",
-    "all": "tsx record.ts && tsx build-gif.ts"
+    "all": "tsx record.ts && tsx build-gif.ts",
+    "record:child": "tsx record-child.ts",
+    "gif:child": "tsx build-gif-child.ts",
+    "all:child": "tsx record-child.ts && tsx build-gif-child.ts"
   },
   "dependencies": {
     "playwright": "1.48.2"

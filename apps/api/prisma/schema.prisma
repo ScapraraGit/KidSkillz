@@ -9,7 +9,21 @@ datasource db {
 
 enum Role {
   PARENT
+  CAREGIVER
   CHILD
+}
+
+enum InvitationKind {
+  CO_PARENT
+  CAREGIVER
+  CAREGIVER_PIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
 }
 
 enum ProofRequirement {
@@ -69,6 +83,7 @@ model Family {
   rewards         Reward[]
   initiatives     InitiativeRequest[]
   ledger          LedgerEntry[]
+  invitations     Invitation[]
 }
 
 model User {
@@ -84,6 +99,13 @@ model User {
   avatarConfig Json?
   isActive     Boolean  @default(true)
   onboardedAt  DateTime?
+  // CAREGIVER-only access window + permission scope. Null on PARENT/CHILD.
+  validFrom    DateTime?
+  validUntil   DateTime?
+  scope        Json?
+  invitedById  String?
+  invitedBy    User?    @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitees     User[]   @relation("InvitedBy")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -97,8 +119,38 @@ model User {
   reviewedRedemptions Redemption[]          @relation("RedemptionReviewer")
   ledgerEntries       LedgerEntry[]         @relation("LedgerChild")
   createdLedger       LedgerEntry[]         @relation("LedgerCreator")
+  createdInvitations  Invitation[]          @relation("InvitationCreator")
+  acceptedInvitations Invitation[]          @relation("InvitationAcceptor")
 
   @@index([familyId])
+}
+
+model Invitation {
+  id           String           @id @default(uuid())
+  familyId     String
+  family       Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  kind         InvitationKind
+  status       InvitationStatus @default(PENDING)
+  // Email for CO_PARENT/CAREGIVER. Null for CAREGIVER_PIN (in-person).
+  email        String?
+  inviteeName  String?
+  // SHA-256 of token (CO_PARENT/CAREGIVER) or PIN (CAREGIVER_PIN). Never store raw.
+  tokenHash    String           @unique
+  expiresAt    DateTime
+  // CAREGIVER-only fields, ignored for CO_PARENT.
+  validFrom    DateTime?
+  validUntil   DateTime?
+  scope        Json?
+  createdById  String
+  createdBy    User             @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  acceptedById String?
+  acceptedBy   User?            @relation("InvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedAt   DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([familyId])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model ChildProfile {

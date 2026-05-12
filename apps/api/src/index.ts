@@ -15,6 +15,7 @@ import { adjustmentsRouter } from "./routes/adjustments.js";
 import { ledgerRouter } from "./routes/ledger.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { uploadsRouter } from "./routes/uploads.js";
+import { invitationsRouter } from "./routes/invitations.js";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/adjustments", adjustmentsRouter);
 app.use("/ledger", ledgerRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/uploads", uploadsRouter);
+app.use("/invitations", invitationsRouter);
 
 app.use((_req, res) => res.status(404).json({ error: "NOT_FOUND" }));
 app.use(errorHandler);

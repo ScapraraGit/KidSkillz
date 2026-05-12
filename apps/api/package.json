@@ -7,9 +7,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "tsx src/index.ts",
-    "prisma": "prisma",
-    "seed": "tsx prisma/seed.ts",
-    "migrate:deploy": "prisma migrate deploy"
+    "prisma": "dotenv -e ../../.env -- prisma",
+    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy"
   },
   "dependencies": {
     "@chorechamps/shared": "workspace:*",
@@ -34,6 +34,7 @@
     "@types/multer": "1.4.12",
     "@types/node": "20.16.10",
     "@types/uuid": "10.0.0",
+    "dotenv-cli": "7.4.2",
     "prisma": "5.22.0",
     "tsx": "4.19.2",
     "typescript": "5.6.3"

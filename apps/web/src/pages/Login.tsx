@@ -15,7 +15,7 @@ export function Login({ initialMode = "PARENT" }: { initialMode?: Mode } = {}) {
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="text-5xl">🌟</div>
+          <div className="text-5xl">🪙</div>
           <h1 className="text-3xl font-bold mt-2 tracking-tight">ChoreChamps</h1>
           <p className="text-slate-500">Earn credits, plan ahead, do something amazing.</p>
         </div>

@@ -74,7 +74,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl">🌟</span>
+            <span className="text-xl">🪙</span>
             <span className="font-semibold text-slate-800">ChoreChamps</span>
             <nav className="hidden sm:flex items-center gap-1 ml-4">
               {links.map((l) => (

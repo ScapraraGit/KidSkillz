@@ -19,4 +19,5 @@ export const env = {
   UPLOAD_MAX_BYTES: Number(process.env.UPLOAD_MAX_BYTES ?? 5_242_880),
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   NODE_ENV: process.env.NODE_ENV ?? "development",
+  APP_URL: process.env.APP_URL ?? "http://localhost:5173",
 };

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireParentOrCaregiver } from "../middleware/auth.js";
 import {
   approveRedemption,
   listRedemptions,
@@ -36,12 +36,12 @@ redemptionsRouter.get("/", async (req, res) => {
 
 const reviewSchema = z.object({ reason: z.string().max(500).optional() });
 
-redemptionsRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) => {
+redemptionsRouter.post("/:id/approve", requireParentOrCaregiver("canApproveRedemptions"), async (req, res) => {
   const r = await approveRedemption(req.auth!.fid, req.params.id, req.auth!.sub);
   res.json({ redemption: serializeRedemption(r) });
 });
 
-redemptionsRouter.post("/:id/reject", requireRole("PARENT"), async (req, res) => {
+redemptionsRouter.post("/:id/reject", requireParentOrCaregiver("canApproveRedemptions"), async (req, res) => {
   const { reason } = reviewSchema.parse(req.body ?? {});
   const r = await rejectRedemption(req.auth!.fid, req.params.id, req.auth!.sub, reason);
   res.json({ redemption: serializeRedemption(r) });

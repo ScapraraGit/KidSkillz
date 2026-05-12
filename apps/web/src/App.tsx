@@ -10,6 +10,9 @@ import { ParentRewards } from "./pages/parent/Rewards";
 import { ParentChildren } from "./pages/parent/Children";
 import { ParentLedger } from "./pages/parent/Ledger";
 import { ParentSettings } from "./pages/parent/Settings";
+import { FamilyMembers } from "./pages/parent/FamilyMembers";
+import { InviteAccept } from "./pages/InviteAccept";
+import { CaregiverPin } from "./pages/CaregiverPin";
 import { ChildDashboard } from "./pages/child/Dashboard";
 import { ChildRewards } from "./pages/child/Rewards";
 import { ChildInitiative } from "./pages/child/Initiative";
@@ -24,12 +27,14 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Login initialMode="SIGNUP" />} />
+        <Route path="/invite/:token" element={<InviteAccept />} />
+        <Route path="/caregiver/pin" element={<CaregiverPin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
 
-  if (user.role === "PARENT") {
+  if (user.role === "PARENT" || user.role === "CAREGIVER") {
     return (
       <Routes>
         <Route path="/login" element={<Navigate to="/parent" replace />} />
@@ -41,6 +46,7 @@ export default function App() {
           <Route path="/parent/children" element={<ParentChildren />} />
           <Route path="/parent/ledger" element={<ParentLedger />} />
           <Route path="/parent/settings" element={<ParentSettings />} />
+          <Route path="/parent/members" element={<FamilyMembers />} />
         </Route>
         <Route path="*" element={<Navigate to="/parent" replace />} />
       </Routes>

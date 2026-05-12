@@ -24,7 +24,18 @@ const parentLinks: NavLinkDef[] = [
   { to: "/parent/rewards", label: "Rewards", id: "nav-rewards" },
   { to: "/parent/children", label: "Kids" },
   { to: "/parent/ledger", label: "Ledger" },
+  { to: "/parent/members", label: "Members" },
   { to: "/parent/settings", label: "Settings", id: "nav-settings" },
+];
+
+// Caregivers see a reduced nav — no Settings, no Members.
+const caregiverLinks: NavLinkDef[] = [
+  { to: "/parent", label: "Dashboard", end: true },
+  { to: "/parent/approvals", label: "Approvals" },
+  { to: "/parent/tasks", label: "Tasks" },
+  { to: "/parent/rewards", label: "Rewards" },
+  { to: "/parent/children", label: "Kids" },
+  { to: "/parent/ledger", label: "Ledger" },
 ];
 
 const childLinks: NavLinkDef[] = [
@@ -40,7 +51,8 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const logout = useAuth((s) => s.logout);
   const nav = useNavigate();
   const loc = useLocation();
-  const links = role === "PARENT" ? parentLinks : childLinks;
+  const isCaregiver = user?.role === "CAREGIVER";
+  const links = role === "CHILD" ? childLinks : isCaregiver ? caregiverLinks : parentLinks;
 
   const me = useQuery({
     queryKey: ["me"],
@@ -71,6 +83,12 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
 
   return (
     <div className="min-h-full flex flex-col">
+      {isCaregiver && (
+        <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
+          Caregiver session
+          {user?.validUntil && <> · expires {new Date(user.validUntil).toLocaleString()}</>}
+        </div>
+      )}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">

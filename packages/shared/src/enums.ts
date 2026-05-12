@@ -1,8 +1,24 @@
 export const Role = {
   PARENT: "PARENT",
+  CAREGIVER: "CAREGIVER",
   CHILD: "CHILD",
 } as const;
 export type Role = (typeof Role)[keyof typeof Role];
+
+export const InvitationKind = {
+  CO_PARENT: "CO_PARENT",
+  CAREGIVER: "CAREGIVER",
+  CAREGIVER_PIN: "CAREGIVER_PIN",
+} as const;
+export type InvitationKind = (typeof InvitationKind)[keyof typeof InvitationKind];
+
+export const InvitationStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  EXPIRED: "EXPIRED",
+  REVOKED: "REVOKED",
+} as const;
+export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus];
 
 export const ProofRequirement = {
   NONE: "NONE",

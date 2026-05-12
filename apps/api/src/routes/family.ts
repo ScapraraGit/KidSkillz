@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { getFamily, getFamilySettings, updateSettings } from "../services/family.js";
+import { prisma } from "../db.js";
 
 export const familyRouter = Router();
 
@@ -11,6 +12,23 @@ familyRouter.get("/", async (req, res) => {
   const fam = await getFamily(req.auth!.fid);
   const settings = await getFamilySettings(fam.id);
   res.json({ id: fam.id, name: fam.name, settings });
+});
+
+familyRouter.get("/members", requireRole("PARENT"), async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { familyId: req.auth!.fid, role: { in: ["PARENT", "CAREGIVER"] }, isActive: true },
+    orderBy: [{ role: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, email: true, role: true, validUntil: true },
+  });
+  res.json({
+    members: users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      validUntil: u.validUntil?.toISOString() ?? null,
+    })),
+  });
 });
 
 const settingsSchema = z.object({

@@ -155,7 +155,7 @@ authRouter.patch("/me/avatar", requireAuth, async (req, res) => {
   res.json({ user: serializeUser(user) });
 });
 
-function serializeUser(u: import("@prisma/client").User) {
+export function serializeUser(u: import("@prisma/client").User) {
   return {
     id: u.id,
     familyId: u.familyId,
@@ -165,5 +165,6 @@ function serializeUser(u: import("@prisma/client").User) {
     avatarColor: u.avatarColor,
     avatarConfig: (u.avatarConfig as AvatarConfig | null) ?? null,
     onboardedAt: u.onboardedAt?.toISOString() ?? null,
+    validUntil: u.validUntil?.toISOString() ?? null,
   };
 }

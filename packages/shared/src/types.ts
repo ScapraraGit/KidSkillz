@@ -2,6 +2,8 @@ import type {
   ApprovalStatus,
   ChildAuthMode,
   InitiativeKind,
+  InvitationKind,
+  InvitationStatus,
   LedgerKind,
   ProofRequirement,
   RecurrenceFrequency,
@@ -9,6 +11,27 @@ import type {
   Role,
   TaskKind,
 } from "./enums.js";
+
+export interface CaregiverScope {
+  canApproveTasks: boolean;
+  canApproveRedemptions: boolean;
+  canApproveInitiatives: boolean;
+  canViewLedger: boolean;
+  kidIds: string[];
+}
+
+export interface InvitationDTO {
+  id: string;
+  kind: InvitationKind;
+  status: InvitationStatus;
+  email: string | null;
+  inviteeName: string | null;
+  validFrom: string | null;
+  validUntil: string | null;
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt: string | null;
+}
 
 export interface FamilySettings {
   childAuthMode: ChildAuthMode;
@@ -107,6 +130,7 @@ export interface AuthUserDTO {
   avatarColor?: string;
   avatarConfig?: AvatarConfig | null;
   onboardedAt?: string | null;
+  validUntil?: string | null;
 }
 
 export interface MeResponseDTO {

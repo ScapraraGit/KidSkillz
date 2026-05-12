@@ -110,6 +110,9 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [invitePartner, setInvitePartner] = useState(false);
+  const [partnerEmail, setPartnerEmail] = useState("");
+  const [partnerName, setPartnerName] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -126,6 +129,10 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           setErr("Password must be at least 8 characters");
           return;
         }
+        if (invitePartner && !partnerEmail) {
+          setErr("Enter partner email or uncheck the box");
+          return;
+        }
         setLoading(true);
         try {
           const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/register", {
@@ -134,6 +141,15 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           setSession(r.token, r.user);
           const me = await api<{ settings: FamilySettings }>("/auth/me");
           setSettings(me.settings);
+          if (invitePartner && partnerEmail) {
+            try {
+              await api("/invitations", {
+                body: { kind: "CO_PARENT", email: partnerEmail, inviteeName: partnerName || undefined },
+              });
+            } catch (inviteErr) {
+              console.error("[signup:partner-invite] failed", inviteErr);
+            }
+          }
           nav("/parent");
         } catch (e: any) {
           setErr(e.message ?? "Signup failed");
@@ -193,6 +209,23 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           minLength={8}
         />
       </Field>
+      <div className="border-t border-slate-200 pt-3 space-y-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" title="Invite a co-parent" checked={invitePartner} onChange={(e) => setInvitePartner(e.target.checked)} />
+          Invite a co-parent (optional)
+        </label>
+        {invitePartner && (
+          <div className="space-y-2 pl-6">
+            <Field label="Partner's email">
+              <input className={inputCls} type="email" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} required={invitePartner} />
+            </Field>
+            <Field label="Partner's name (optional)">
+              <input className={inputCls} value={partnerName} onChange={(e) => setPartnerName(e.target.value)} maxLength={80} />
+            </Field>
+            <p className="text-xs text-slate-500">They'll get an email with a link to join your family with full access.</p>
+          </div>
+        )}
+      </div>
       {err && <div className="text-sm text-rose-600">{err}</div>}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating family..." : "Create family"}

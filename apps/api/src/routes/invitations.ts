@@ -4,6 +4,7 @@ import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { hashPassword, signToken } from "../lib/auth.js";
+import { serializeUser } from "./auth.js";
 import {
   DEFAULT_CAREGIVER_SCOPE,
   generateInvitationToken,
@@ -191,7 +192,7 @@ invitationsRouter.post("/by-token/:token/accept", async (req, res) => {
   });
 
   const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  res.json({ token, user: serializeUser(user) });
 });
 
 const pinLoginSchema = z.object({
@@ -240,10 +241,7 @@ invitationsRouter.post("/pin-login", async (req, res) => {
   });
 
   const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
-  res.json({
-    token,
-    user: { id: user.id, name: user.name, role: user.role, validUntil: user.validUntil?.toISOString() ?? null },
-  });
+  res.json({ token, user: serializeUser(user) });
 });
 
 // Revoke pending invitation.

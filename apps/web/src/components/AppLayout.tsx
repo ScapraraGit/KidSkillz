@@ -99,19 +99,21 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
             <nav className="hidden sm:flex items-center gap-1 ml-4">
               {links.map((l) => (
                 <Tooltip key={l.to} label={l.tip} side="bottom">
-                  <NavLink
-                    to={l.to}
-                    end={l.end}
-                    id={l.id}
-                    className={({ isActive }) =>
-                      clsx(
-                        "px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                        isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
-                      )
-                    }
-                  >
-                    {l.label}
-                  </NavLink>
+                  <span className="inline-flex">
+                    <NavLink
+                      to={l.to}
+                      end={l.end}
+                      id={l.id}
+                      className={({ isActive }) =>
+                        clsx(
+                          "px-3 py-1.5 rounded-lg text-sm font-medium transition",
+                          isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
+                        )
+                      }
+                    >
+                      {l.label}
+                    </NavLink>
+                  </span>
                 </Tooltip>
               ))}
             </nav>

@@ -9,7 +9,10 @@
     "start": "tsx src/index.ts",
     "prisma": "dotenv -e ../../.env -- prisma",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy"
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@chorechamps/shared": "workspace:*",
@@ -37,6 +40,8 @@
     "dotenv-cli": "7.4.2",
     "prisma": "5.22.0",
     "tsx": "4.19.2",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "vitest": "^2.1.5",
+    "@vitest/coverage-v8": "^2.1.5"
   }
 }

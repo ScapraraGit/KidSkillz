@@ -1,4 +1,5 @@
-import { chromium, Page } from "playwright";
+import type { Page } from "playwright";
+import { chromium } from "playwright";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 

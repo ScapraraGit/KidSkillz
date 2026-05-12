@@ -47,6 +47,6 @@ const dbHost = (() => {
 console.log(`[chorechamps-api] DB host: ${dbHost}`);
 
 app.listen(env.PORT, () => {
-  // eslint-disable-next-line no-console
+   
   console.log(`[chorechamps-api] listening on :${env.PORT}`);
 });

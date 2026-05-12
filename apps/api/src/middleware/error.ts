@@ -13,7 +13,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof AppError) {
     return res.status(err.status).json({ error: err.code, message: err.message });
   }
-  // eslint-disable-next-line no-console
+   
   console.error("[unhandled]", err);
   return res.status(500).json({ error: "INTERNAL", message: "Something went wrong" });
 };

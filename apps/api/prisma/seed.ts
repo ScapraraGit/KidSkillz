@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 async function main() {
   const existing = await prisma.family.findFirst({ where: { name: "The Caprara Family" } });
   if (existing) {
-    // eslint-disable-next-line no-console
+     
     console.log("[seed] Family already exists, skipping seed.");
     return;
   }
@@ -306,13 +306,13 @@ async function main() {
     },
   });
 
-  // eslint-disable-next-line no-console
+   
   console.log("[seed] Done. Login: dad@example.com / password123 — kids PINs Ava=1234, Leo=4321");
 }
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
+     
     console.error(e);
     process.exit(1);
   })

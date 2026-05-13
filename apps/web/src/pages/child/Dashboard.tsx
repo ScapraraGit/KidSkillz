@@ -14,6 +14,8 @@ import { PetHero } from "../../components/PetHero";
 import { ChallengeSection } from "../../components/ChallengeCard";
 import { StreakSaver } from "../../components/StreakSaver";
 import { SavingsGoal } from "../../components/SavingsGoal";
+import { ActiveTimerCard } from "../../components/ActiveTimerCard";
+import { useActiveTimer } from "../../hooks/useActiveTimer";
 import type { ChallengeDTO, ChallengeProgressDTO, ChildDashboardDTO, LevelDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
 
 interface ChallengeRow { challenge: ChallengeDTO; progress: ChallengeProgressDTO | null }
@@ -43,6 +45,12 @@ export function ChildDashboard() {
   const user = useAuth((s) => s.user);
   const settings = useAuth((s) => s.settings);
   const qc = useQueryClient();
+
+  const soundEnabled = dash.data?.child.soundEnabled ?? false;
+  const timer = useActiveTimer({
+    childId: meId,
+    onExpire: () => fireCelebrate("task", { sound: soundEnabled }),
+  });
 
   const seenLevelRef = useRef<number | null>(null);
   const seenChallengeRef = useRef<Set<string> | null>(null);
@@ -133,6 +141,15 @@ export function ChildDashboard() {
         />
       ) : (
         <LevelCard level={level} />
+      )}
+
+      {timer.timer && (
+        <ActiveTimerCard
+          timer={timer.timer}
+          timeLeft={timer.timeLeft}
+          expired={timer.expired}
+          onCancel={timer.cancel}
+        />
       )}
 
       <StreakSaver
@@ -259,11 +276,22 @@ export function ChildDashboard() {
                 ) : occ.completionStatus === "APPROVED" ? (
                   <Badge color="emerald">✓ Done</Badge>
                 ) : (
-                  <Tooltip label={d.child.earningPaused ? "Earning is paused — ask a parent" : "Submit this task for parent approval"}>
-                    <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
-                      Mark done
-                    </Button>
-                  </Tooltip>
+                  <>
+                    <StartTimerButton
+                      taskId={occ.task.id}
+                      taskTitle={occ.task.title}
+                      defaultMinutes={occ.task.defaultDurationMinutes ?? null}
+                      disabled={!!timer.timer}
+                      onStart={(durationMs) =>
+                        timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs })
+                      }
+                    />
+                    <Tooltip label={d.child.earningPaused ? "Earning is paused — ask a parent" : "Submit this task for parent approval"}>
+                      <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
+                        Mark done
+                      </Button>
+                    </Tooltip>
+                  </>
                 )}
               </li>
             ))}
@@ -293,6 +321,7 @@ export function ChildDashboard() {
           occurrence={completing}
           onClose={() => setCompleting(null)}
           onSubmitted={(credits) => {
+            if (timer.timer?.taskId === completing.task.id) timer.cancel();
             setCompleting(null);
             setCelebrate(credits);
             fireCelebrate("task", { sound: d.child.soundEnabled });
@@ -406,6 +435,63 @@ function CompleteModal({
         {err && <div className="text-sm text-rose-600">{err}</div>}
       </div>
     </Modal>
+  );
+}
+
+const TIMER_PRESETS = [5, 10, 15, 30];
+
+function StartTimerButton({
+  taskId: _taskId,
+  taskTitle: _taskTitle,
+  defaultMinutes,
+  disabled,
+  onStart,
+}: {
+  taskId: string;
+  taskTitle: string;
+  defaultMinutes: number | null;
+  disabled: boolean;
+  onStart: (durationMs: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const presets = defaultMinutes && !TIMER_PRESETS.includes(defaultMinutes)
+    ? [defaultMinutes, ...TIMER_PRESETS].sort((a, b) => a - b)
+    : TIMER_PRESETS;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <Tooltip label={disabled ? "A timer is already running" : "Start a focus timer for this task"}>
+        <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} disabled={disabled}>
+          ▶ Timer
+        </Button>
+      </Tooltip>
+      {open && (
+        <div className="absolute right-0 z-30 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 p-2 flex flex-col gap-1 min-w-[120px]">
+          <div className="text-[10px] text-slate-500 px-2 pt-1">Pick a length</div>
+          {presets.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => { onStart(m * 60_000); setOpen(false); }}
+              className="text-sm px-3 py-1.5 text-left rounded-lg hover:bg-brand-50 hover:text-brand-700"
+            >
+              {m} min{defaultMinutes === m ? " (suggested)" : ""}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

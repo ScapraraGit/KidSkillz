@@ -220,6 +220,7 @@ model Task {
   recurrence       Json?            // { frequency, daysOfWeek, expiresAt }
   dueAt            DateTime?
   dueByTime        String?          // HH:MM in family TZ; only meaningful for RECURRING tasks
+  defaultDurationMinutes Int?       // optional kid-focus timer default; 1..240
   proofRequirement ProofRequirement @default(NOTES_OPTIONAL)
   isActive         Boolean          @default(true)
   assignedToId     String

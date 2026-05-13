@@ -14,6 +14,7 @@ export interface CreateTaskInput {
   recurrence?: Recurrence | null;
   dueAt?: string | null;
   dueByTime?: string | null;
+  defaultDurationMinutes?: number | null;
   proofRequirement?: import("@prisma/client").ProofRequirement;
   isActive?: boolean;
   assignedToId: string;
@@ -51,6 +52,7 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
       recurrence: input.recurrence ? (input.recurrence as object) : undefined,
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
       dueByTime: input.dueByTime ?? null,
+      defaultDurationMinutes: input.defaultDurationMinutes ?? null,
       proofRequirement: input.proofRequirement ?? "NOTES_OPTIONAL",
       isActive: input.isActive ?? true,
       assignedToId: input.assignedToId,
@@ -90,6 +92,7 @@ export async function duplicateAcrossKids(familyId: string, taskId: string) {
           recurrence: (source.recurrence as object | null) ?? undefined,
           dueAt: source.dueAt,
           dueByTime: source.dueByTime,
+          defaultDurationMinutes: source.defaultDurationMinutes,
           proofRequirement: source.proofRequirement,
           isActive: source.isActive,
           assignedToId: t.id,
@@ -115,6 +118,7 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
       }),
       ...(input.dueAt !== undefined && { dueAt: input.dueAt ? new Date(input.dueAt) : null }),
       ...(input.dueByTime !== undefined && { dueByTime: input.dueByTime }),
+      ...(input.defaultDurationMinutes !== undefined && { defaultDurationMinutes: input.defaultDurationMinutes }),
       ...(input.proofRequirement !== undefined && { proofRequirement: input.proofRequirement }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
       ...(input.assignedToId !== undefined && { assignedToId: input.assignedToId }),
@@ -219,6 +223,7 @@ export function serializeTask(t: import("@prisma/client").Task) {
     recurrence: (t.recurrence as Recurrence | null) ?? null,
     dueAt: t.dueAt?.toISOString() ?? null,
     dueByTime: t.dueByTime ?? null,
+    defaultDurationMinutes: t.defaultDurationMinutes ?? null,
     proofRequirement: t.proofRequirement,
     isActive: t.isActive,
     assignedToId: t.assignedToId,

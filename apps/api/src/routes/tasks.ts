@@ -35,6 +35,7 @@ const createTaskSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24h)")
     .nullable()
     .optional(),
+  defaultDurationMinutes: z.number().int().min(1).max(240).nullable().optional(),
   proofRequirement: z
     .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
     .optional(),

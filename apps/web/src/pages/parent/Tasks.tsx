@@ -210,6 +210,9 @@ function TaskFormModal({
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [dueByTime, setDueByTime] = useState(initial?.dueByTime ?? "");
   const [dueAt, setDueAt] = useState(initial?.dueAt ? initial.dueAt.slice(0, 16) : "");
+  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState<string>(
+    initial?.defaultDurationMinutes != null ? String(initial.defaultDurationMinutes) : "",
+  );
 
   const save = useMutation({
     mutationFn: async () => {
@@ -222,6 +225,7 @@ function TaskFormModal({
         proofRequirement,
         isActive,
         assignedToId,
+        defaultDurationMinutes: defaultDurationMinutes.trim() ? Number(defaultDurationMinutes) : null,
       };
       if (kind === "RECURRING") {
         body.recurrence = {
@@ -335,6 +339,17 @@ function TaskFormModal({
             />
           </Field>
         )}
+        <Field label="Suggested timer (minutes)" hint="Optional. Default duration kid sees when starting a focus timer for this task. 1–240. Leave blank to omit.">
+          <input
+            className={inputCls}
+            type="number"
+            min={1}
+            max={240}
+            value={defaultDurationMinutes}
+            onChange={(e) => setDefaultDurationMinutes(e.target.value)}
+            placeholder="e.g. 15"
+          />
+        </Field>
         <Field label="Proof requirement">
           <select className={inputCls} value={proofRequirement} onChange={(e) => setProofRequirement(e.target.value as any)}>
             <option value="NONE">None</option>

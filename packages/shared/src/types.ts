@@ -171,6 +171,7 @@ export interface TaskDTO {
   recurrence?: Recurrence | null;
   dueAt?: string | null;
   dueByTime?: string | null;       // "HH:MM" family TZ — recurring tasks only
+  defaultDurationMinutes?: number | null; // optional kid-focus timer suggestion
   proofRequirement: ProofRequirement;
   isActive: boolean;
   assignedToId: string;

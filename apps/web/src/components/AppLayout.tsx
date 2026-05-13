@@ -9,6 +9,8 @@ import { OnboardingTour } from "./OnboardingTour";
 import { Tooltip } from "./Tooltip";
 import { SoundToggle } from "./SoundToggle";
 import { NotificationBell } from "./NotificationBell";
+import { EmailVerifyBanner } from "./EmailVerifyBanner";
+import { TermsGate } from "./TermsGate";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
 import type { MeResponseDTO } from "@chorechamps/shared";
@@ -88,11 +90,15 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
 
   return (
     <div className="min-h-full flex flex-col">
+      {user && <TermsGate user={user} />}
       {isCaregiver && (
         <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
           Caregiver session
           {user?.validUntil && <> · expires {new Date(user.validUntil).toLocaleString()}</>}
         </div>
+      )}
+      {role === "PARENT" && !isCaregiver && user && !user.emailVerifiedAt && (
+        <EmailVerifyBanner email={user.email} />
       )}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">

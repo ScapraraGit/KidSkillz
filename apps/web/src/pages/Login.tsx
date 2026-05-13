@@ -2,9 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
+import { Link } from "react-router-dom";
 import { Button, Card, Field, inputCls } from "../components/ui";
 import { KidAvatar } from "../components/KidAvatar";
-import type { AuthUserDTO, AvatarConfig, FamilySettings } from "@chorechamps/shared";
+import {
+  CURRENT_TERMS_VERSION,
+  type AuthUserDTO,
+  type AvatarConfig,
+  type FamilySettings,
+} from "@chorechamps/shared";
 
 type Mode = "PARENT" | "CHILD" | "SIGNUP";
 
@@ -110,6 +116,10 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
         <button type="button" className="text-brand-600 hover:underline" onClick={onSignup}>
           Create a family
         </button>
+        {" · "}
+        <Link to="/forgot-password" className="text-brand-600 hover:underline">
+          Forgot password?
+        </Link>
       </p>
     </form>
   );
@@ -127,6 +137,7 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
   const [invitePartner, setInvitePartner] = useState(false);
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerName, setPartnerName] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -147,10 +158,14 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           setErr("Enter partner email or uncheck the box");
           return;
         }
+        if (!acceptedTerms) {
+          setErr("Please accept the Terms of Service and Privacy Policy");
+          return;
+        }
         setLoading(true);
         try {
           const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/register", {
-            body: { familyName, parentName, email, password },
+            body: { familyName, parentName, email, password, acceptedTermsVersion: CURRENT_TERMS_VERSION },
           });
           setSession(r.token, r.user);
           const me = await api<{ settings: FamilySettings }>("/auth/me");
@@ -258,8 +273,28 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           </div>
         )}
       </div>
+      <label className="flex items-start gap-2 text-xs text-slate-600 pt-1">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          title="Accept Terms of Service and Privacy Policy"
+          className="mt-0.5"
+        />
+        <span>
+          I agree to the{" "}
+          <Link to="/terms" target="_blank" className="text-brand-600 hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" target="_blank" className="text-brand-600 hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
       {err && <div className="text-sm text-rose-600">{err}</div>}
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
         {loading ? "Creating family..." : "Create family"}
       </Button>
       <p className="text-xs text-center text-slate-500 pt-1">

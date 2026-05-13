@@ -57,6 +57,8 @@ export interface FamilySettings {
     incrementMinutes: number; // 30
     maxPerRedemptionMinutes: number; // 60
   };
+  /** Days to retain proof photos before auto-purge. Set to 0 to keep forever. */
+  photoRetentionDays: number;
   timezone: string; // IANA, e.g. "America/Phoenix"
 }
 
@@ -80,6 +82,7 @@ export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
     incrementMinutes: 30,
     maxPerRedemptionMinutes: 60,
   },
+  photoRetentionDays: 90,
   timezone: "America/Phoenix",
 };
 
@@ -137,7 +140,16 @@ export interface AuthUserDTO {
   avatarConfig?: AvatarConfig | null;
   onboardedAt?: string | null;
   validUntil?: string | null;
+  emailVerifiedAt?: string | null;
+  acceptedTermsVersion?: number | null;
+  acceptedTermsAt?: string | null;
 }
+
+/**
+ * Current ToS/Privacy revision. Bump when material changes ship; users with
+ * acceptedTermsVersion < CURRENT_TERMS_VERSION get re-prompted on next session.
+ */
+export const CURRENT_TERMS_VERSION = 1;
 
 export interface MeResponseDTO {
   user: AuthUserDTO;

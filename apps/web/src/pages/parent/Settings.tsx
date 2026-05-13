@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { useNavigate } from "react-router-dom";
+import { api, API_URL } from "../../lib/api";
 import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
+import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechamps/shared";
@@ -208,6 +210,24 @@ export function ParentSettings() {
       </Card>
 
       <Card className="space-y-4">
+        <h3 className="font-semibold">Photo proof retention</h3>
+        <p className="text-sm text-slate-500">
+          Photos kids submit as proof are automatically deleted after this many days. Set to 0 to keep them
+          forever.
+        </p>
+        <Field label="Retention (days)" hint="Default 90. Lower = better privacy. 0 = no auto-delete.">
+          <input
+            className={inputCls}
+            type="number"
+            min={0}
+            max={3650}
+            value={s.photoRetentionDays ?? 90}
+            onChange={(e) => setS({ ...s, photoRetentionDays: Number(e.target.value) })}
+          />
+        </Field>
+      </Card>
+
+      <Card className="space-y-4">
         <h3 className="font-semibold">Screen time defaults</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="Increment minutes">
@@ -243,6 +263,130 @@ export function ParentSettings() {
           </Button>
         </Tooltip>
       </div>
+
+      <DataAndDeletionCard familyName={familyQ.data?.name ?? ""} />
     </div>
+  );
+}
+
+function DataAndDeletionCard({ familyName }: { familyName: string }) {
+  const logout = useAuth((s) => s.logout);
+  const nav = useNavigate();
+  const [exporting, setExporting] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
+
+  async function downloadExport() {
+    setExporting(true);
+    setExportErr(null);
+    try {
+      const token = useAuth.getState().token;
+      const res = await fetch(`${API_URL}/family/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`Export failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `chorechamps-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setExportErr(e.message ?? "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-4 border-rose-200">
+      <h3 className="font-semibold">Your data</h3>
+      <p className="text-sm text-slate-600">
+        Export a full JSON copy of everything in your family, or permanently delete your account.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Tooltip label="Download a JSON file with every record in your family (excluding passwords + tokens).">
+          <Button variant="secondary" onClick={downloadExport} disabled={exporting}>
+            {exporting ? "Preparing…" : "Export data"}
+          </Button>
+        </Tooltip>
+        <Tooltip label="Permanently delete this family, all kids, tasks, rewards, and history. Cannot be undone.">
+          <Button variant="danger" onClick={() => setShowDelete(true)}>
+            Delete family…
+          </Button>
+        </Tooltip>
+      </div>
+      {exportErr && <div className="text-sm text-rose-600">{exportErr}</div>}
+
+      {showDelete && (
+        <DeleteFamilyModal
+          familyName={familyName}
+          onClose={() => setShowDelete(false)}
+          onDeleted={() => {
+            logout();
+            nav("/", { replace: true });
+          }}
+        />
+      )}
+    </Card>
+  );
+}
+
+function DeleteFamilyModal({
+  familyName,
+  onClose,
+  onDeleted,
+}: {
+  familyName: string;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const del = useMutation({
+    mutationFn: () => api("/family", { method: "DELETE", body: { confirmText } }),
+    onSuccess: onDeleted,
+    onError: (e: any) => setErr(e.message ?? "Delete failed"),
+  });
+
+  const ok = confirmText === familyName;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Delete this family?"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={() => del.mutate()} disabled={!ok || del.isPending}>
+            {del.isPending ? "Deleting…" : "Permanently delete"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-sm">
+        <p className="text-rose-700 font-semibold">This cannot be undone.</p>
+        <p>
+          All kids, tasks, completions, rewards, redemptions, ledger entries, challenges, notifications, and
+          invitations will be permanently deleted. Caregivers and co-parents will lose access immediately.
+        </p>
+        <Field label={`Type the family name to confirm: "${familyName}"`}>
+          <input
+            className={inputCls}
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={familyName}
+            autoFocus
+          />
+        </Field>
+        {err && <div className="text-rose-600">{err}</div>}
+      </div>
+    </Modal>
   );
 }

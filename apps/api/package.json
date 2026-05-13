@@ -11,6 +11,7 @@
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
     "backfill:challenges": "dotenv -e ../../.env -- tsx prisma/backfill-challenges.ts",
     "jobs:no-misses": "dotenv -e ../../.env -- tsx prisma/run-no-misses.ts",
+    "jobs:photo-purge": "dotenv -e ../../.env -- tsx prisma/run-photo-purge.ts",
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest",

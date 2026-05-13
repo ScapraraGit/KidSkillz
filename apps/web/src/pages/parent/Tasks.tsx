@@ -71,108 +71,112 @@ export function ParentTasks() {
         {(tasksQ.data?.tasks.length ?? 0) === 0 ? (
           <EmptyState title="No tasks yet" hint="Create your first chore." />
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="text-left p-3 font-medium">Title</th>
-                <th className="text-left p-3 font-medium">Type</th>
-                <th className="text-left p-3 font-medium align-top">
-                  <div className="flex flex-col gap-1">
-                    <span>Assigned</span>
-                    <select
-                      className="bg-white border border-slate-300 rounded-md text-xs px-1.5 py-0.5 font-normal text-slate-700"
-                      value={assignedFilter}
-                      onChange={(e) => setAssignedFilter(e.target.value as AssignedFilter)}
-                    >
-                      <option value="all">All</option>
-                      {childrenQ.data?.children.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </th>
-                <th className="text-right p-3 font-medium">Credits</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {visibleTasks.length === 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-slate-500 text-sm">
-                    No tasks match this filter.
-                    {assignedFilter !== "all" && (
-                      <>
-                        {" "}
-                        <button
-                          className="text-brand-700 font-medium underline"
-                          onClick={() => setAssignedFilter("all")}
-                        >
-                          Clear filter
-                        </button>
-                      </>
-                    )}
-                  </td>
+                  <th className="text-left p-3 font-medium">Title</th>
+                  <th className="text-left p-3 font-medium">Type</th>
+                  <th className="text-left p-3 font-medium align-top">
+                    <div className="flex flex-col gap-1">
+                      <span>Assigned</span>
+                      <select
+                        className="bg-white border border-slate-300 rounded-md text-xs px-1.5 py-0.5 font-normal text-slate-700"
+                        value={assignedFilter}
+                        onChange={(e) => setAssignedFilter(e.target.value as AssignedFilter)}
+                      >
+                        <option value="all">All</option>
+                        {childrenQ.data?.children.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </th>
+                  <th className="text-right p-3 font-medium">Credits</th>
+                  <th className="p-3"></th>
                 </tr>
-              )}
-              {visibleTasks.map((t) => {
-                const child = childrenQ.data?.children.find((c) => c.id === t.assignedToId);
-                return (
-                  <tr key={t.id} className={t.isActive ? "" : "opacity-50"}>
-                    <td className="p-3">
-                      <div className="font-medium">{t.title}</div>
-                      {t.category && <div className="text-xs text-slate-500">{t.category}</div>}
-                    </td>
-                    <td className="p-3">
-                      {t.kind === "ONE_TIME" ? (
-                        <Badge>One-time</Badge>
-                      ) : (
-                        <div className="flex gap-1 flex-wrap">
-                          <Badge color="brand">{t.recurrence?.frequency}</Badge>
-                          {t.recurrence?.daysOfWeek && (
-                            <span className="text-xs text-slate-500">
-                              {t.recurrence.daysOfWeek.map((d) => DOW[d]).join(", ")}
-                            </span>
-                          )}
-                        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visibleTasks.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-slate-500 text-sm">
+                      No tasks match this filter.
+                      {assignedFilter !== "all" && (
+                        <>
+                          {" "}
+                          <button
+                            className="text-brand-700 font-medium underline"
+                            onClick={() => setAssignedFilter("all")}
+                          >
+                            Clear filter
+                          </button>
+                        </>
                       )}
                     </td>
-                    <td className="p-3">{child?.name ?? <span className="text-slate-400">Unknown</span>}</td>
-                    <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
-                    <td className="p-3 text-right whitespace-nowrap">
-                      <Tooltip label="Edit task fields, schedule, proof requirement">
-                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
-                          Edit
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Create a copy of this task for every other kid">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm(`Copy "${t.title}" to all other kids?`)) duplicate.mutate(t.id);
-                          }}
-                          disabled={duplicate.isPending}
-                        >
-                          Copy to all kids
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Permanently delete this task (history preserved on ledger)">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => confirm("Delete?") && del.mutate(t.id)}
-                        >
-                          Delete
-                        </Button>
-                      </Tooltip>
-                    </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                )}
+                {visibleTasks.map((t) => {
+                  const child = childrenQ.data?.children.find((c) => c.id === t.assignedToId);
+                  return (
+                    <tr key={t.id} className={t.isActive ? "" : "opacity-50"}>
+                      <td className="p-3">
+                        <div className="font-medium">{t.title}</div>
+                        {t.category && <div className="text-xs text-slate-500">{t.category}</div>}
+                      </td>
+                      <td className="p-3">
+                        {t.kind === "ONE_TIME" ? (
+                          <Badge>One-time</Badge>
+                        ) : (
+                          <div className="flex gap-1 flex-wrap">
+                            <Badge color="brand">{t.recurrence?.frequency}</Badge>
+                            {t.recurrence?.daysOfWeek && (
+                              <span className="text-xs text-slate-500">
+                                {t.recurrence.daysOfWeek.map((d) => DOW[d]).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {child?.name ?? <span className="text-slate-400">Unknown</span>}
+                      </td>
+                      <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <Tooltip label="Edit task fields, schedule, proof requirement">
+                          <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+                            Edit
+                          </Button>
+                        </Tooltip>
+                        <Tooltip label="Create a copy of this task for every other kid">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Copy "${t.title}" to all other kids?`)) duplicate.mutate(t.id);
+                            }}
+                            disabled={duplicate.isPending}
+                          >
+                            Copy to all kids
+                          </Button>
+                        </Tooltip>
+                        <Tooltip label="Permanently delete this task (history preserved on ledger)">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirm("Delete?") && del.mutate(t.id)}
+                          >
+                            Delete
+                          </Button>
+                        </Tooltip>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 

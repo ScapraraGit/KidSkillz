@@ -45,7 +45,17 @@ export function FamilyMembers() {
   });
 
   const pending = (invitationsQ.data?.invitations ?? []).filter((i) => i.status === "PENDING");
-  const history = (invitationsQ.data?.invitations ?? []).filter((i) => i.status !== "PENDING").slice(0, 10);
+  // Recent history rolls off after 5 days. Cutoff measured against the most relevant
+  // timestamp per row (acceptedAt for ACCEPTED, expiresAt for EXPIRED, createdAt for REVOKED).
+  const HISTORY_WINDOW_MS = 5 * 24 * 3600_000;
+  const cutoff = Date.now() - HISTORY_WINDOW_MS;
+  const history = (invitationsQ.data?.invitations ?? [])
+    .filter((i) => i.status !== "PENDING")
+    .filter((i) => {
+      const ts = new Date(i.acceptedAt ?? i.expiresAt ?? i.createdAt).getTime();
+      return ts >= cutoff;
+    })
+    .slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -216,7 +226,10 @@ export function FamilyMembers() {
 
       {history.length > 0 && (
         <Card>
-          <h3 className="font-semibold mb-3">Recent history</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Recent history</h3>
+            <span className="text-xs text-slate-500">Last 5 days</span>
+          </div>
           <ul className="divide-y divide-slate-100">
             {history.map((inv) => (
               <li key={inv.id} className="py-2 flex items-center justify-between text-sm">

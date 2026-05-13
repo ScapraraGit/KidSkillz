@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { getFamily, getFamilySettings, updateSettings } from "../services/family.js";
+import { deleteFamily, exportFamily } from "../services/data-export.js";
+import { HttpError } from "../errors.js";
 import { prisma } from "../db.js";
 
 export const familyRouter = Router();
@@ -50,6 +52,7 @@ const settingsSchema = z.object({
       maxPerRedemptionMinutes: z.number().int().positive(),
     })
     .optional(),
+  photoRetentionDays: z.number().int().min(0).max(3650).optional(),
   timezone: z.string().optional(),
 });
 
@@ -58,4 +61,28 @@ familyRouter.patch("/settings", requireRole("PARENT"), async (req, res) => {
   await updateSettings(req.auth!.fid, patch);
   const settings = await getFamilySettings(req.auth!.fid);
   res.json({ settings });
+});
+
+familyRouter.get("/export", requireRole("PARENT"), async (req, res) => {
+  const data = await exportFamily(req.auth!.fid);
+  const filename = `chorechamps-export-${new Date().toISOString().slice(0, 10)}.json`;
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(JSON.stringify(data, null, 2));
+});
+
+const deleteSchema = z.object({ confirmText: z.string().min(1).max(200) });
+
+familyRouter.delete("/", requireRole("PARENT"), async (req, res) => {
+  const { confirmText } = deleteSchema.parse(req.body ?? {});
+  try {
+    const r = await deleteFamily({
+      familyId: req.auth!.fid,
+      parentUserId: req.auth!.sub,
+      confirmText,
+    });
+    res.json({ ok: true, deletedUsers: r.deletedUsers });
+  } catch (e) {
+    throw HttpError.badRequest((e as Error).message);
+  }
 });

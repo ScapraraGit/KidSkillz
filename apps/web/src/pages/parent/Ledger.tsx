@@ -45,40 +45,42 @@ export function ParentLedger() {
         {ledgerQ.data?.entries.length === 0 ? (
           <EmptyState title="No entries." />
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="text-left p-3">When</th>
-                <th className="text-left p-3">Kid</th>
-                <th className="text-left p-3">Reason</th>
-                <th className="text-left p-3">Kind</th>
-                <th className="text-right p-3">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {ledgerQ.data?.entries.map((e) => {
-                const child = childrenQ.data?.children.find((c) => c.id === e.childId);
-                return (
-                  <tr key={e.id}>
-                    <td className="p-3 text-xs text-slate-500 whitespace-nowrap">
-                      {new Date(e.createdAt).toLocaleString()}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <Avatar name={child?.name ?? "?"} color={child?.avatarColor} size={24} />
-                        <span>{child?.name ?? "—"}</span>
-                      </div>
-                    </td>
-                    <td className="p-3">{e.reason}</td>
-                    <td className="p-3 text-xs text-slate-500">{e.kind}</td>
-                    <td className="p-3 text-right">
-                      <CreditChip amount={e.amount} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="text-left p-3">When</th>
+                  <th className="text-left p-3">Kid</th>
+                  <th className="text-left p-3">Reason</th>
+                  <th className="text-left p-3">Kind</th>
+                  <th className="text-right p-3">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {ledgerQ.data?.entries.map((e) => {
+                  const child = childrenQ.data?.children.find((c) => c.id === e.childId);
+                  return (
+                    <tr key={e.id}>
+                      <td className="p-3 text-xs text-slate-500 whitespace-nowrap">
+                        {new Date(e.createdAt).toLocaleString()}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar name={child?.name ?? "?"} color={child?.avatarColor} size={24} />
+                          <span>{child?.name ?? "—"}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">{e.reason}</td>
+                      <td className="p-3 text-xs text-slate-500">{e.kind}</td>
+                      <td className="p-3 text-right">
+                        <CreditChip amount={e.amount} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
     </div>

@@ -18,6 +18,10 @@ import { ChildDashboard } from "./pages/child/Dashboard";
 import { ChildRewards } from "./pages/child/Rewards";
 import { ChildInitiative } from "./pages/child/Initiative";
 import { ChildActivity } from "./pages/child/Activity";
+import { TermsOfService, PrivacyPolicy } from "./pages/Legal";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
+import { VerifyEmail } from "./pages/VerifyEmail";
 
 export default function App() {
   const { token, user } = useAuth();
@@ -30,6 +34,11 @@ export default function App() {
         <Route path="/signup" element={<Login initialMode="SIGNUP" />} />
         <Route path="/invite/:token" element={<InviteAccept />} />
         <Route path="/caregiver/pin" element={<CaregiverPin />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -39,6 +48,9 @@ export default function App() {
     return (
       <Routes>
         <Route path="/login" element={<Navigate to="/parent" replace />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route element={<AppLayout role="PARENT" />}>
           <Route path="/parent" element={<ParentDashboard />} />
           <Route path="/parent/approvals" element={<ParentApprovals />} />
@@ -58,6 +70,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/me" replace />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route element={<AppLayout role="CHILD" />}>
         <Route path="/me" element={<ChildDashboard />} />
         <Route path="/me/rewards" element={<ChildRewards />} />

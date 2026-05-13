@@ -147,7 +147,7 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
       </Tooltip>
       <Tooltip label="Optional kudos message your kid will see in their activity feed.">
         <input
-          className={`${inputCls} w-44`}
+          className={`${inputCls} w-full sm:w-44`}
           type="text"
           maxLength={280}
           placeholder="Nice job! 💬 (optional)"

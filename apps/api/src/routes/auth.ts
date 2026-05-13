@@ -7,8 +7,14 @@ import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
 import { seedDefaultChallenges } from "../services/challenges.js";
+import {
+  consumePasswordReset,
+  consumeVerificationToken,
+  issuePasswordReset,
+  issueVerificationEmail,
+} from "../services/auth-tokens.js";
 import { avatarConfigSchema } from "./children.js";
-import { DEFAULT_FAMILY_SETTINGS, type AvatarConfig } from "@chorechamps/shared";
+import { CURRENT_TERMS_VERSION, DEFAULT_FAMILY_SETTINGS, type AvatarConfig } from "@chorechamps/shared";
 
 export const authRouter = Router();
 
@@ -17,10 +23,16 @@ const parentRegisterSchema = z.object({
   parentName: z.string().trim().min(1).max(80),
   email: z.string().email(),
   password: z.string().min(8).max(128),
+  acceptedTermsVersion: z.number().int().positive(),
 });
 
 authRouter.post("/parent/register", async (req, res) => {
-  const { familyName, parentName, email, password } = parentRegisterSchema.parse(req.body);
+  const { familyName, parentName, email, password, acceptedTermsVersion } = parentRegisterSchema.parse(
+    req.body,
+  );
+  if (acceptedTermsVersion < CURRENT_TERMS_VERSION) {
+    throw HttpError.badRequest("Please accept the latest Terms of Service", "TERMS_OUTDATED");
+  }
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw HttpError.badRequest("Email already in use");
   const passwordHash = await hashPassword(password);
@@ -39,8 +51,12 @@ authRouter.post("/parent/register", async (req, res) => {
       email,
       passwordHash,
       avatarColor: "#2563eb",
+      acceptedTermsVersion,
+      acceptedTermsAt: new Date(),
     },
   });
+  // Fire-and-forget verification email; failures don't block registration.
+  await issueVerificationEmail(user.id).catch((e) => console.error("[verify:send]", e));
   const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
   res.json({ token, user: serializeUser(user) });
 });
@@ -165,6 +181,57 @@ authRouter.patch("/me/avatar", requireAuth, async (req, res) => {
   res.json({ user: serializeUser(user) });
 });
 
+// --- Email verification + password reset ---
+
+const verifySchema = z.object({ token: z.string().min(10).max(512) });
+
+authRouter.post("/verify-email", async (req, res) => {
+  const { token } = verifySchema.parse(req.body);
+  await consumeVerificationToken(token);
+  res.json({ ok: true });
+});
+
+authRouter.post("/verify-email/resend", requireAuth, async (req, res) => {
+  await issueVerificationEmail(req.auth!.sub);
+  res.json({ ok: true });
+});
+
+const forgotSchema = z.object({ email: z.string().email() });
+
+authRouter.post("/forgot-password", async (req, res) => {
+  const { email } = forgotSchema.parse(req.body);
+  await issuePasswordReset(email);
+  // Always 200, no enumeration leak.
+  res.json({ ok: true });
+});
+
+const resetSchema = z.object({
+  token: z.string().min(10).max(512),
+  password: z.string().min(8).max(128),
+});
+
+authRouter.post("/reset-password", async (req, res) => {
+  const { token, password } = resetSchema.parse(req.body);
+  await consumePasswordReset(token, password);
+  res.json({ ok: true });
+});
+
+// --- Terms acceptance for existing accounts whose accepted version is stale ---
+
+const acceptTermsSchema = z.object({ version: z.number().int().positive() });
+
+authRouter.post("/accept-terms", requireAuth, async (req, res) => {
+  const { version } = acceptTermsSchema.parse(req.body);
+  if (version < CURRENT_TERMS_VERSION) {
+    throw HttpError.badRequest("Outdated terms version", "TERMS_OUTDATED");
+  }
+  const user = await prisma.user.update({
+    where: { id: req.auth!.sub },
+    data: { acceptedTermsVersion: version, acceptedTermsAt: new Date() },
+  });
+  res.json({ user: serializeUser(user) });
+});
+
 export function serializeUser(u: import("@prisma/client").User) {
   return {
     id: u.id,
@@ -176,5 +243,8 @@ export function serializeUser(u: import("@prisma/client").User) {
     avatarConfig: (u.avatarConfig as AvatarConfig | null) ?? null,
     onboardedAt: u.onboardedAt?.toISOString() ?? null,
     validUntil: u.validUntil?.toISOString() ?? null,
+    emailVerifiedAt: u.emailVerifiedAt?.toISOString() ?? null,
+    acceptedTermsVersion: u.acceptedTermsVersion ?? null,
+    acceptedTermsAt: u.acceptedTermsAt?.toISOString() ?? null,
   };
 }

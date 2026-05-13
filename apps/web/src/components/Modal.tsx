@@ -20,18 +20,18 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200"
+        className="w-full max-w-lg max-h-[92vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h3 className="font-semibold">{title}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Close">
             ✕
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto">{children}</div>
         {footer && (
-          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-2">
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-2 shrink-0 flex-wrap">
             {footer}
           </div>
         )}

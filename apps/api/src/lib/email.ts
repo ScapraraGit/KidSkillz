@@ -21,3 +21,13 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
     validUntil: params.validUntil?.toISOString() ?? null,
   });
 }
+
+export async function sendVerificationEmail(params: { to: string; verifyUrl: string }): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log("[email:verify]", { to: params.to, verifyUrl: params.verifyUrl });
+}
+
+export async function sendPasswordResetEmail(params: { to: string; resetUrl: string }): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log("[email:reset]", { to: params.to, resetUrl: params.resetUrl });
+}

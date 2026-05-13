@@ -56,6 +56,23 @@ completionsRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) =
   res.json({ completion: serializeCompletion(c) });
 });
 
+const bulkApproveSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(100) });
+
+completionsRouter.post("/bulk-approve", requireRole("PARENT"), async (req, res) => {
+  const { ids } = bulkApproveSchema.parse(req.body);
+  const results = await Promise.allSettled(
+    ids.map((id) => approveCompletion(req.auth!.fid, id, req.auth!.sub)),
+  );
+  const approved = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results
+    .map((r, i) => ({
+      id: ids[i],
+      reason: r.status === "rejected" ? String((r.reason as Error)?.message ?? r.reason) : null,
+    }))
+    .filter((f) => f.reason !== null);
+  res.json({ approved, failed });
+});
+
 completionsRouter.post("/:id/reject", requireRole("PARENT"), async (req, res) => {
   const { reason } = reviewSchema.parse(req.body ?? {});
   const c = await rejectCompletion(req.auth!.fid, req.params.id, req.auth!.sub, reason);

@@ -5,7 +5,7 @@ import { postLedger } from "./ledger.js";
 import { evaluateLevelUp } from "./levels.js";
 import { evaluateChallenges } from "./challenges.js";
 import { createNotification } from "./notifications.js";
-import { getFamilySettings } from "./family.js";
+import { getFamilySettings, isVacationActive } from "./family.js";
 import type { InitiativeKind } from "@prisma/client";
 
 export interface SubmitInitiativeInput {
@@ -21,6 +21,10 @@ export interface SubmitInitiativeInput {
 export async function submitInitiative(familyId: string, input: SubmitInitiativeInput) {
   await ensureChildInFamily(familyId, input.childId);
   await ensureChildCanEarn(input.childId);
+  const settings = await getFamilySettings(familyId);
+  if (isVacationActive(settings)) {
+    throw HttpError.forbidden("Vacation mode is on — enjoy the break!");
+  }
   if (input.suggestedCredits < 0) throw HttpError.badRequest("Suggested credits must be ≥ 0");
 
   return prisma.initiativeRequest.create({

@@ -31,3 +31,12 @@ export async function sendPasswordResetEmail(params: { to: string; resetUrl: str
   // eslint-disable-next-line no-console
   console.log("[email:reset]", { to: params.to, resetUrl: params.resetUrl });
 }
+
+export async function sendNotificationEmail(params: {
+  to: string;
+  title: string;
+  body?: string | null;
+}): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log("[email:notification]", { to: params.to, title: params.title, body: params.body ?? null });
+}

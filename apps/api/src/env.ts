@@ -20,4 +20,5 @@ export const env = {
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   NODE_ENV: process.env.NODE_ENV ?? "development",
   APP_URL: process.env.APP_URL ?? "http://localhost:5173",
+  SENTRY_DSN: process.env.SENTRY_DSN ?? "",
 };

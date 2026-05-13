@@ -7,7 +7,8 @@ import { getBalance } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
 
 export async function childStats(familyId: string, childId: string): Promise<ChildStatsDTO> {
-  const { timezone: tz } = await getFamilySettings(familyId);
+  const settings = await getFamilySettings(familyId);
+  const { timezone: tz, vacationMode } = settings;
   const balance = await getBalance(childId);
   const weekStart = startOfWeekInTz(tz);
 
@@ -48,12 +49,27 @@ export async function childStats(familyId: string, childId: string): Promise<Chi
     days.add(formatInTimeZone(e.createdAt, tz, "yyyy-MM-dd"));
   }
   const todayCal = parseISO(todayInTz(tz));
+  const vacStart = vacationMode?.startsAt
+    ? formatInTimeZone(new Date(vacationMode.startsAt), tz, "yyyy-MM-dd")
+    : null;
+  const vacEnd = vacationMode?.endsAt
+    ? formatInTimeZone(new Date(vacationMode.endsAt), tz, "yyyy-MM-dd")
+    : null;
+  function isVacationDay(d: string): boolean {
+    if (!vacationMode?.active && !vacEnd) return false;
+    if (!vacStart) return false;
+    if (d < vacStart) return false;
+    if (vacEnd && d > vacEnd) return false;
+    return true;
+  }
   let streak = 0;
   for (let i = 0; i < 60; i++) {
     const d = format(addDays(todayCal, -i), "yyyy-MM-dd");
     if (days.has(d)) streak++;
     else if (i === 0)
       continue; // grace for today not done yet
+    else if (isVacationDay(d))
+      continue; // vacation freezes streak
     else break;
   }
 

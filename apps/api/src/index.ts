@@ -1,3 +1,6 @@
+import { initSentry, Sentry } from "./lib/sentry.js";
+initSentry();
+
 import express from "express";
 import "express-async-errors";
 import cors from "cors";
@@ -77,6 +80,12 @@ app.use("/challenges", challengesRouter);
 app.use("/notifications", notificationsRouter);
 
 app.use((_req, res) => res.status(404).json({ error: "NOT_FOUND" }));
+
+// Sentry capture before the JSON error handler. When DSN is unset the SDK is a no-op.
+app.use((err: unknown, _req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  if (env.SENTRY_DSN) Sentry.captureException(err);
+  next(err);
+});
 app.use(errorHandler);
 
 const dbHost = (() => {

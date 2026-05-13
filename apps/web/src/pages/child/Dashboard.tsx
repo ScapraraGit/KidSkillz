@@ -24,6 +24,7 @@ import { PetHero } from "../../components/PetHero";
 import { ChallengeSection } from "../../components/ChallengeCard";
 import { StreakSaver } from "../../components/StreakSaver";
 import { SavingsGoal } from "../../components/SavingsGoal";
+import { VacationBanner } from "../../components/VacationBanner";
 import { ActiveTimerCard } from "../../components/ActiveTimerCard";
 import { useActiveTimer } from "../../hooks/useActiveTimer";
 import type {
@@ -119,6 +120,8 @@ export function ChildDashboard() {
   const d = dash.data;
   const level = levelQ.data ?? { level: 1, xp: 0, xpInLevel: 0, xpToNext: 50 };
   const isYounger = d.child.viewMode === "YOUNGER";
+  const vacation = settings?.vacationMode;
+  const onVacation = !!vacation?.active;
   const greeting = greet();
 
   return (
@@ -182,6 +185,8 @@ export function ChildDashboard() {
         <LevelCard level={level} />
       )}
 
+      {onVacation && <VacationBanner endsAt={vacation?.endsAt} note={vacation?.note} />}
+
       {timer.timer && (
         <ActiveTimerCard
           timer={timer.timer}
@@ -191,15 +196,17 @@ export function ChildDashboard() {
         />
       )}
 
-      <StreakSaver
-        timezone={settings?.timezone ?? "America/Phoenix"}
-        streakDays={d.stats.streakDays}
-        openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
-        completionsToday={
-          d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING")
-            .length
-        }
-      />
+      {!onVacation && (
+        <StreakSaver
+          timezone={settings?.timezone ?? "America/Phoenix"}
+          streakDays={d.stats.streakDays}
+          openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
+          completionsToday={
+            d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING")
+              .length
+          }
+        />
+      )}
 
       {d.child.savingsGoalRewardId && (
         <SavingsGoal
@@ -343,19 +350,25 @@ export function ChildDashboard() {
                       taskId={occ.task.id}
                       taskTitle={occ.task.title}
                       defaultMinutes={occ.task.defaultDurationMinutes ?? null}
-                      disabled={!!timer.timer}
+                      disabled={!!timer.timer || onVacation}
                       onStart={(durationMs) =>
                         timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs })
                       }
                     />
                     <Tooltip
                       label={
-                        d.child.earningPaused
-                          ? "Earning is paused — ask a parent"
-                          : "Submit this task for parent approval"
+                        onVacation
+                          ? "Vacation mode is on — enjoy the break!"
+                          : d.child.earningPaused
+                            ? "Earning is paused — ask a parent"
+                            : "Submit this task for parent approval"
                       }
                     >
-                      <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
+                      <Button
+                        size="sm"
+                        onClick={() => setCompleting(occ)}
+                        disabled={d.child.earningPaused || onVacation}
+                      >
                         Mark done
                       </Button>
                     </Tooltip>

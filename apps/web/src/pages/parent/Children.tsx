@@ -23,6 +23,7 @@ interface ChallengeRow {
 
 export function ParentChildren() {
   const qc = useQueryClient();
+  const nav = useNavigate();
   const childrenQ = useQuery({
     queryKey: ["children"],
     queryFn: () => api<{ children: ChildDTO[] }>("/children"),
@@ -69,6 +70,11 @@ export function ParentChildren() {
             </div>
             <KidGamificationStrip child={c} />
             <div className="flex flex-wrap gap-2">
+              <Tooltip label={`Create a new task assigned to ${c.name}`}>
+                <Button size="sm" onClick={() => nav(`/parent/tasks?childId=${c.id}&new=1`)}>
+                  Add task
+                </Button>
+              </Tooltip>
               <Tooltip label="Edit name, PIN, avatar, pause flags">
                 <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>
                   Edit

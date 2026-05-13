@@ -24,14 +24,14 @@ Effort: **S** = under 1d · **M** = 1–3d · **L** = >3d. Effort is rough.
 
 ## Tier 2 — Should-have before broader rollout
 
-- [ ] **Allowance / weekly auto-credit** — `Family.allowanceConfig` JSON (amount, dayOfWeek, enabled per kid), cron posts `LedgerKind.ALLOWANCE`. New enum value. **M**
-- [ ] **Vacation mode** — `Family.vacationMode { active, endsAt }`. Pauses earning, freezes streaks, hides streak-saver. Parent toggle. **S**
-- [ ] **Bulk approve in parent Approvals** — multi-select checkbox + "Approve selected" button. Reuse approve endpoint in loop or new `POST /completions/bulk-approve`. **S**
-- [ ] **Photo lightbox / proof viewer** — click thumbnail → modal with full image. Replace current `target="_blank"` link in `Approvals.tsx`. **S**
-- [ ] **Ledger search/filter** — date range, kind multi-select, kid filter on `/parent/ledger`. **S**
-- [ ] **Error tracking (Sentry)** — wire `@sentry/node` in `apps/api/src/index.ts` after errorHandler, `@sentry/react` in `apps/web/src/main.tsx`. DSN via env. **S**
-- [ ] **Email notifications mirror** — when `createNotification()` fires for kid with email OR for parent of kid, also send via Resend. Batched daily digest preferred. **M**
-- [ ] **Onboarding wizard hardening** — extend `OnboardingTour` to gate first-run: must create 1 kid + 1 task + 1 reward before reaching full dashboard. **S**
+- [ ] **Allowance / weekly auto-credit** — `Family.allowanceConfig` JSON (amount, dayOfWeek, enabled per kid), cron posts `LedgerKind.ALLOWANCE`. New enum value. **M** _(deferred per user)_
+- [x] **Vacation mode** — `Family.vacationMode { active, endsAt }`. Pauses earning, freezes streaks, hides streak-saver. Parent toggle. **S**
+- [x] **Bulk approve in parent Approvals** — multi-select checkbox + "Approve selected" button. Reuse approve endpoint in loop or new `POST /completions/bulk-approve`. **S**
+- [x] **Photo lightbox / proof viewer** — click thumbnail → modal with full image. Replace current `target="_blank"` link in `Approvals.tsx`. **S**
+- [x] **Ledger search/filter** — date range, kind multi-select, kid filter on `/parent/ledger`. **S**
+- [x] **Error tracking (Sentry)** — wire `@sentry/node` in `apps/api/src/index.ts` after errorHandler, `@sentry/react` in `apps/web/src/main.tsx`. DSN via env. **S**
+- [x] **Email notifications mirror** — when `createNotification()` fires for kid with email OR for parent of kid, also send via Resend. Batched daily digest preferred. **M**
+- [x] **Onboarding wizard hardening** — extend `OnboardingTour` to gate first-run: must create 1 kid + 1 task + 1 reward before reaching full dashboard. **S**
 
 ## Tier 3 — Feature gaps users will ask for fast
 

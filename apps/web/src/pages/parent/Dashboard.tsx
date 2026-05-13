@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Avatar, Badge, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
+import { SetupChecklist } from "../../components/SetupChecklist";
 import type { ParentDashboardDTO } from "@chorechamps/shared";
 
 export function ParentDashboard() {
@@ -27,36 +28,7 @@ export function ParentDashboard() {
         }
       />
 
-      {data.children.length === 0 && (
-        <Card id="tile-children" className="text-center">
-          <div className="text-4xl mb-2">👋</div>
-          <h3 className="font-semibold text-lg">Welcome to ChoreChamps!</h3>
-          <p className="text-sm text-slate-600 max-w-md mx-auto mt-1">
-            Get started by adding your first kid. You'll set their name, PIN, and avatar — then you can create
-            tasks and rewards for them.
-          </p>
-          <div className="flex justify-center gap-2 mt-4 flex-wrap">
-            <Link
-              to="/parent/children"
-              className="px-4 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700"
-            >
-              Add a kid →
-            </Link>
-            <Link
-              to="/parent/tasks"
-              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200"
-            >
-              Create tasks
-            </Link>
-            <Link
-              to="/parent/rewards"
-              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200"
-            >
-              Create rewards
-            </Link>
-          </div>
-        </Card>
-      )}
+      <SetupChecklist />
 
       <section
         id={data.children.length === 0 ? undefined : "tile-children"}

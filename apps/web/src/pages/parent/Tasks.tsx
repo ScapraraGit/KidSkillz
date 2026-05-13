@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
@@ -23,6 +23,18 @@ export function ParentTasks() {
     queryFn: () => api<{ children: ChildDTO[] }>("/children"),
   });
   const [editing, setEditing] = useState<TaskDTO | "new" | null>(null);
+
+  // Deep-link from elsewhere: ?new=1 auto-opens the New Task modal, prefilled with
+  // the active childId filter as the assignee. Strip the param after consuming so
+  // navigating back doesn't reopen the modal.
+  useEffect(() => {
+    if (params.get("new") === "1") {
+      setEditing("new");
+      const next = new URLSearchParams(params);
+      next.delete("new");
+      setParams(next, { replace: true });
+    }
+  }, [params, setParams]);
 
   const del = useMutation({
     mutationFn: (id: string) => api(`/tasks/${id}`, { method: "DELETE" }),
@@ -75,8 +87,6 @@ export function ParentTasks() {
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <th className="text-left p-3 font-medium">Title</th>
-                  <th className="text-left p-3 font-medium">Type</th>
                   <th className="text-left p-3 font-medium align-top">
                     <div className="flex flex-col gap-1">
                       <span>Assigned</span>
@@ -94,6 +104,8 @@ export function ParentTasks() {
                       </select>
                     </div>
                   </th>
+                  <th className="text-left p-3 font-medium">Title</th>
+                  <th className="text-left p-3 font-medium">Type</th>
                   <th className="text-right p-3 font-medium">Credits</th>
                   <th className="p-3"></th>
                 </tr>
@@ -121,6 +133,9 @@ export function ParentTasks() {
                   const child = childrenQ.data?.children.find((c) => c.id === t.assignedToId);
                   return (
                     <tr key={t.id} className={t.isActive ? "" : "opacity-50"}>
+                      <td className="p-3 whitespace-nowrap font-medium">
+                        {child?.name ?? <span className="text-slate-400">Unknown</span>}
+                      </td>
                       <td className="p-3">
                         <div className="font-medium">{t.title}</div>
                         {t.category && <div className="text-xs text-slate-500">{t.category}</div>}
@@ -138,9 +153,6 @@ export function ParentTasks() {
                             )}
                           </div>
                         )}
-                      </td>
-                      <td className="p-3">
-                        {child?.name ?? <span className="text-slate-400">Unknown</span>}
                       </td>
                       <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
                       <td className="p-3 text-right whitespace-nowrap">

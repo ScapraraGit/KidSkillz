@@ -1,6 +1,6 @@
 import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
-import { getFamilySettings } from "./family.js";
+import { getFamilySettings, isVacationActive } from "./family.js";
 import { ensureChildCanEarn, ensureChildInFamily } from "./children.js";
 import { postLedger } from "./ledger.js";
 import { evaluateLevelUp } from "./levels.js";
@@ -39,6 +39,10 @@ export interface SubmitCompletionInput {
 export async function submitCompletion(familyId: string, input: SubmitCompletionInput) {
   const child = await ensureChildInFamily(familyId, input.childId);
   await ensureChildCanEarn(child.id);
+  const settings = await getFamilySettings(familyId);
+  if (isVacationActive(settings)) {
+    throw HttpError.forbidden("Vacation mode is on — enjoy the break!");
+  }
 
   const task = await prisma.task.findFirst({ where: { id: input.taskId, familyId, isActive: true } });
   if (!task) throw HttpError.notFound("Task not found");

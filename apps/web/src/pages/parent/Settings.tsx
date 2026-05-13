@@ -210,6 +210,82 @@ export function ParentSettings() {
       </Card>
 
       <Card className="space-y-4">
+        <h3 className="font-semibold">Email notifications</h3>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={s.emailNotifications ?? false}
+            onChange={(e) => setS({ ...s, emailNotifications: e.target.checked })}
+          />
+          Mirror in-app notifications to email for any user with an email on file
+        </label>
+        <p className="text-xs text-slate-500">
+          Kids without an email never receive emails. Off by default to avoid inbox flood.
+        </p>
+      </Card>
+
+      <Card className="space-y-4">
+        <h3 className="font-semibold">Vacation mode</h3>
+        <p className="text-sm text-slate-500">
+          Pauses earning family-wide and freezes streak loss. Toggle on for trips so kids don't get penalized
+          for missed days. Auto-deactivates after the end date.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={s.vacationMode?.active ?? false}
+            onChange={(e) =>
+              setS({
+                ...s,
+                vacationMode: {
+                  ...(s.vacationMode ?? {}),
+                  active: e.target.checked,
+                },
+              })
+            }
+          />
+          On vacation
+        </label>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Ends on (optional)" hint="Auto-clears 'on vacation' once this date passes.">
+            <input
+              className={inputCls}
+              type="date"
+              value={s.vacationMode?.endsAt ? new Date(s.vacationMode.endsAt).toISOString().slice(0, 10) : ""}
+              onChange={(e) =>
+                setS({
+                  ...s,
+                  vacationMode: {
+                    ...(s.vacationMode ?? { active: false }),
+                    active: s.vacationMode?.active ?? false,
+                    endsAt: e.target.value ? new Date(e.target.value + "T23:59:59").toISOString() : null,
+                  },
+                })
+              }
+            />
+          </Field>
+          <Field label="Note for kids (optional)">
+            <input
+              className={inputCls}
+              maxLength={200}
+              placeholder="e.g. Beach week — relax!"
+              value={s.vacationMode?.note ?? ""}
+              onChange={(e) =>
+                setS({
+                  ...s,
+                  vacationMode: {
+                    ...(s.vacationMode ?? { active: false }),
+                    active: s.vacationMode?.active ?? false,
+                    note: e.target.value || null,
+                  },
+                })
+              }
+            />
+          </Field>
+        </div>
+      </Card>
+
+      <Card className="space-y-4">
         <h3 className="font-semibold">Photo proof retention</h3>
         <p className="text-sm text-slate-500">
           Photos kids submit as proof are automatically deleted after this many days. Set to 0 to keep them

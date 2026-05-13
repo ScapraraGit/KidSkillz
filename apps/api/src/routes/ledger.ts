@@ -2,6 +2,18 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
+import type { LedgerKind, Prisma } from "@prisma/client";
+
+const ALL_KINDS: LedgerKind[] = [
+  "TASK",
+  "INITIATIVE",
+  "INITIATIVE_BONUS",
+  "REDEMPTION",
+  "ADJUSTMENT_POSITIVE",
+  "ADJUSTMENT_NEGATIVE",
+  "LEVEL_UP",
+  "CHALLENGE_BONUS",
+];
 
 export const ledgerRouter = Router();
 
@@ -13,9 +25,29 @@ ledgerRouter.get("/", async (req, res) => {
   if (req.auth!.role === "CHILD" && req.query.childId && req.query.childId !== req.auth!.sub) {
     throw HttpError.forbidden();
   }
-  const where = {
+
+  // kind = comma-separated subset; unknown values dropped silently.
+  const kindRaw = (req.query.kind as string | undefined) ?? "";
+  const kinds = kindRaw
+    .split(",")
+    .map((k) => k.trim().toUpperCase())
+    .filter((k): k is LedgerKind => (ALL_KINDS as string[]).includes(k));
+
+  const fromRaw = req.query.from as string | undefined;
+  const toRaw = req.query.to as string | undefined;
+  const dateFilter: Prisma.DateTimeFilter = {};
+  if (fromRaw && /^\d{4}-\d{2}-\d{2}$/.test(fromRaw)) {
+    dateFilter.gte = new Date(`${fromRaw}T00:00:00.000Z`);
+  }
+  if (toRaw && /^\d{4}-\d{2}-\d{2}$/.test(toRaw)) {
+    dateFilter.lt = new Date(`${toRaw}T23:59:59.999Z`);
+  }
+
+  const where: Prisma.LedgerEntryWhereInput = {
     familyId: req.auth!.fid,
     ...(childId && { childId }),
+    ...(kinds.length > 0 && { kind: { in: kinds } }),
+    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
   };
   const entries = await prisma.ledgerEntry.findMany({
     where,

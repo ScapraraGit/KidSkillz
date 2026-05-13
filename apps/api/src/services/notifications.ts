@@ -1,6 +1,8 @@
 import { prisma } from "../db.js";
 import type { NotificationKind, Prisma } from "@prisma/client";
 import type { NotificationDTO } from "@chorechamps/shared";
+import { sendNotificationEmail } from "../lib/email.js";
+import { getFamilySettings } from "./family.js";
 
 interface CreateOpts {
   familyId: string;
@@ -14,7 +16,7 @@ interface CreateOpts {
 
 export async function createNotification(opts: CreateOpts) {
   const client = opts.tx ?? prisma;
-  return client.notification.create({
+  const created = await client.notification.create({
     data: {
       familyId: opts.familyId,
       userId: opts.userId,
@@ -24,6 +26,29 @@ export async function createNotification(opts: CreateOpts) {
       payload: opts.payload as object | undefined,
     },
   });
+
+  // Mirror to email when family setting is on and recipient has an email on file.
+  // Errors are swallowed — the in-app notification is already persisted.
+  try {
+    const settings = await getFamilySettings(opts.familyId);
+    if (settings.emailNotifications) {
+      const recipient = await prisma.user.findUnique({
+        where: { id: opts.userId },
+        select: { email: true },
+      });
+      if (recipient?.email) {
+        await sendNotificationEmail({
+          to: recipient.email,
+          title: opts.title,
+          body: opts.body ?? null,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[notifications:email]", e);
+  }
+
+  return created;
 }
 
 export async function listForUser(

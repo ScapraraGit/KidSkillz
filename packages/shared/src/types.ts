@@ -59,6 +59,15 @@ export interface FamilySettings {
   };
   /** Days to retain proof photos before auto-purge. Set to 0 to keep forever. */
   photoRetentionDays: number;
+  /** Mirror in-app notifications to email for any user with an email on file. Default off. */
+  emailNotifications?: boolean;
+  /** When active, blocks new completion submissions and freezes streak loss family-wide. */
+  vacationMode?: {
+    active: boolean;
+    startsAt?: string | null; // ISO; set by server when active flips on
+    endsAt?: string | null; // ISO; once past, server auto-deactivates
+    note?: string | null;
+  };
   timezone: string; // IANA, e.g. "America/Phoenix"
 }
 
@@ -83,6 +92,8 @@ export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
     maxPerRedemptionMinutes: 60,
   },
   photoRetentionDays: 90,
+  emailNotifications: false,
+  vacationMode: { active: false, startsAt: null, endsAt: null, note: null },
   timezone: "America/Phoenix",
 };
 

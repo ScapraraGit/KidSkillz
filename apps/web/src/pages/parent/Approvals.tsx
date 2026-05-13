@@ -13,6 +13,7 @@ import {
   inputCls,
 } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
+import { PhotoLightbox } from "../../components/PhotoLightbox";
 import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechamps/shared";
 
 export function ParentApprovals() {
@@ -20,6 +21,34 @@ export function ParentApprovals() {
   const completionsQ = useQuery({
     queryKey: ["completions", "PENDING"],
     queryFn: () => api<{ completions: TaskCompletionDTO[] }>("/completions?status=PENDING"),
+  });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const bulk = useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ approved: number; failed: { id: string; reason: string }[] }>("/completions/bulk-approve", {
+        body: { ids },
+      }),
+    onSuccess: (r) => {
+      setSelected(new Set());
+      if (r.failed.length > 0) {
+        alert(
+          `Approved ${r.approved}. Failed ${r.failed.length}:\n${r.failed.map((f) => f.reason).join("\n")}`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["completions"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["ledger"] });
+    },
   });
   const initiativeQ = useQuery({
     queryKey: ["initiative", "PENDING"],
@@ -43,13 +72,36 @@ export function ParentApprovals() {
       <PageHeader title="Approvals" subtitle="Review what your kids submitted." />
 
       <Card>
-        <h3 className="font-semibold mb-3">Task completions</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Task completions</h3>
+          {(completionsQ.data?.completions.length ?? 0) > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-500">{selected.size} selected</span>
+              <Tooltip label="Approve all selected at once (no override, no kudos).">
+                <Button
+                  variant="success"
+                  size="sm"
+                  disabled={selected.size === 0 || bulk.isPending}
+                  onClick={() => bulk.mutate(Array.from(selected))}
+                >
+                  {bulk.isPending ? "Approving…" : `Approve ${selected.size || ""}`}
+                </Button>
+              </Tooltip>
+            </div>
+          )}
+        </div>
         {completionsQ.data?.completions.length === 0 ? (
           <EmptyState title="No completions waiting." />
         ) : (
           <ul className="divide-y divide-slate-100">
             {completionsQ.data?.completions.map((c) => (
-              <CompletionRow key={c.id} completion={c} onChange={refresh} />
+              <CompletionRow
+                key={c.id}
+                completion={c}
+                selected={selected.has(c.id)}
+                onToggleSelect={() => toggleSelect(c.id)}
+                onChange={refresh}
+              />
             ))}
           </ul>
         )}
@@ -84,7 +136,17 @@ export function ParentApprovals() {
   );
 }
 
-function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO; onChange: () => void }) {
+function CompletionRow({
+  completion,
+  selected,
+  onToggleSelect,
+  onChange,
+}: {
+  completion: TaskCompletionDTO;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onChange: () => void;
+}) {
   const [override, setOverride] = useState<string>("");
   const [kudos, setKudos] = useState<string>("");
   const approve = useMutation({
@@ -115,6 +177,15 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
 
   return (
     <li className="py-3 flex flex-wrap items-center gap-3">
+      <Tooltip label="Select for bulk approve">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          aria-label={`Select ${completion.child!.name}'s ${completion.task!.title}`}
+          className="shrink-0"
+        />
+      </Tooltip>
       <Avatar name={completion.child!.name} color={completion.child!.avatarColor} size={32} />
       <div className="flex-1 min-w-[200px]">
         <div className="text-sm flex items-center gap-2 flex-wrap">
@@ -122,11 +193,7 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
           {tierBadge}
         </div>
         {completion.notes && <div className="text-xs text-slate-500 italic">"{completion.notes}"</div>}
-        {photoUrl && (
-          <a className="text-xs text-brand-700 underline" href={photoUrl} target="_blank" rel="noreferrer">
-            View photo
-          </a>
-        )}
+        {photoUrl && <PhotoLightbox src={photoUrl} alt={`Proof for ${completion.task!.title}`} thumb />}
         {isReduced && (
           <div className="text-xs text-slate-500 mt-1">
             Suggested award: <strong>{suggested!.credits}</strong> (full: {fullCredit}). Override below to

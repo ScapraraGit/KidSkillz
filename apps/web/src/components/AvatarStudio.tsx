@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Button } from "./ui";
 import { KidAvatar } from "./KidAvatar";
+import { PETS } from "../lib/pets";
 
 // Curated DiceBear "avataaars" option pools — keeping the choices kid-friendly.
 const TOPS = [
@@ -67,6 +68,7 @@ const TABS: Tab[] = [
   { key: "clothing", label: "Outfit", emoji: "👕" },
   { key: "clothesColor", label: "Shirt color", emoji: "🎨" },
   { key: "background", label: "Background", emoji: "🌈" },
+  { key: "pet", label: "Pet", emoji: "🐾" },
 ];
 
 function pickOne<T>(arr: readonly T[]): T {
@@ -332,9 +334,49 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
           onChange={onChange}
         />
       );
+    case "pet":
+      return <PetPicker config={config} onChange={onChange} />;
     default:
       return null;
   }
+}
+
+function PetPicker({ config, onChange }: { config: AvatarConfig; onChange: (next: AvatarConfig) => void }) {
+  const current = config.pet;
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+      <button
+        onClick={() => {
+          const next: AvatarConfig = { ...config };
+          delete next.pet;
+          onChange(next);
+        }}
+        className={
+          "rounded-xl p-3 flex flex-col items-center gap-1 border-2 transition " +
+          (!current ? "border-brand-500 bg-brand-50" : "border-transparent hover:bg-slate-100")
+        }
+      >
+        <span className="text-3xl">🚫</span>
+        <span className="text-[10px] text-slate-500">None</span>
+      </button>
+      {PETS.map((p) => {
+        const selected = current === p.id;
+        return (
+          <button
+            key={p.id}
+            onClick={() => onChange({ ...config, pet: p.id })}
+            className={
+              "rounded-xl p-3 flex flex-col items-center gap-1 border-2 transition " +
+              (selected ? "border-brand-500 bg-brand-50" : "border-transparent hover:bg-slate-100")
+            }
+          >
+            <span className="text-3xl">{p.stages[2]}</span>
+            <span className="text-[10px] text-slate-500">{p.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function PreviewPicker({

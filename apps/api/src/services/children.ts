@@ -4,6 +4,7 @@ import { hashPassword } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { getBalance } from "./ledger.js";
 import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
+import { ChildViewMode } from "@chorechamps/shared";
 
 export async function listChildren(familyId: string): Promise<ChildDTO[]> {
   const kids = await prisma.user.findMany({
@@ -22,6 +23,9 @@ export async function listChildren(familyId: string): Promise<ChildDTO[]> {
       redemptionPaused: k.childProfile?.redemptionPaused ?? false,
       earningPaused: k.childProfile?.earningPaused ?? false,
       proofRequirementOverride: k.childProfile?.proofRequirementOverride ?? null,
+      soundEnabled: k.childProfile?.soundEnabled ?? false,
+      viewMode: (k.childProfile?.viewMode ?? ChildViewMode.YOUNGER) as ChildDTO["viewMode"],
+      savingsGoalRewardId: k.childProfile?.savingsGoalRewardId ?? null,
       balance: await getBalance(k.id),
     })),
   );
@@ -42,6 +46,9 @@ export async function getChild(familyId: string, childId: string): Promise<Child
     redemptionPaused: k.childProfile?.redemptionPaused ?? false,
     earningPaused: k.childProfile?.earningPaused ?? false,
     proofRequirementOverride: k.childProfile?.proofRequirementOverride ?? null,
+    soundEnabled: k.childProfile?.soundEnabled ?? false,
+    viewMode: (k.childProfile?.viewMode ?? ChildViewMode.YOUNGER) as ChildDTO["viewMode"],
+    savingsGoalRewardId: k.childProfile?.savingsGoalRewardId ?? null,
     balance: await getBalance(k.id),
   };
 }
@@ -77,6 +84,9 @@ export interface UpdateChildInput {
   redemptionPaused?: boolean;
   earningPaused?: boolean;
   proofRequirementOverride?: ChildDTO["proofRequirementOverride"];
+  soundEnabled?: boolean;
+  viewMode?: ChildDTO["viewMode"];
+  savingsGoalRewardId?: string | null;
 }
 
 export async function updateChild(familyId: string, childId: string, input: UpdateChildInput) {
@@ -97,6 +107,9 @@ export async function updateChild(familyId: string, childId: string, input: Upda
           ...(input.proofRequirementOverride !== undefined && {
             proofRequirementOverride: input.proofRequirementOverride,
           }),
+          ...(input.soundEnabled !== undefined && { soundEnabled: input.soundEnabled }),
+          ...(input.viewMode !== undefined && { viewMode: input.viewMode }),
+          ...(input.savingsGoalRewardId !== undefined && { savingsGoalRewardId: input.savingsGoalRewardId }),
         },
       },
     },

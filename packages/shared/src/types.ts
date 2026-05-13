@@ -1,10 +1,14 @@
 import type {
   ApprovalStatus,
+  ChallengeKind,
+  ChallengeWindow,
   ChildAuthMode,
+  ChildViewMode,
   InitiativeKind,
   InvitationKind,
   InvitationStatus,
   LedgerKind,
+  NotificationKind,
   ProofRequirement,
   RecurrenceFrequency,
   RewardType,
@@ -119,6 +123,8 @@ export interface AvatarConfig {
   mouth?: string[];
   skinColor?: string[];
   backgroundColor?: string[];
+  /** Companion pet identifier (e.g. "dragon"). Rendered next to avatar; evolves with level. */
+  pet?: string;
 }
 
 export interface AuthUserDTO {
@@ -148,6 +154,9 @@ export interface ChildDTO {
   redemptionPaused: boolean;
   earningPaused: boolean;
   proofRequirementOverride?: ProofRequirement | null;
+  soundEnabled: boolean;
+  viewMode: ChildViewMode;
+  savingsGoalRewardId?: string | null;
   balance: number;
 }
 
@@ -195,6 +204,7 @@ export interface TaskCompletionDTO {
   reviewedAt?: string | null;
   reviewedById?: string | null;
   creditAwarded?: number | null;
+  parentNote?: string | null;
   suggestedAward?: SuggestedAwardDTO | null;
   task?: TaskDTO;
   child?: { id: string; name: string; avatarColor: string };
@@ -259,6 +269,8 @@ export interface LedgerEntryDTO {
   sourceId?: string | null;
   createdById?: string | null;
   createdAt: string;
+  /** Optional kudos message attached at approval time (TASK entries only). */
+  parentNote?: string | null;
 }
 
 export interface ChildStatsDTO {
@@ -287,4 +299,49 @@ export interface ChildDashboardDTO {
   recentLedger: LedgerEntryDTO[];
   pendingCompletionCount: number;
   pendingRedemptionCount: number;
+}
+
+export interface ChallengeDTO {
+  id: string;
+  familyId: string;
+  kind: ChallengeKind;
+  title: string;
+  target: number;
+  window: ChallengeWindow;
+  rewardCredits: number;
+  isActive: boolean;
+  startsAt: string;
+  endsAt?: string | null;
+}
+
+/**
+ * periodKey format: "YYYY-MM-DD" for DAY window, "YYYY-Www" (ISO week) for WEEK window.
+ */
+export interface ChallengeProgressDTO {
+  id: string;
+  challengeId: string;
+  childId: string;
+  periodKey: string;
+  value: number;
+  completedAt?: string | null;
+  challenge?: ChallengeDTO;
+}
+
+export const CHALLENGE_PERIOD_KEY_PATTERN = /^(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2})$/;
+
+export interface LevelDTO {
+  level: number;
+  xp: number;          // lifetime positive ledger sum
+  xpInLevel: number;   // xp above current level threshold
+  xpToNext: number;    // xp needed to reach next level from current threshold
+}
+
+export interface NotificationDTO {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body?: string | null;
+  payload?: Record<string, unknown> | null;
+  readAt?: string | null;
+  createdAt: string;
 }

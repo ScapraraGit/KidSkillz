@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyState, Field, PageHeader, ProgressBar, inputC
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
+import { celebrate as fireCelebrate } from "../../lib/celebrate";
 import type { ChildDTO, RewardDTO } from "@chorechamps/shared";
 
 export function ChildRewards() {
@@ -18,6 +19,14 @@ export function ChildRewards() {
   const rewardsQ = useQuery({ queryKey: ["rewards"], queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards") });
   const [requesting, setRequesting] = useState<RewardDTO | null>(null);
   const qc = useQueryClient();
+  const setGoal = useMutation({
+    mutationFn: (rewardId: string | null) =>
+      api("/children/preferences", { method: "PATCH", body: { savingsGoalRewardId: rewardId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["children"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
 
   if (!me || !rewardsQ.data) return <div>Loading…</div>;
 
@@ -82,6 +91,22 @@ export function ChildRewards() {
                   {affordable ? "Redeem" : "Keep saving"}
                 </Button>
               </Tooltip>
+              {(() => {
+                const isGoal = me.savingsGoalRewardId === r.id;
+                return (
+                  <Tooltip label={isGoal ? "Stop saving for this" : "Pin this as your savings goal — dashboard shows progress."}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2"
+                      disabled={setGoal.isPending}
+                      onClick={() => setGoal.mutate(isGoal ? null : r.id)}
+                    >
+                      {isGoal ? "★ Saving for this — unpin" : "☆ Set as savings goal"}
+                    </Button>
+                  </Tooltip>
+                );
+              })()}
             </Card>
           );
         })}
@@ -94,6 +119,7 @@ export function ChildRewards() {
           onClose={() => setRequesting(null)}
           onDone={() => {
             setRequesting(null);
+            fireCelebrate("redeem", { sound: me.soundEnabled });
             qc.invalidateQueries({ queryKey: ["dashboard"] });
             qc.invalidateQueries({ queryKey: ["children"] });
             qc.invalidateQueries({ queryKey: ["redemptions"] });

@@ -7,6 +7,8 @@ import { KidAvatar } from "./KidAvatar";
 import { AvatarStudio } from "./AvatarStudio";
 import { OnboardingTour } from "./OnboardingTour";
 import { Tooltip } from "./Tooltip";
+import { SoundToggle } from "./SoundToggle";
+import { NotificationBell } from "./NotificationBell";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
 import type { MeResponseDTO } from "@chorechamps/shared";
@@ -24,6 +26,7 @@ const parentLinks: NavLinkDef[] = [
   { to: "/parent/approvals", label: "Approvals", tip: "Review pending chores and redemptions" },
   { to: "/parent/tasks", label: "Tasks", id: "nav-tasks", tip: "Create and manage chore templates" },
   { to: "/parent/rewards", label: "Rewards", id: "nav-rewards", tip: "Manage the reward catalog" },
+  { to: "/parent/challenges", label: "Challenges", tip: "Daily and weekly bonus missions" },
   { to: "/parent/children", label: "Kids", tip: "Add kids and edit per-child settings" },
   { to: "/parent/ledger", label: "Ledger", tip: "Full credit history (append-only)" },
   { to: "/parent/members", label: "Members", tip: "Invite parents and caregivers" },
@@ -119,6 +122,8 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
+            {role === "CHILD" && <SoundToggle />}
             {user && (
               <Tooltip label="Edit your avatar" side="bottom">
                 <button

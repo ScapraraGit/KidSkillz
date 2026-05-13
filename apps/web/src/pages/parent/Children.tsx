@@ -7,7 +7,10 @@ import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
-import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
+import { getPet, petStageForLevel, PET_STAGE_NAMES } from "../../lib/pets";
+import type { AvatarConfig, ChallengeDTO, ChallengeProgressDTO, ChildDTO, LevelDTO } from "@chorechamps/shared";
+
+interface ChallengeRow { challenge: ChallengeDTO; progress: ChallengeProgressDTO | null }
 
 export function ParentChildren() {
   const qc = useQueryClient();
@@ -52,6 +55,7 @@ export function ParentChildren() {
                 <div className="text-xs text-slate-500">credits</div>
               </div>
             </div>
+            <KidGamificationStrip child={c} />
             <div className="flex flex-wrap gap-2">
               <Tooltip label="Edit name, PIN, avatar, pause flags">
                 <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>Edit</Button>
@@ -93,6 +97,48 @@ export function ParentChildren() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function KidGamificationStrip({ child }: { child: ChildDTO }) {
+  const levelQ = useQuery({
+    queryKey: ["children", child.id, "level"],
+    queryFn: () => api<{ level: LevelDTO }>(`/children/${child.id}/level`),
+    select: (r) => r.level,
+    staleTime: 30_000,
+  });
+  const challengesQ = useQuery({
+    queryKey: ["challenges", "child", child.id],
+    queryFn: () => api<{ challenges: ChallengeRow[] }>(`/challenges/child/${child.id}`),
+    select: (r) => r.challenges,
+    staleTime: 30_000,
+  });
+
+  const level = levelQ.data;
+  const challenges = challengesQ.data ?? [];
+  const completed = challenges.filter((r) => r.progress?.completedAt).length;
+  const pet = getPet(child.avatarConfig?.pet);
+  const stage = level ? petStageForLevel(level.level) : 0;
+  const petGlyph = pet.stages[stage];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <Tooltip label={`XP ${level?.xp ?? 0} · ${level?.xpInLevel ?? 0}/${level?.xpToNext ?? 0} to next`}>
+        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 font-semibold px-2 py-1">
+          ⭐ Lvl {level?.level ?? "—"}
+        </span>
+      </Tooltip>
+      <Tooltip label={`Pet: ${pet.label} (${PET_STAGE_NAMES[stage]})`}>
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-1">
+          {petGlyph} {pet.label}
+        </span>
+      </Tooltip>
+      <Tooltip label={`${completed}/${challenges.length} active challenges completed this period`}>
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-1">
+          🎯 {completed}/{challenges.length}
+        </span>
+      </Tooltip>
     </div>
   );
 }

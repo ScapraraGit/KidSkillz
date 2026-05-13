@@ -21,7 +21,12 @@ export function ChildActivity() {
               <li key={e.id} className="p-3 flex items-center gap-3 text-sm">
                 <div className="flex-1">
                   <div className="font-medium text-slate-800">{e.reason}</div>
-                  <div className="text-xs text-slate-500">
+                  {e.parentNote && (
+                    <div className="mt-1 inline-flex items-center gap-1 text-xs text-brand-700 bg-brand-50 rounded-full px-2 py-0.5">
+                      💬 {e.parentNote}
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-500 mt-0.5">
                     {new Date(e.createdAt).toLocaleString()} · {e.kind.replace(/_/g, " ").toLowerCase()}
                   </div>
                 </div>

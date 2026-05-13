@@ -22,6 +22,20 @@ ledgerRouter.get("/", async (req, res) => {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+
+  // Hydrate parentNote for TASK entries (kudos surfaces in kid activity feed).
+  const taskSourceIds = entries
+    .filter((e) => e.kind === "TASK" && e.sourceType === "TASK_COMPLETION" && e.sourceId)
+    .map((e) => e.sourceId!) as string[];
+  const noteByCompletion = new Map<string, string>();
+  if (taskSourceIds.length > 0) {
+    const completions = await prisma.taskCompletion.findMany({
+      where: { id: { in: taskSourceIds }, task: { familyId: req.auth!.fid } },
+      select: { id: true, parentNote: true },
+    });
+    for (const c of completions) if (c.parentNote) noteByCompletion.set(c.id, c.parentNote);
+  }
+
   res.json({
     entries: entries.map((e) => ({
       id: e.id,
@@ -33,6 +47,7 @@ ledgerRouter.get("/", async (req, res) => {
       sourceId: e.sourceId,
       createdById: e.createdById,
       createdAt: e.createdAt.toISOString(),
+      parentNote: e.sourceId ? noteByCompletion.get(e.sourceId) ?? null : null,
     })),
   });
 });

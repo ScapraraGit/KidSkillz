@@ -8,6 +8,7 @@ import {
   updateChild,
 } from "../services/children.js";
 import { childStats } from "../services/stats.js";
+import { getChildLevel } from "../services/levels.js";
 import { HttpError } from "../errors.js";
 
 const stringArray = z.array(z.string().max(40)).max(40);
@@ -32,6 +33,7 @@ export const avatarConfigSchema = z
     mouth: stringArray.optional(),
     skinColor: stringArray.optional(),
     backgroundColor: stringArray.optional(),
+    pet: z.string().max(40).optional(),
   })
   .strict();
 
@@ -71,6 +73,21 @@ const updateSchema = z.object({
     .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
     .nullable()
     .optional(),
+  soundEnabled: z.boolean().optional(),
+  viewMode: z.enum(["YOUNGER", "OLDER"]).optional(),
+  savingsGoalRewardId: z.string().uuid().nullable().optional(),
+});
+
+const preferencesSchema = z.object({
+  soundEnabled: z.boolean().optional(),
+  viewMode: z.enum(["YOUNGER", "OLDER"]).optional(),
+  savingsGoalRewardId: z.string().uuid().nullable().optional(),
+});
+
+childrenRouter.patch("/preferences", requireRole("CHILD"), async (req, res) => {
+  const input = preferencesSchema.parse(req.body);
+  const child = await updateChild(req.auth!.fid, req.auth!.sub, input);
+  res.json({ child });
 });
 
 childrenRouter.patch("/:id", requireRole("PARENT"), async (req, res) => {
@@ -95,4 +112,10 @@ childrenRouter.get("/:id/stats", async (req, res) => {
   if (req.auth!.role === "CHILD" && req.auth!.sub !== req.params.id) throw HttpError.forbidden();
   await getChild(req.auth!.fid, req.params.id); // family scope guard
   res.json({ stats: await childStats(req.auth!.fid, req.params.id) });
+});
+
+childrenRouter.get("/:id/level", async (req, res) => {
+  if (req.auth!.role === "CHILD" && req.auth!.sub !== req.params.id) throw HttpError.forbidden();
+  await getChild(req.auth!.fid, req.params.id); // family scope guard
+  res.json({ level: await getChildLevel(req.auth!.fid, req.params.id) });
 });

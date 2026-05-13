@@ -6,6 +6,7 @@ import { comparePassword, hashPassword, signToken } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
+import { seedDefaultChallenges } from "../services/challenges.js";
 import { avatarConfigSchema } from "./children.js";
 import { DEFAULT_FAMILY_SETTINGS, type AvatarConfig } from "@chorechamps/shared";
 
@@ -29,6 +30,7 @@ authRouter.post("/parent/register", async (req, res) => {
       settings: { ...DEFAULT_FAMILY_SETTINGS } as object,
     },
   });
+  await seedDefaultChallenges(family.id);
   const user = await prisma.user.create({
     data: {
       familyId: family.id,

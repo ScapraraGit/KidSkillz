@@ -4,6 +4,7 @@ import { ensureChildCanRedeem, ensureChildInFamily } from "./children.js";
 import { getReward } from "./rewards.js";
 import { getBalance, postLedger } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
+import { createNotification } from "./notifications.js";
 import type { RewardMetadata } from "@chorechamps/shared";
 
 export interface RequestRedemptionInput {
@@ -106,8 +107,8 @@ export async function approveRedemption(familyId: string, id: string, parentUser
   // Re-check earning pause / balance at approval time
   await ensureChildCanRedeem(r.childId);
 
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.redemption.update({
+  const updated = await prisma.$transaction(async (tx) => {
+    const upd = await tx.redemption.update({
       where: { id },
       data: { status: "APPROVED", reviewedAt: new Date(), reviewedById: parentUserId },
       include: { reward: true, child: { select: { id: true, name: true, avatarColor: true } } },
@@ -123,15 +124,26 @@ export async function approveRedemption(familyId: string, id: string, parentUser
       sourceId: id,
       createdById: parentUserId,
     });
-    return updated;
+    return upd;
   });
+  await createNotification({
+    familyId,
+    userId: r.childId,
+    kind: "REDEMPTION_APPROVED",
+    title: `Reward approved: ${r.reward.name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`,
+    payload: { redemptionId: id },
+  });
+  return updated;
 }
 
 export async function rejectRedemption(familyId: string, id: string, parentUserId: string, reason?: string) {
-  const r = await prisma.redemption.findFirst({ where: { id, reward: { familyId } } });
+  const r = await prisma.redemption.findFirst({
+    where: { id, reward: { familyId } },
+    include: { reward: true },
+  });
   if (!r) throw HttpError.notFound("Redemption not found");
   if (r.status !== "PENDING") throw HttpError.conflict("Already reviewed");
-  return prisma.redemption.update({
+  const updated = await prisma.redemption.update({
     where: { id },
     data: {
       status: "REJECTED",
@@ -141,6 +153,15 @@ export async function rejectRedemption(familyId: string, id: string, parentUserI
     },
     include: { reward: true, child: { select: { id: true, name: true, avatarColor: true } } },
   });
+  await createNotification({
+    familyId,
+    userId: r.childId,
+    kind: "REDEMPTION_REJECTED",
+    title: `Reward request declined: ${r.reward.name}`,
+    body: reason || undefined,
+    payload: { redemptionId: id },
+  });
+  return updated;
 }
 
 export function serializeRedemption(r: any) {

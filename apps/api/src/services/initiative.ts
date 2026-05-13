@@ -2,6 +2,9 @@ import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { ensureChildCanEarn, ensureChildInFamily } from "./children.js";
 import { postLedger } from "./ledger.js";
+import { evaluateLevelUp } from "./levels.js";
+import { evaluateChallenges } from "./challenges.js";
+import { createNotification } from "./notifications.js";
 import { getFamilySettings } from "./family.js";
 import type { InitiativeKind } from "@prisma/client";
 
@@ -107,6 +110,22 @@ export async function approveInitiative(
         createdById: parentUserId,
       });
     }
+    if (baseCredits > 0 || bonus > 0) {
+      await evaluateChallenges(
+        { tx, familyId, childId: ir.childId, parentUserId },
+        { type: "INITIATIVE_APPROVED", credits: baseCredits + bonus },
+      );
+      await evaluateLevelUp({ tx, familyId, childId: ir.childId, createdById: parentUserId });
+    }
+    await createNotification({
+      tx,
+      familyId,
+      userId: ir.childId,
+      kind: "INITIATIVE_APPROVED",
+      title: `Initiative approved: ${ir.title}`,
+      body: bonus > 0 ? `+${baseCredits + bonus} 🪙 (incl. +${bonus} bonus)` : `+${baseCredits} 🪙`,
+      payload: { initiativeId: id },
+    });
     return updated;
   });
 }

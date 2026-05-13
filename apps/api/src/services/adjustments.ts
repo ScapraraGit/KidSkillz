@@ -1,6 +1,8 @@
 import { HttpError } from "../errors.js";
 import { ensureChildInFamily } from "./children.js";
 import { postLedger } from "./ledger.js";
+import { evaluateLevelUp } from "./levels.js";
+import { evaluateChallenges } from "./challenges.js";
 
 export async function postAdjustment(input: {
   familyId: string;
@@ -14,7 +16,7 @@ export async function postAdjustment(input: {
   if (input.amount === 0) throw HttpError.badRequest("Amount cannot be zero");
 
   const kind = input.amount > 0 ? "ADJUSTMENT_POSITIVE" : "ADJUSTMENT_NEGATIVE";
-  return postLedger({
+  const entry = await postLedger({
     familyId: input.familyId,
     childId: input.childId,
     amount: input.amount,
@@ -23,4 +25,16 @@ export async function postAdjustment(input: {
     sourceType: "ADJUSTMENT",
     createdById: input.parentUserId,
   });
+  if (input.amount > 0) {
+    await evaluateChallenges(
+      { familyId: input.familyId, childId: input.childId, parentUserId: input.parentUserId },
+      { type: "ADJUSTMENT", credits: input.amount },
+    );
+    await evaluateLevelUp({
+      familyId: input.familyId,
+      childId: input.childId,
+      createdById: input.parentUserId,
+    });
+  }
+  return entry;
 }

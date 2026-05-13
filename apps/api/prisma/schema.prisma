@@ -68,6 +68,38 @@ enum LedgerKind {
   REDEMPTION
   ADJUSTMENT_POSITIVE
   ADJUSTMENT_NEGATIVE
+  LEVEL_UP
+  CHALLENGE_BONUS
+}
+
+enum ChallengeKind {
+  COMPLETE_N_TASKS
+  EARN_N_CREDITS
+  INITIATIVE_N_TIMES
+  NO_MISSES
+  EARLY_BIRD
+}
+
+enum ChallengeWindow {
+  DAY
+  WEEK
+}
+
+enum ChildViewMode {
+  YOUNGER
+  OLDER
+}
+
+enum NotificationKind {
+  COMPLETION_APPROVED
+  COMPLETION_REJECTED
+  REDEMPTION_APPROVED
+  REDEMPTION_REJECTED
+  INITIATIVE_APPROVED
+  INITIATIVE_REJECTED
+  CHALLENGE_COMPLETED
+  LEVEL_UP
+  KUDOS
 }
 
 model Family {
@@ -84,6 +116,9 @@ model Family {
   initiatives     InitiativeRequest[]
   ledger          LedgerEntry[]
   invitations     Invitation[]
+  challenges      Challenge[]
+  challengeProgress ChallengeProgress[]
+  notifications   Notification[]
 }
 
 model User {
@@ -121,6 +156,8 @@ model User {
   createdLedger       LedgerEntry[]         @relation("LedgerCreator")
   createdInvitations  Invitation[]          @relation("InvitationCreator")
   acceptedInvitations Invitation[]          @relation("InvitationAcceptor")
+  challengeProgress   ChallengeProgress[]   @relation("ChallengeProgressChild")
+  notifications       Notification[]        @relation("NotificationUser")
 
   @@index([familyId])
 }
@@ -162,6 +199,9 @@ model ChildProfile {
   redemptionPaused         Boolean  @default(false)
   earningPaused            Boolean  @default(false)
   proofRequirementOverride ProofRequirement?
+  soundEnabled             Boolean  @default(false)
+  viewMode                 ChildViewMode @default(YOUNGER)
+  savingsGoalRewardId      String?
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -208,6 +248,7 @@ model TaskCompletion {
   reviewedById    String?
   reviewer        User?          @relation("CompletionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   creditAwarded   Int?
+  parentNote      String?        // optional kudos message from parent on approve
 
   @@unique([taskId, childId, occurrenceDate])
   @@index([childId])
@@ -299,4 +340,62 @@ model LedgerEntry {
   @@index([familyId])
   @@index([childId])
   @@index([createdAt])
+}
+
+model Challenge {
+  id            String          @id @default(uuid())
+  familyId      String
+  family        Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  kind          ChallengeKind
+  title         String
+  target        Int
+  window        ChallengeWindow
+  rewardCredits Int
+  isActive      Boolean         @default(true)
+  startsAt      DateTime        @default(now())
+  endsAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  progress ChallengeProgress[]
+
+  @@index([familyId])
+  @@index([isActive])
+}
+
+model ChallengeProgress {
+  id           String    @id @default(uuid())
+  familyId     String
+  family       Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  challengeId  String
+  challenge    Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  childId      String
+  child        User      @relation("ChallengeProgressChild", fields: [childId], references: [id], onDelete: Cascade)
+  // YYYY-MM-DD for DAY window, YYYY-Www for WEEK window. Scopes progress per period.
+  periodKey    String
+  value        Int       @default(0)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([challengeId, childId, periodKey])
+  @@index([familyId])
+  @@index([childId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  familyId  String
+  family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind
+  title     String
+  body      String?
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([familyId])
 }

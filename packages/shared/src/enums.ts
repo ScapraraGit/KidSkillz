@@ -74,8 +74,44 @@ export const LedgerKind = {
   REDEMPTION: "REDEMPTION",
   ADJUSTMENT_POSITIVE: "ADJUSTMENT_POSITIVE",
   ADJUSTMENT_NEGATIVE: "ADJUSTMENT_NEGATIVE",
+  LEVEL_UP: "LEVEL_UP",
+  CHALLENGE_BONUS: "CHALLENGE_BONUS",
 } as const;
 export type LedgerKind = (typeof LedgerKind)[keyof typeof LedgerKind];
+
+export const ChallengeKind = {
+  COMPLETE_N_TASKS: "COMPLETE_N_TASKS",
+  EARN_N_CREDITS: "EARN_N_CREDITS",
+  INITIATIVE_N_TIMES: "INITIATIVE_N_TIMES",
+  NO_MISSES: "NO_MISSES",
+  EARLY_BIRD: "EARLY_BIRD",
+} as const;
+export type ChallengeKind = (typeof ChallengeKind)[keyof typeof ChallengeKind];
+
+export const ChallengeWindow = {
+  DAY: "DAY",
+  WEEK: "WEEK",
+} as const;
+export type ChallengeWindow = (typeof ChallengeWindow)[keyof typeof ChallengeWindow];
+
+export const ChildViewMode = {
+  YOUNGER: "YOUNGER",
+  OLDER: "OLDER",
+} as const;
+export type ChildViewMode = (typeof ChildViewMode)[keyof typeof ChildViewMode];
+
+export const NotificationKind = {
+  COMPLETION_APPROVED: "COMPLETION_APPROVED",
+  COMPLETION_REJECTED: "COMPLETION_REJECTED",
+  REDEMPTION_APPROVED: "REDEMPTION_APPROVED",
+  REDEMPTION_REJECTED: "REDEMPTION_REJECTED",
+  INITIATIVE_APPROVED: "INITIATIVE_APPROVED",
+  INITIATIVE_REJECTED: "INITIATIVE_REJECTED",
+  CHALLENGE_COMPLETED: "CHALLENGE_COMPLETED",
+  LEVEL_UP: "LEVEL_UP",
+  KUDOS: "KUDOS",
+} as const;
+export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind];
 
 export const ChildAuthMode = {
   INDIVIDUAL: "INDIVIDUAL",

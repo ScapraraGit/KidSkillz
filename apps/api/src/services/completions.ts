@@ -3,6 +3,10 @@ import { HttpError } from "../errors.js";
 import { getFamilySettings } from "./family.js";
 import { ensureChildCanEarn, ensureChildInFamily } from "./children.js";
 import { postLedger } from "./ledger.js";
+import { evaluateLevelUp } from "./levels.js";
+import { evaluateChallenges } from "./challenges.js";
+import { createNotification } from "./notifications.js";
+import { formatInTimeZone } from "date-fns-tz";
 import { todayInTz } from "../lib/time.js";
 import { serializeTask } from "./tasks.js";
 import { computeSuggestedAward } from "./awards.js";
@@ -91,7 +95,13 @@ export async function listCompletions(familyId: string, opts: { status?: "PENDIN
   });
 }
 
-export async function approveCompletion(familyId: string, completionId: string, parentUserId: string, creditOverride?: number) {
+export async function approveCompletion(
+  familyId: string,
+  completionId: string,
+  parentUserId: string,
+  creditOverride?: number,
+  parentNote?: string,
+) {
   const c = await prisma.taskCompletion.findFirst({
     where: { id: completionId, task: { familyId } },
     include: { task: true },
@@ -119,6 +129,7 @@ export async function approveCompletion(familyId: string, completionId: string, 
   if (credits < 0) throw HttpError.badRequest("Credit value cannot be negative");
 
   const updated = await prisma.$transaction(async (tx) => {
+    const trimmedNote = parentNote?.trim() || null;
     const upd = await tx.taskCompletion.update({
       where: { id: completionId },
       data: {
@@ -126,6 +137,7 @@ export async function approveCompletion(familyId: string, completionId: string, 
         reviewedAt: new Date(),
         reviewedById: parentUserId,
         creditAwarded: credits,
+        parentNote: trimmedNote,
       },
       include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },
     });
@@ -141,17 +153,46 @@ export async function approveCompletion(familyId: string, completionId: string, 
         sourceId: completionId,
         createdById: parentUserId,
       });
+      const settings = await getFamilySettings(familyId);
+      const submittedHour = Number(formatInTimeZone(c.submittedAt, settings.timezone, "H"));
+      await evaluateChallenges(
+        { tx, familyId, childId: c.childId, parentUserId },
+        { type: "TASK_APPROVED", credits, earlyBird: submittedHour < 12 },
+      );
+      await evaluateLevelUp({ tx, familyId, childId: c.childId, createdById: parentUserId });
     }
     return upd;
   });
+
+  await createNotification({
+    familyId,
+    userId: c.childId,
+    kind: "COMPLETION_APPROVED",
+    title: `+${updated.creditAwarded ?? 0} 🪙 for "${c.task.title}"`,
+    body: parentNote?.trim() || undefined,
+    payload: { completionId, taskId: c.taskId },
+  });
+  if (parentNote?.trim()) {
+    await createNotification({
+      familyId,
+      userId: c.childId,
+      kind: "KUDOS",
+      title: `Kudos from a grown-up!`,
+      body: parentNote.trim(),
+    });
+  }
+
   return updated;
 }
 
 export async function rejectCompletion(familyId: string, completionId: string, parentUserId: string, reason?: string) {
-  const c = await prisma.taskCompletion.findFirst({ where: { id: completionId, task: { familyId } } });
+  const c = await prisma.taskCompletion.findFirst({
+    where: { id: completionId, task: { familyId } },
+    include: { task: true },
+  });
   if (!c) throw HttpError.notFound("Completion not found");
   if (c.status !== "PENDING") throw HttpError.conflict("Completion already reviewed");
-  return prisma.taskCompletion.update({
+  const updated = await prisma.taskCompletion.update({
     where: { id: completionId },
     data: {
       status: "REJECTED",
@@ -161,6 +202,15 @@ export async function rejectCompletion(familyId: string, completionId: string, p
     },
     include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },
   });
+  await createNotification({
+    familyId,
+    userId: c.childId,
+    kind: "COMPLETION_REJECTED",
+    title: `"${c.task.title}" needs another try`,
+    body: reason || undefined,
+    payload: { completionId },
+  });
+  return updated;
 }
 
 export function serializeCompletion(c: any, suggested?: SuggestedAwardDTO | null) {
@@ -176,6 +226,7 @@ export function serializeCompletion(c: any, suggested?: SuggestedAwardDTO | null
     reviewedAt: c.reviewedAt?.toISOString() ?? null,
     reviewedById: c.reviewedById ?? null,
     creditAwarded: c.creditAwarded ?? null,
+    parentNote: c.parentNote ?? null,
     suggestedAward: suggested ?? null,
     task: c.task ? serializeTask(c.task) : undefined,
     child: c.child ?? undefined,

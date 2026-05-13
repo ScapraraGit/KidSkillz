@@ -11,6 +11,7 @@ import { ParentChildren } from "./pages/parent/Children";
 import { ParentLedger } from "./pages/parent/Ledger";
 import { ParentSettings } from "./pages/parent/Settings";
 import { FamilyMembers } from "./pages/parent/FamilyMembers";
+import { ParentChallenges } from "./pages/parent/Challenges";
 import { InviteAccept } from "./pages/InviteAccept";
 import { CaregiverPin } from "./pages/CaregiverPin";
 import { ChildDashboard } from "./pages/child/Dashboard";
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/parent/ledger" element={<ParentLedger />} />
           <Route path="/parent/settings" element={<ParentSettings />} />
           <Route path="/parent/members" element={<FamilyMembers />} />
+          <Route path="/parent/challenges" element={<ParentChallenges />} />
         </Route>
         <Route path="*" element={<Navigate to="/parent" replace />} />
       </Routes>

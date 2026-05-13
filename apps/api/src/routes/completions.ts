@@ -43,11 +43,12 @@ completionsRouter.get("/", async (req, res) => {
 const reviewSchema = z.object({
   creditOverride: z.number().int().min(0).optional(),
   reason: z.string().max(500).optional(),
+  parentNote: z.string().max(280).optional(),
 });
 
 completionsRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) => {
-  const { creditOverride } = reviewSchema.parse(req.body ?? {});
-  const c = await approveCompletion(req.auth!.fid, req.params.id, req.auth!.sub, creditOverride);
+  const { creditOverride, parentNote } = reviewSchema.parse(req.body ?? {});
+  const c = await approveCompletion(req.auth!.fid, req.params.id, req.auth!.sub, creditOverride, parentNote);
   res.json({ completion: serializeCompletion(c) });
 });
 

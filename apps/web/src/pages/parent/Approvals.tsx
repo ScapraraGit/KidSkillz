@@ -80,11 +80,14 @@ export function ParentApprovals() {
 
 function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO; onChange: () => void }) {
   const [override, setOverride] = useState<string>("");
+  const [kudos, setKudos] = useState<string>("");
   const approve = useMutation({
-    mutationFn: () =>
-      api(`/completions/${completion.id}/approve`, {
-        body: override ? { creditOverride: Number(override) } : {},
-      }),
+    mutationFn: () => {
+      const body: Record<string, unknown> = {};
+      if (override) body.creditOverride = Number(override);
+      if (kudos.trim()) body.parentNote = kudos.trim();
+      return api(`/completions/${completion.id}/approve`, { body });
+    },
     onSuccess: onChange,
   });
   const reject = useMutation({
@@ -128,6 +131,18 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
           placeholder={`${suggested?.credits ?? fullCredit}`}
           value={override}
           onChange={(e) => setOverride(e.target.value)}
+          aria-label="Credit override"
+        />
+      </Tooltip>
+      <Tooltip label="Optional kudos message your kid will see in their activity feed.">
+        <input
+          className={`${inputCls} w-44`}
+          type="text"
+          maxLength={280}
+          placeholder="Nice job! 💬 (optional)"
+          value={kudos}
+          onChange={(e) => setKudos(e.target.value)}
+          aria-label="Kudos message"
         />
       </Tooltip>
       <Tooltip label="Award credits and clear from queue">

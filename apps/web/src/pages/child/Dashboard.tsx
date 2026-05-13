@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, uploadProof } from "../../lib/api";
 import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
@@ -8,22 +8,90 @@ import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
-import type { ChildDashboardDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
+import { celebrate as fireCelebrate } from "../../lib/celebrate";
+import { LevelCard, LevelRing } from "../../components/LevelCard";
+import { PetHero } from "../../components/PetHero";
+import { ChallengeSection } from "../../components/ChallengeCard";
+import { StreakSaver } from "../../components/StreakSaver";
+import { SavingsGoal } from "../../components/SavingsGoal";
+import type { ChallengeDTO, ChallengeProgressDTO, ChildDashboardDTO, LevelDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
+
+interface ChallengeRow { challenge: ChallengeDTO; progress: ChallengeProgressDTO | null }
 
 export function ChildDashboard() {
   const dash = useQuery({
     queryKey: ["dashboard", "child"],
     queryFn: () => api<ChildDashboardDTO>("/dashboard/child"),
   });
+  const meId = useAuth((s) => s.user?.id);
+  const levelQ = useQuery({
+    queryKey: ["children", meId, "level"],
+    queryFn: () => api<{ level: LevelDTO }>(`/children/${meId}/level`),
+    enabled: !!meId,
+    select: (r) => r.level,
+  });
+  const challengesQ = useQuery({
+    queryKey: ["challenges", "me"],
+    queryFn: () => api<{ challenges: ChallengeRow[] }>("/challenges/me"),
+    select: (r) => r.challenges,
+  });
 
   const [completing, setCompleting] = useState<TodayTaskOccurrenceDTO | null>(null);
   const [celebrate, setCelebrate] = useState<number | null>(null);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [petBounce, setPetBounce] = useState(0);
   const user = useAuth((s) => s.user);
+  const settings = useAuth((s) => s.settings);
   const qc = useQueryClient();
+
+  const seenLevelRef = useRef<number | null>(null);
+  const seenChallengeRef = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    const lvl = levelQ.data?.level;
+    if (lvl == null) return;
+    const key = `cc:lastSeenLevel:${meId}`;
+    const stored = Number(localStorage.getItem(key) ?? "0") || 0;
+    const prior = seenLevelRef.current ?? stored;
+    if (lvl > prior && prior > 0) {
+      fireCelebrate("levelup", { sound: dash.data?.child.soundEnabled ?? false });
+      setPetBounce((n) => n + 1);
+    }
+    seenLevelRef.current = lvl;
+    localStorage.setItem(key, String(lvl));
+  }, [levelQ.data?.level, meId, dash.data?.child.soundEnabled]);
+
+  useEffect(() => {
+    const rows = challengesQ.data;
+    if (!rows) return;
+    const completedIds = new Set(
+      rows.filter((r) => r.progress?.completedAt).map((r) => r.challenge.id + ":" + r.progress!.periodKey),
+    );
+    const storeKey = `cc:seenChallenges:${meId}`;
+    const stored = safeReadStringSet(storeKey);
+    const prior = seenChallengeRef.current ?? stored;
+    let firedAny = false;
+    for (const id of completedIds) {
+      if (!prior.has(id)) {
+        firedAny = true;
+        break;
+      }
+    }
+    if (firedAny && prior.size > 0) {
+      fireCelebrate("challenge", { sound: dash.data?.child.soundEnabled ?? false });
+    }
+    seenChallengeRef.current = completedIds;
+    try {
+      localStorage.setItem(storeKey, JSON.stringify(Array.from(completedIds)));
+    } catch {
+      // Quota or storage disabled — celebrate fallback still works, watcher state held in ref.
+    }
+  }, [challengesQ.data, meId, dash.data?.child.soundEnabled]);
 
   if (dash.isLoading || !dash.data) return <div>Loading…</div>;
   const d = dash.data;
+  const level = levelQ.data ?? { level: 1, xp: 0, xpInLevel: 0, xpToNext: 50 };
+  const isYounger = d.child.viewMode === "YOUNGER";
   const greeting = greet();
 
   return (
@@ -37,15 +105,54 @@ export function ChildDashboard() {
                 onClick={() => setStudioOpen(true)}
                 className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
               >
-                <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
+                {isYounger ? (
+                  <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
+                ) : (
+                  <LevelRing level={level} size={64} stroke={4}>
+                    <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={52} />
+                  </LevelRing>
+                )}
                 <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">✏️</span>
               </button>
             </Tooltip>
             <span>{greeting}, {d.child.name}!</span>
+            {!isYounger && (
+              <span className="ml-1"><LevelCard level={level} variant="compact" /></span>
+            )}
           </span>
         }
         subtitle={d.child.redemptionPaused ? "Heads up: redemption is paused right now." : "Earn credits and crush your day."}
       />
+
+      {isYounger ? (
+        <PetHero
+          petId={d.child.avatarConfig?.pet}
+          level={level}
+          childName={d.child.name}
+          bounceKey={petBounce}
+        />
+      ) : (
+        <LevelCard level={level} />
+      )}
+
+      <StreakSaver
+        timezone={settings?.timezone ?? "America/Phoenix"}
+        streakDays={d.stats.streakDays}
+        openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
+        completionsToday={d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING").length}
+      />
+
+      {d.child.savingsGoalRewardId && (
+        <SavingsGoal
+          rewardId={d.child.savingsGoalRewardId}
+          balance={d.child.balance}
+          weekEarned={d.stats.weekEarned}
+        />
+      )}
+
+      {challengesQ.data && (
+        <ChallengeSection rows={challengesQ.data} variant={isYounger ? "YOUNGER" : "OLDER"} />
+      )}
 
       <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card
@@ -188,7 +295,11 @@ export function ChildDashboard() {
           onSubmitted={(credits) => {
             setCompleting(null);
             setCelebrate(credits);
+            fireCelebrate("task", { sound: d.child.soundEnabled });
+            setPetBounce((n) => n + 1);
             qc.invalidateQueries({ queryKey: ["dashboard"] });
+            qc.invalidateQueries({ queryKey: ["children", meId, "level"] });
+            qc.invalidateQueries({ queryKey: ["challenges", "me"] });
             setTimeout(() => setCelebrate(null), 2000);
           }}
         />
@@ -296,6 +407,17 @@ function CompleteModal({
       </div>
     </Modal>
   );
+}
+
+function safeReadStringSet(key: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr.filter((s): s is string => typeof s === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
 }
 
 function greet() {

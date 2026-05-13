@@ -6,11 +6,11 @@ export interface PetDef {
 }
 
 export const PETS: PetDef[] = [
-  { id: "dragon", label: "Dragon",  stages: ["🥚", "🐣", "🐉", "🐲"] },
-  { id: "cat",    label: "Cat",     stages: ["🥚", "🐱", "🐈", "🦁"] },
-  { id: "dog",    label: "Dog",     stages: ["🥚", "🐶", "🐕", "🐺"] },
-  { id: "fox",    label: "Fox",     stages: ["🥚", "🐣", "🦊", "🦊"] },
-  { id: "bunny",  label: "Bunny",   stages: ["🥚", "🐣", "🐰", "🐇"] },
+  { id: "dragon", label: "Dragon", stages: ["🥚", "🐣", "🐉", "🐲"] },
+  { id: "cat", label: "Cat", stages: ["🥚", "🐱", "🐈", "🦁"] },
+  { id: "dog", label: "Dog", stages: ["🥚", "🐶", "🐕", "🐺"] },
+  { id: "fox", label: "Fox", stages: ["🥚", "🐣", "🦊", "🦊"] },
+  { id: "bunny", label: "Bunny", stages: ["🥚", "🐣", "🐰", "🐇"] },
 ];
 
 export const DEFAULT_PET_ID = "dragon";

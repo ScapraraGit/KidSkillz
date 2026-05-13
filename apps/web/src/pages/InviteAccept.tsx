@@ -31,27 +31,36 @@ export function InviteAccept() {
   useEffect(() => {
     if (!token) return;
     api<Preview>(`/invitations/by-token/${token}`)
-      .then((p) => { setPreview(p); if (p.inviteeName) setName(p.inviteeName); })
+      .then((p) => {
+        setPreview(p);
+        if (p.inviteeName) setName(p.inviteeName);
+      })
       .catch((e) => setErr(e.message ?? "Invitation not found"));
   }, [token]);
 
   if (err && !preview) {
     return (
       <Shell>
-        <Card><div className="text-rose-600 font-medium">{err}</div><p className="text-sm text-slate-500 mt-2">Ask whoever invited you for a new link.</p></Card>
+        <Card>
+          <div className="text-rose-600 font-medium">{err}</div>
+          <p className="text-sm text-slate-500 mt-2">Ask whoever invited you for a new link.</p>
+        </Card>
       </Shell>
     );
   }
-  if (!preview) return <Shell><Card>Loading…</Card></Shell>;
+  if (!preview)
+    return (
+      <Shell>
+        <Card>Loading…</Card>
+      </Shell>
+    );
 
   const isCaregiver = preview.kind === "CAREGIVER";
 
   return (
     <Shell>
       <Card>
-        <h2 className="text-xl font-semibold">
-          Join {preview.familyName ?? "this family"}
-        </h2>
+        <h2 className="text-xl font-semibold">Join {preview.familyName ?? "this family"}</h2>
         <p className="text-sm text-slate-500 mt-1">
           {isCaregiver ? "You've been invited as a caregiver" : "You've been invited as a co-parent"}
           {preview.email && <> · {preview.email}</>}
@@ -67,8 +76,14 @@ export function InviteAccept() {
           onSubmit={async (e) => {
             e.preventDefault();
             setErr(null);
-            if (password !== confirm) { setErr("Passwords don't match"); return; }
-            if (password.length < 8) { setErr("Password must be at least 8 characters"); return; }
+            if (password !== confirm) {
+              setErr("Passwords don't match");
+              return;
+            }
+            if (password.length < 8) {
+              setErr("Password must be at least 8 characters");
+              return;
+            }
             setBusy(true);
             try {
               const r = await api<{ token: string; user: AuthUserDTO }>(
@@ -79,14 +94,46 @@ export function InviteAccept() {
               const me = await api<{ settings: FamilySettings }>("/auth/me");
               setSettings(me.settings);
               nav("/parent");
-            } catch (e: any) { setErr(e.message ?? "Could not accept invitation"); } finally { setBusy(false); }
+            } catch (e: any) {
+              setErr(e.message ?? "Could not accept invitation");
+            } finally {
+              setBusy(false);
+            }
           }}
         >
-          <Field label="Your name"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} /></Field>
-          <Field label="Create password"><input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} /></Field>
-          <Field label="Confirm password"><input className={inputCls} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} /></Field>
+          <Field label="Your name">
+            <input
+              className={inputCls}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={80}
+            />
+          </Field>
+          <Field label="Create password">
+            <input
+              className={inputCls}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </Field>
+          <Field label="Confirm password">
+            <input
+              className={inputCls}
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              minLength={8}
+            />
+          </Field>
           {err && <div className="text-sm text-rose-600">{err}</div>}
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Joining…" : "Accept and create account"}</Button>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "Joining…" : "Accept and create account"}
+          </Button>
         </form>
       </Card>
     </Shell>

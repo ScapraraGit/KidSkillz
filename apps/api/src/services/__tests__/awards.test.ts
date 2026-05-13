@@ -22,20 +22,12 @@ const TZ = "America/New_York";
 describe("computeDeadline", () => {
   it("returns dueAt for ONE_TIME tasks", () => {
     const due = new Date("2026-05-01T12:00:00Z");
-    const d = computeDeadline(
-      { kind: "ONE_TIME", creditValue: 10, dueAt: due, dueByTime: null },
-      null,
-      TZ,
-    );
+    const d = computeDeadline({ kind: "ONE_TIME", creditValue: 10, dueAt: due, dueByTime: null }, null, TZ);
     expect(d?.toISOString()).toBe(due.toISOString());
   });
 
   it("returns null when ONE_TIME has no dueAt", () => {
-    const d = computeDeadline(
-      { kind: "ONE_TIME", creditValue: 10, dueAt: null, dueByTime: null },
-      null,
-      TZ,
-    );
+    const d = computeDeadline({ kind: "ONE_TIME", creditValue: 10, dueAt: null, dueByTime: null }, null, TZ);
     expect(d).toBeNull();
   });
 

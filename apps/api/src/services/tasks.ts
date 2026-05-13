@@ -118,7 +118,9 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
       }),
       ...(input.dueAt !== undefined && { dueAt: input.dueAt ? new Date(input.dueAt) : null }),
       ...(input.dueByTime !== undefined && { dueByTime: input.dueByTime }),
-      ...(input.defaultDurationMinutes !== undefined && { defaultDurationMinutes: input.defaultDurationMinutes }),
+      ...(input.defaultDurationMinutes !== undefined && {
+        defaultDurationMinutes: input.defaultDurationMinutes,
+      }),
       ...(input.proofRequirement !== undefined && { proofRequirement: input.proofRequirement }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
       ...(input.assignedToId !== undefined && { assignedToId: input.assignedToId }),
@@ -145,7 +147,10 @@ function recurrenceMatchesDate(rec: Recurrence, dateStr: string, dow: number): b
  *  - active ONE_TIME tasks assigned to this child (or unassigned), if no completion exists yet
  *  - RECURRING task occurrences for today (skipping if already completed-for-today)
  */
-export async function listTodayForChild(familyId: string, childId: string): Promise<TodayTaskOccurrenceDTO[]> {
+export async function listTodayForChild(
+  familyId: string,
+  childId: string,
+): Promise<TodayTaskOccurrenceDTO[]> {
   const settings = await getFamilySettings(familyId);
   const today = todayInTz(settings.timezone);
   const dow = dowSunFirst(settings.timezone);

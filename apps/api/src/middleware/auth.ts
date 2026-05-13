@@ -18,8 +18,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.header("authorization") ?? "";
   const [scheme, headerToken] = header.split(" ");
   // Allow ?token=... for GET-only flows like <img>/<a href> for proof images.
-  const queryToken =
-    req.method === "GET" && typeof req.query.token === "string" ? req.query.token : null;
+  const queryToken = req.method === "GET" && typeof req.query.token === "string" ? req.query.token : null;
   const token = scheme === "Bearer" && headerToken ? headerToken : queryToken;
   if (!token) return next(HttpError.unauthorized());
   try {
@@ -42,7 +41,10 @@ type ScopeKey = keyof Omit<CaregiverScope, "kidIds">;
 
 // Allows PARENT unconditionally. Allows CAREGIVER if active window + scope flag set.
 // Optional kidId enforces caregiver kidIds restriction (empty list = all kids).
-export function requireParentOrCaregiver(scopeKey: ScopeKey, getKidId?: (req: Request) => string | undefined) {
+export function requireParentOrCaregiver(
+  scopeKey: ScopeKey,
+  getKidId?: (req: Request) => string | undefined,
+) {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (!req.auth) throw HttpError.unauthorized();

@@ -1,12 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import {
-  createChild,
-  getChild,
-  listChildren,
-  updateChild,
-} from "../services/children.js";
+import { createChild, getChild, listChildren, updateChild } from "../services/children.js";
 import { childStats } from "../services/stats.js";
 import { getChildLevel } from "../services/levels.js";
 import { HttpError } from "../errors.js";
@@ -51,7 +46,10 @@ childrenRouter.get("/", async (req, res) => {
 
 const createSchema = z.object({
   name: z.string().min(1).max(60),
-  pin: z.string().regex(/^\d{4,8}$/).nullish(),
+  pin: z
+    .string()
+    .regex(/^\d{4,8}$/)
+    .nullish(),
   avatarColor: z.string().optional(),
   avatarConfig: avatarConfigSchema.nullable().optional(),
 });
@@ -64,7 +62,11 @@ childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
 
 const updateSchema = z.object({
   name: z.string().min(1).max(60).optional(),
-  pin: z.string().regex(/^\d{4,8}$/).nullable().optional(),
+  pin: z
+    .string()
+    .regex(/^\d{4,8}$/)
+    .nullable()
+    .optional(),
   avatarColor: z.string().optional(),
   avatarConfig: avatarConfigSchema.nullable().optional(),
   redemptionPaused: z.boolean().optional(),

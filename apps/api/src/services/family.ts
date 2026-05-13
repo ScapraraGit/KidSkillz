@@ -9,7 +9,7 @@ export async function getFamily(familyId: string) {
 }
 
 export function readSettings(raw: unknown): FamilySettings {
-  return { ...DEFAULT_FAMILY_SETTINGS, ...(raw as Partial<FamilySettings> | null ?? {}) };
+  return { ...DEFAULT_FAMILY_SETTINGS, ...((raw as Partial<FamilySettings> | null) ?? {}) };
 }
 
 export async function updateSettings(familyId: string, patch: Partial<FamilySettings>) {

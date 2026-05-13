@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ActiveTimer,
-  clearTimer,
-  isExpired,
-  loadTimer,
-  saveTimer,
-  timeLeftMs,
-} from "../lib/activeTimer";
+import { ActiveTimer, clearTimer, isExpired, loadTimer, saveTimer, timeLeftMs } from "../lib/activeTimer";
 
 interface UseActiveTimer {
   timer: ActiveTimer | null;

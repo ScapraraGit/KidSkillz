@@ -38,7 +38,11 @@ export class LocalStorage implements StorageProvider {
   }
 
   async delete(key: string) {
-    try { await fs.unlink(this.full(key)); } catch { /* ignore */ }
+    try {
+      await fs.unlink(this.full(key));
+    } catch {
+      /* ignore */
+    }
   }
 }
 

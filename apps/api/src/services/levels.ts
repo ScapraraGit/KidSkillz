@@ -50,7 +50,11 @@ async function getXp(familyId: string, childId: string, tx?: Prisma.TransactionC
   return r._sum.amount ?? 0;
 }
 
-async function acknowledgedLevel(familyId: string, childId: string, tx?: Prisma.TransactionClient): Promise<number> {
+async function acknowledgedLevel(
+  familyId: string,
+  childId: string,
+  tx?: Prisma.TransactionClient,
+): Promise<number> {
   const client = tx ?? prisma;
   const count = await client.ledgerEntry.count({
     where: { familyId, childId, kind: "LEVEL_UP" },

@@ -84,13 +84,27 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
       className="space-y-3"
     >
       <Field label="Email">
-        <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input
+          className={inputCls}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </Field>
       <Field label="Password">
-        <input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input
+          className={inputCls}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
       </Field>
       {err && <div className="text-sm text-rose-600">{err}</div>}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</Button>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Signing in..." : "Sign in"}
+      </Button>
       <p className="text-xs text-center text-slate-500 pt-1">
         New here?{" "}
         <button type="button" className="text-brand-600 hover:underline" onClick={onSignup}>
@@ -211,18 +225,36 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
       </Field>
       <div className="border-t border-slate-200 pt-3 space-y-2">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" title="Invite a co-parent" checked={invitePartner} onChange={(e) => setInvitePartner(e.target.checked)} />
+          <input
+            type="checkbox"
+            title="Invite a co-parent"
+            checked={invitePartner}
+            onChange={(e) => setInvitePartner(e.target.checked)}
+          />
           Invite a co-parent (optional)
         </label>
         {invitePartner && (
           <div className="space-y-2 pl-6">
             <Field label="Partner's email">
-              <input className={inputCls} type="email" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} required={invitePartner} />
+              <input
+                className={inputCls}
+                type="email"
+                value={partnerEmail}
+                onChange={(e) => setPartnerEmail(e.target.value)}
+                required={invitePartner}
+              />
             </Field>
             <Field label="Partner's name (optional)">
-              <input className={inputCls} value={partnerName} onChange={(e) => setPartnerName(e.target.value)} maxLength={80} />
+              <input
+                className={inputCls}
+                value={partnerName}
+                onChange={(e) => setPartnerName(e.target.value)}
+                maxLength={80}
+              />
             </Field>
-            <p className="text-xs text-slate-500">They'll get an email with a link to join your family with full access.</p>
+            <p className="text-xs text-slate-500">
+              They'll get an email with a link to join your family with full access.
+            </p>
           </div>
         )}
       </div>
@@ -263,7 +295,9 @@ function ChildLogin() {
   const lookup = async () => {
     setErr(null);
     try {
-      const r = await api<{ families: FamilyLookup[] }>(`/auth/families/lookup?name=${encodeURIComponent(familyName)}`);
+      const r = await api<{ families: FamilyLookup[] }>(
+        `/auth/families/lookup?name=${encodeURIComponent(familyName)}`,
+      );
       setFamilies(r.families);
       if (r.families.length === 1) setPicked(r.families[0]);
     } catch (e: any) {
@@ -286,7 +320,9 @@ function ChildLogin() {
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
               />
-              <Button variant="secondary" onClick={lookup} type="button">Find</Button>
+              <Button variant="secondary" onClick={lookup} type="button">
+                Find
+              </Button>
             </div>
           </Field>
           {families.map((f) => (
@@ -296,7 +332,9 @@ function ChildLogin() {
               onClick={() => setPicked(f)}
             >
               <div className="font-medium">{f.name}</div>
-              <div className="text-xs text-slate-500">{f.users.length} kid{f.users.length === 1 ? "" : "s"}</div>
+              <div className="text-xs text-slate-500">
+                {f.users.length} kid{f.users.length === 1 ? "" : "s"}
+              </div>
             </button>
           ))}
         </>
@@ -304,7 +342,9 @@ function ChildLogin() {
 
       {picked && !childId && (
         <>
-          <div className="text-sm text-slate-600">Pick your profile in <strong>{picked.name}</strong>:</div>
+          <div className="text-sm text-slate-600">
+            Pick your profile in <strong>{picked.name}</strong>:
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {picked.users.map((u) => (
               <button
@@ -317,7 +357,9 @@ function ChildLogin() {
               </button>
             ))}
           </div>
-          <button className="text-xs text-slate-500" onClick={() => setPicked(null)}>← back</button>
+          <button className="text-xs text-slate-500" onClick={() => setPicked(null)}>
+            ← back
+          </button>
         </>
       )}
 
@@ -351,7 +393,9 @@ function ChildLogin() {
               <KidAvatar name={child.name} color={child.avatarColor} config={child.avatarConfig} size={40} />
             )}
             <div className="font-medium">{child?.name}</div>
-            <button className="text-xs text-slate-500 ml-auto" onClick={() => setChildId(null)} type="button">change</button>
+            <button className="text-xs text-slate-500 ml-auto" onClick={() => setChildId(null)} type="button">
+              change
+            </button>
           </div>
           {mode === "INDIVIDUAL" ? (
             <Field label="PIN">
@@ -378,7 +422,9 @@ function ChildLogin() {
             </Field>
           )}
           {err && <div className="text-sm text-rose-600">{err}</div>}
-          <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Let's go!"}</Button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Signing in..." : "Let's go!"}
+          </Button>
         </form>
       )}
     </div>

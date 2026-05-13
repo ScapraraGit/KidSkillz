@@ -22,9 +22,7 @@ export function ParentDashboard() {
         subtitle="What needs your attention today."
         right={
           <Link id="tile-pending-badge" to="/parent/approvals">
-            <Badge color={totalPending > 0 ? "amber" : "slate"}>
-              {totalPending} pending
-            </Badge>
+            <Badge color={totalPending > 0 ? "amber" : "slate"}>{totalPending} pending</Badge>
           </Link>
         }
       />
@@ -34,8 +32,8 @@ export function ParentDashboard() {
           <div className="text-4xl mb-2">👋</div>
           <h3 className="font-semibold text-lg">Welcome to ChoreChamps!</h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto mt-1">
-            Get started by adding your first kid. You'll set their name, PIN, and avatar — then you
-            can create tasks and rewards for them.
+            Get started by adding your first kid. You'll set their name, PIN, and avatar — then you can create
+            tasks and rewards for them.
           </p>
           <div className="flex justify-center gap-2 mt-4 flex-wrap">
             <Link
@@ -60,7 +58,10 @@ export function ParentDashboard() {
         </Card>
       )}
 
-      <section id={data.children.length === 0 ? undefined : "tile-children"} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section
+        id={data.children.length === 0 ? undefined : "tile-children"}
+        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
         {data.children.map((c, idx) => {
           const week = data.weeklyTotals.find((w) => w.childId === c.id);
           return (
@@ -148,7 +149,9 @@ export function ParentDashboard() {
             </ul>
           )}
           <div className="mt-3 text-right">
-            <Link to="/parent/approvals" className="text-sm text-brand-700 font-medium">Review all →</Link>
+            <Link to="/parent/approvals" className="text-sm text-brand-700 font-medium">
+              Review all →
+            </Link>
           </div>
         </Card>
 
@@ -169,8 +172,7 @@ export function ParentDashboard() {
                   <Avatar name={r.child!.name} color={r.child!.avatarColor} size={32} />
                   <div className="flex-1">
                     <div className="text-sm">
-                      <strong>{r.child!.name}</strong> wants{" "}
-                      <strong>{r.reward!.name}</strong>
+                      <strong>{r.child!.name}</strong> wants <strong>{r.reward!.name}</strong>
                       {r.quantity > 1 && ` ×${r.quantity}`}
                     </div>
                     {r.notes && <div className="text-xs text-slate-500">"{r.notes}"</div>}
@@ -202,7 +204,9 @@ export function ParentDashboard() {
                   <span className="font-medium">{child?.name}</span>
                   <span className="text-slate-500">{e.reason}</span>
                   <CreditChip amount={e.amount} />
-                  <span className="ml-auto text-xs text-slate-400">{new Date(e.createdAt).toLocaleString()}</span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </span>
                 </li>
               );
             })}

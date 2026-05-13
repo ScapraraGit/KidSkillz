@@ -15,7 +15,10 @@ export function Modal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200"
         onClick={(e) => e.stopPropagation()}
@@ -27,7 +30,11 @@ export function Modal({
           </button>
         </div>
         <div className="p-5">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-2">{footer}</div>}
+        {footer && (
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-2">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

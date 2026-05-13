@@ -71,15 +71,27 @@ export function ParentChallenges() {
                   </div>
                 </div>
                 <Tooltip label={c.isActive ? "Hide from kids" : "Show to kids"}>
-                  <Button variant="ghost" size="sm" onClick={() => toggle.mutate(c)} disabled={toggle.isPending}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggle.mutate(c)}
+                    disabled={toggle.isPending}
+                  >
                     {c.isActive ? "Deactivate" : "Activate"}
                   </Button>
                 </Tooltip>
                 <Tooltip label="Edit title, target, reward">
-                  <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>Edit</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>
+                    Edit
+                  </Button>
                 </Tooltip>
                 <Tooltip label="Delete permanently (loses all progress history)">
-                  <Button variant="danger" size="sm" onClick={() => remove.mutate(c.id)} disabled={remove.isPending}>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => remove.mutate(c.id)}
+                    disabled={remove.isPending}
+                  >
                     Delete
                   </Button>
                 </Tooltip>
@@ -92,8 +104,15 @@ export function ParentChallenges() {
       {(creating || editing) && (
         <ChallengeModal
           existing={editing}
-          onClose={() => { setCreating(false); setEditing(null); }}
-          onSaved={() => { refresh(); setCreating(false); setEditing(null); }}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            refresh();
+            setCreating(false);
+            setEditing(null);
+          }}
         />
       )}
     </div>
@@ -137,7 +156,9 @@ function ChallengeModal({
       title={existing ? "Edit challenge" : "New challenge"}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || !form.title.trim()}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>

@@ -80,9 +80,7 @@ const NOTE_PATTERNS: Record<CelebrateKind, { freq: number; dur: number; gap: num
     { freq: 740, dur: 0.1, gap: 0.11 },
     { freq: 880, dur: 0.16, gap: 0.22 },
   ],
-  badge: [
-    { freq: 988, dur: 0.18, gap: 0 },
-  ],
+  badge: [{ freq: 988, dur: 0.18, gap: 0 }],
   levelup: [
     { freq: 523, dur: 0.08, gap: 0 },
     { freq: 659, dur: 0.08, gap: 0.09 },

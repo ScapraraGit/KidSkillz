@@ -47,7 +47,7 @@ ledgerRouter.get("/", async (req, res) => {
       sourceId: e.sourceId,
       createdById: e.createdById,
       createdAt: e.createdAt.toISOString(),
-      parentNote: e.sourceId ? noteByCompletion.get(e.sourceId) ?? null : null,
+      parentNote: e.sourceId ? (noteByCompletion.get(e.sourceId) ?? null) : null,
     })),
   });
 });

@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
-import { Badge, Button, Card, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  PageHeader,
+  ProgressBar,
+  inputCls,
+} from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
@@ -16,7 +25,10 @@ export function ChildRewards() {
   });
   const me = childQ.data?.children.find((c) => c.id === meId);
 
-  const rewardsQ = useQuery({ queryKey: ["rewards"], queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards") });
+  const rewardsQ = useQuery({
+    queryKey: ["rewards"],
+    queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards"),
+  });
   const [requesting, setRequesting] = useState<RewardDTO | null>(null);
   const qc = useQueryClient();
   const setGoal = useMutation({
@@ -71,7 +83,9 @@ export function ChildRewards() {
               <div className="mt-3">
                 <ProgressBar value={Math.min(me.balance, r.creditCost)} max={r.creditCost} />
                 <div className="text-xs text-slate-500 mt-1">
-                  {affordable ? "You can afford this!" : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
+                  {affordable
+                    ? "You can afford this!"
+                    : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
                 </div>
               </div>
               <Tooltip
@@ -79,8 +93,8 @@ export function ChildRewards() {
                   me.redemptionPaused
                     ? "Redemption paused — ask a parent"
                     : !affordable
-                    ? `Need ${r.creditCost - me.balance} more credits`
-                    : "Request this reward (parent approves)"
+                      ? `Need ${r.creditCost - me.balance} more credits`
+                      : "Request this reward (parent approves)"
                 }
               >
                 <Button
@@ -94,7 +108,13 @@ export function ChildRewards() {
               {(() => {
                 const isGoal = me.savingsGoalRewardId === r.id;
                 return (
-                  <Tooltip label={isGoal ? "Stop saving for this" : "Pin this as your savings goal — dashboard shows progress."}>
+                  <Tooltip
+                    label={
+                      isGoal
+                        ? "Stop saving for this"
+                        : "Pin this as your savings goal — dashboard shows progress."
+                    }
+                  >
                     <Button
                       variant="ghost"
                       size="sm"
@@ -166,7 +186,9 @@ function RedeemModal({
       title={`Redeem: ${reward.name}`}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => send.mutate()} disabled={send.isPending || total > balance}>
             {send.isPending ? "Sending…" : `Request (${total} 🪙)`}
           </Button>
@@ -175,7 +197,10 @@ function RedeemModal({
     >
       <div className="space-y-3">
         {isQty && (
-          <Field label={`How many ${unit}-minute units?`} hint={`Max ${maxQty} per request (${maxMinutes}m total)`}>
+          <Field
+            label={`How many ${unit}-minute units?`}
+            hint={`Max ${maxQty} per request (${maxMinutes}m total)`}
+          >
             <input
               className={inputCls}
               type="number"
@@ -191,7 +216,9 @@ function RedeemModal({
         </Field>
         <div className="text-sm bg-slate-50 rounded-lg p-3">
           Cost: <strong>{total} credits</strong>. After: <strong>{balance - total}</strong> remaining.
-          {reward.requiresApproval && <div className="text-xs text-slate-500 mt-1">A grown-up needs to approve.</div>}
+          {reward.requiresApproval && (
+            <div className="text-xs text-slate-500 mt-1">A grown-up needs to approve.</div>
+          )}
         </div>
         {err && <div className="text-sm text-rose-600">{err}</div>}
       </div>

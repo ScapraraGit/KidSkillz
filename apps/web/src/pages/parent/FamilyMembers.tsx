@@ -27,9 +27,16 @@ export function FamilyMembers() {
 
   const membersQ = useQuery({
     queryKey: ["family-members"],
-    queryFn: () => api<{ members: { id: string; name: string; email: string | null; role: string; validUntil: string | null }[] }>(
-      "/family/members",
-    ).catch(() => ({ members: [] })),
+    queryFn: () =>
+      api<{
+        members: {
+          id: string;
+          name: string;
+          email: string | null;
+          role: string;
+          validUntil: string | null;
+        }[];
+      }>("/family/members").catch(() => ({ members: [] })),
   });
 
   const revoke = useMutation({
@@ -49,17 +56,48 @@ export function FamilyMembers() {
           mode === "NONE" ? (
             <div className="flex gap-2">
               <Tooltip label="Invite a co-parent with full access (email link)">
-                <Button variant="secondary" onClick={() => { setMode("CO_PARENT"); setLastResult(null); }}>Add Parent</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setMode("CO_PARENT");
+                    setLastResult(null);
+                  }}
+                >
+                  Add Parent
+                </Button>
               </Tooltip>
               <Tooltip label="Invite a grandparent or sitter with scoped, time-boxed access">
-                <Button variant="secondary" onClick={() => { setMode("CAREGIVER"); setLastResult(null); }}>Invite caregiver</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setMode("CAREGIVER");
+                    setLastResult(null);
+                  }}
+                >
+                  Invite caregiver
+                </Button>
               </Tooltip>
               <Tooltip label="Generate a one-time PIN for a sitter — no email needed">
-                <Button onClick={() => { setMode("CAREGIVER_PIN"); setLastResult(null); }}>Generate PIN</Button>
+                <Button
+                  onClick={() => {
+                    setMode("CAREGIVER_PIN");
+                    setLastResult(null);
+                  }}
+                >
+                  Generate PIN
+                </Button>
               </Tooltip>
             </div>
           ) : (
-            <Button variant="ghost" onClick={() => { setMode("NONE"); setLastResult(null); }}>Cancel</Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setMode("NONE");
+                setLastResult(null);
+              }}
+            >
+              Cancel
+            </Button>
           )
         }
       />
@@ -71,21 +109,49 @@ export function FamilyMembers() {
             <div className="mt-2">
               <div className="text-sm text-amber-900">PIN for caregiver to sign in:</div>
               <div className="text-3xl font-bold tracking-widest mt-1">{lastResult.pin}</div>
-              <div className="text-xs text-amber-800 mt-2">Caregiver enters at /caregiver/pin with your family name.</div>
+              <div className="text-xs text-amber-800 mt-2">
+                Caregiver enters at /caregiver/pin with your family name.
+              </div>
             </div>
           )}
           {lastResult.acceptUrl && (
             <div className="mt-2 text-sm">
               <div className="text-amber-900">Accept link (also emailed):</div>
-              <div className="font-mono text-xs break-all mt-1 bg-white p-2 rounded">{lastResult.acceptUrl}</div>
+              <div className="font-mono text-xs break-all mt-1 bg-white p-2 rounded">
+                {lastResult.acceptUrl}
+              </div>
             </div>
           )}
         </Card>
       )}
 
-      {mode === "CO_PARENT" && <CoParentForm onDone={(r) => { setLastResult(r); setMode("NONE"); qc.invalidateQueries({ queryKey: ["invitations"] }); }} />}
-      {mode === "CAREGIVER" && <CaregiverEmailForm onDone={(r) => { setLastResult(r); setMode("NONE"); qc.invalidateQueries({ queryKey: ["invitations"] }); }} />}
-      {mode === "CAREGIVER_PIN" && <CaregiverPinForm onDone={(r) => { setLastResult(r); setMode("NONE"); qc.invalidateQueries({ queryKey: ["invitations"] }); }} />}
+      {mode === "CO_PARENT" && (
+        <CoParentForm
+          onDone={(r) => {
+            setLastResult(r);
+            setMode("NONE");
+            qc.invalidateQueries({ queryKey: ["invitations"] });
+          }}
+        />
+      )}
+      {mode === "CAREGIVER" && (
+        <CaregiverEmailForm
+          onDone={(r) => {
+            setLastResult(r);
+            setMode("NONE");
+            qc.invalidateQueries({ queryKey: ["invitations"] });
+          }}
+        />
+      )}
+      {mode === "CAREGIVER_PIN" && (
+        <CaregiverPinForm
+          onDone={(r) => {
+            setLastResult(r);
+            setMode("NONE");
+            qc.invalidateQueries({ queryKey: ["invitations"] });
+          }}
+        />
+      )}
 
       <Card>
         <h3 className="font-semibold mb-3">Current members</h3>
@@ -100,8 +166,12 @@ export function FamilyMembers() {
                   <div className="text-xs text-slate-500">{m.email ?? "—"}</div>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <Badge color={m.role === "PARENT" ? "brand" : m.role === "CAREGIVER" ? "amber" : "slate"}>{m.role}</Badge>
-                  {m.validUntil && <span className="text-slate-500">until {new Date(m.validUntil).toLocaleString()}</span>}
+                  <Badge color={m.role === "PARENT" ? "brand" : m.role === "CAREGIVER" ? "amber" : "slate"}>
+                    {m.role}
+                  </Badge>
+                  {m.validUntil && (
+                    <span className="text-slate-500">until {new Date(m.validUntil).toLocaleString()}</span>
+                  )}
                 </div>
               </li>
             ))}
@@ -124,11 +194,17 @@ export function FamilyMembers() {
                   <div className="text-xs text-slate-500">
                     {inv.kind === "CO_PARENT" && "Co-parent"}
                     {inv.kind === "CAREGIVER" && `Caregiver · ${formatRange(inv.validFrom, inv.validUntil)}`}
-                    {inv.kind === "CAREGIVER_PIN" && `PIN handoff · expires ${new Date(inv.expiresAt).toLocaleString()}`}
+                    {inv.kind === "CAREGIVER_PIN" &&
+                      `PIN handoff · expires ${new Date(inv.expiresAt).toLocaleString()}`}
                   </div>
                 </div>
                 <Tooltip label="Cancel this invitation. PIN/link stops working immediately.">
-                  <Button size="sm" variant="ghost" onClick={() => revoke.mutate(inv.id)} disabled={revoke.isPending}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => revoke.mutate(inv.id)}
+                    disabled={revoke.isPending}
+                  >
                     Revoke
                   </Button>
                 </Tooltip>
@@ -144,7 +220,9 @@ export function FamilyMembers() {
           <ul className="divide-y divide-slate-100">
             {history.map((inv) => (
               <li key={inv.id} className="py-2 flex items-center justify-between text-sm">
-                <span>{inv.inviteeName ?? inv.email ?? "PIN"} · {inv.kind}</span>
+                <span>
+                  {inv.inviteeName ?? inv.email ?? "PIN"} · {inv.kind}
+                </span>
                 <Badge color={inv.status === "ACCEPTED" ? "emerald" : "slate"}>{inv.status}</Badge>
               </li>
             ))}
@@ -169,24 +247,50 @@ function CoParentForm({ onDone }: { onDone: (r: { acceptUrl?: string }) => void 
   return (
     <Card>
       <h3 className="font-semibold mb-3">Add Parent</h3>
-      <p className="text-sm text-slate-500 mb-4">Full access. They sign up via the emailed link and pick their own password.</p>
+      <p className="text-sm text-slate-500 mb-4">
+        Full access. They sign up via the emailed link and pick their own password.
+      </p>
       <form
         className="space-y-3"
         onSubmit={async (e) => {
           e.preventDefault();
-          setErr(null); setBusy(true);
+          setErr(null);
+          setBusy(true);
           try {
             const r = await api<{ acceptUrl: string }>("/invitations", {
               body: { kind: "CO_PARENT", email, inviteeName: name || undefined },
             });
             onDone({ acceptUrl: r.acceptUrl });
-          } catch (e: any) { setErr(e.message ?? "Failed"); } finally { setBusy(false); }
+          } catch (e: any) {
+            setErr(e.message ?? "Failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
-        <Field label="Email"><input title="Email" className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
-        <Field label="Their name (optional)"><input title="Their name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
+        <Field label="Email">
+          <input
+            title="Email"
+            className={inputCls}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Their name (optional)">
+          <input
+            title="Their name"
+            className={inputCls}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
+        </Field>
         {err && <div className="text-sm text-rose-600">{err}</div>}
-        <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send invitation"}</Button>
+        <Button type="submit" disabled={busy}>
+          {busy ? "Sending…" : "Send invitation"}
+        </Button>
       </form>
     </Card>
   );
@@ -203,12 +307,15 @@ function CaregiverEmailForm({ onDone }: { onDone: (r: { acceptUrl?: string }) =>
   return (
     <Card>
       <h3 className="font-semibold mb-3">Invite caregiver (e.g. grandparent)</h3>
-      <p className="text-sm text-slate-500 mb-4">Scoped, time-boxed access. They create their own login on their device.</p>
+      <p className="text-sm text-slate-500 mb-4">
+        Scoped, time-boxed access. They create their own login on their device.
+      </p>
       <form
         className="space-y-3"
         onSubmit={async (e) => {
           e.preventDefault();
-          setErr(null); setBusy(true);
+          setErr(null);
+          setBusy(true);
           try {
             const r = await api<{ acceptUrl: string }>("/invitations", {
               body: {
@@ -221,18 +328,60 @@ function CaregiverEmailForm({ onDone }: { onDone: (r: { acceptUrl?: string }) =>
               },
             });
             onDone({ acceptUrl: r.acceptUrl });
-          } catch (e: any) { setErr(e.message ?? "Failed"); } finally { setBusy(false); }
+          } catch (e: any) {
+            setErr(e.message ?? "Failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Their name"><input title="Their name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} /></Field>
-          <Field label="Email"><input title="Email" className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
-          <Field label="Access starts"><input title="Access starts" className={inputCls} type="date" value={from} onChange={(e) => setFrom(e.target.value)} required /></Field>
-          <Field label="Access ends"><input title="Access ends" className={inputCls} type="date" value={to} onChange={(e) => setTo(e.target.value)} required /></Field>
+          <Field label="Their name">
+            <input
+              title="Their name"
+              className={inputCls}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={80}
+            />
+          </Field>
+          <Field label="Email">
+            <input
+              title="Email"
+              className={inputCls}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Access starts">
+            <input
+              title="Access starts"
+              className={inputCls}
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Access ends">
+            <input
+              title="Access ends"
+              className={inputCls}
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              required
+            />
+          </Field>
         </div>
         <ScopeEditor scope={scope} onChange={setScope} />
         {err && <div className="text-sm text-rose-600">{err}</div>}
-        <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send invitation"}</Button>
+        <Button type="submit" disabled={busy}>
+          {busy ? "Sending…" : "Send invitation"}
+        </Button>
       </form>
     </Card>
   );
@@ -247,12 +396,15 @@ function CaregiverPinForm({ onDone }: { onDone: (r: { pin?: string }) => void })
   return (
     <Card>
       <h3 className="font-semibold mb-3">Generate PIN for a sitter</h3>
-      <p className="text-sm text-slate-500 mb-4">One-time PIN. Single use. Sitter signs in on any device at <code>/caregiver/pin</code>.</p>
+      <p className="text-sm text-slate-500 mb-4">
+        One-time PIN. Single use. Sitter signs in on any device at <code>/caregiver/pin</code>.
+      </p>
       <form
         className="space-y-3"
         onSubmit={async (e) => {
           e.preventDefault();
-          setErr(null); setBusy(true);
+          setErr(null);
+          setBusy(true);
           try {
             const r = await api<{ pin: string }>("/invitations", {
               body: {
@@ -263,16 +415,42 @@ function CaregiverPinForm({ onDone }: { onDone: (r: { pin?: string }) => void })
               },
             });
             onDone({ pin: r.pin });
-          } catch (e: any) { setErr(e.message ?? "Failed"); } finally { setBusy(false); }
+          } catch (e: any) {
+            setErr(e.message ?? "Failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Sitter's name"><input title="Sitter's name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} /></Field>
-          <Field label="Valid for (hours)"><input title="Valid for (hours)" className={inputCls} type="number" min={1} max={168} value={hours} onChange={(e) => setHours(Number(e.target.value))} required /></Field>
+          <Field label="Sitter's name">
+            <input
+              title="Sitter's name"
+              className={inputCls}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={80}
+            />
+          </Field>
+          <Field label="Valid for (hours)">
+            <input
+              title="Valid for (hours)"
+              className={inputCls}
+              type="number"
+              min={1}
+              max={168}
+              value={hours}
+              onChange={(e) => setHours(Number(e.target.value))}
+              required
+            />
+          </Field>
         </div>
         <ScopeEditor scope={scope} onChange={setScope} />
         {err && <div className="text-sm text-rose-600">{err}</div>}
-        <Button type="submit" disabled={busy}>{busy ? "Generating…" : "Generate PIN"}</Button>
+        <Button type="submit" disabled={busy}>
+          {busy ? "Generating…" : "Generate PIN"}
+        </Button>
       </form>
     </Card>
   );
@@ -282,22 +460,34 @@ function ScopeEditor({ scope, onChange }: { scope: CaregiverScope; onChange: (s:
   return (
     <div className="border-t border-slate-200 pt-3 space-y-2">
       <div className="text-sm font-medium text-slate-700">Permissions</div>
-      {(["canApproveTasks", "canApproveRedemptions", "canApproveInitiatives", "canViewLedger"] as const).map((k) => (
-        <label key={k} className="flex items-center gap-2 text-sm">
-          <input type="checkbox" title={labelFor(k)} checked={scope[k]} onChange={(e) => onChange({ ...scope, [k]: e.target.checked })} />
-          {labelFor(k)}
-        </label>
-      ))}
+      {(["canApproveTasks", "canApproveRedemptions", "canApproveInitiatives", "canViewLedger"] as const).map(
+        (k) => (
+          <label key={k} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              title={labelFor(k)}
+              checked={scope[k]}
+              onChange={(e) => onChange({ ...scope, [k]: e.target.checked })}
+            />
+            {labelFor(k)}
+          </label>
+        ),
+      )}
     </div>
   );
 }
 
 function labelFor(k: keyof CaregiverScope): string {
   switch (k) {
-    case "canApproveTasks": return "Approve chore completions";
-    case "canApproveRedemptions": return "Approve reward redemptions";
-    case "canApproveInitiatives": return "Approve initiative requests";
-    case "canViewLedger": return "View credit ledger";
-    default: return k;
+    case "canApproveTasks":
+      return "Approve chore completions";
+    case "canApproveRedemptions":
+      return "Approve reward redemptions";
+    case "canApproveInitiatives":
+      return "Approve initiative requests";
+    case "canViewLedger":
+      return "View credit ledger";
+    default:
+      return k;
   }
 }

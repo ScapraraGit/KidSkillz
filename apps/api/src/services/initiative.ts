@@ -38,7 +38,10 @@ export async function submitInitiative(familyId: string, input: SubmitInitiative
   });
 }
 
-export async function listInitiative(familyId: string, opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string }) {
+export async function listInitiative(
+  familyId: string,
+  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+) {
   return prisma.initiativeRequest.findMany({
     where: {
       familyId,

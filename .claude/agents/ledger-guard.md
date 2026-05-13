@@ -30,6 +30,7 @@ If clean, say `OK: ledger invariants hold`.
 ## Scope
 
 Read these files first:
+
 - `apps/api/src/services/ledger.ts`
 - `apps/api/src/services/completions.ts`
 - `apps/api/src/services/redemptions.ts`

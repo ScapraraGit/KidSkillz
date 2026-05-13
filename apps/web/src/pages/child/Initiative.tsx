@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
-import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CreditChip,
+  EmptyState,
+  Field,
+  PageHeader,
+  inputCls,
+} from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import type { InitiativeRequestDTO } from "@chorechamps/shared";
@@ -38,10 +47,7 @@ export function ChildInitiative() {
   const bonus = settings?.initiativeBonus;
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Initiative"
-        subtitle="Step up. Plan ahead. Earn extra."
-      />
+      <PageHeader title="Initiative" subtitle="Step up. Plan ahead. Earn extra." />
 
       <Card>
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-4">
@@ -67,8 +73,8 @@ export function ChildInitiative() {
 
         {kind === "PLANNED" && bonus?.enabled && (
           <div className="rounded-xl bg-brand-50 border border-brand-200 p-3 mb-4 text-sm text-brand-900">
-            <strong>Bonus available:</strong> Planning ahead can earn you extra credits when approved
-            (+{bonus.plannedFlatBonus} flat
+            <strong>Bonus available:</strong> Planning ahead can earn you extra credits when approved (+
+            {bonus.plannedFlatBonus} flat
             {bonus.plannedMultiplier > 1 ? ` and ×${bonus.plannedMultiplier}` : ""}).
           </div>
         )}
@@ -80,10 +86,20 @@ export function ChildInitiative() {
 
         <div className="space-y-3">
           <Field label="What is it?">
-            <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Organize the bookshelf" />
+            <input
+              className={inputCls}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Organize the bookshelf"
+            />
           </Field>
           <Field label="Tell us more">
-            <textarea className={inputCls} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <textarea
+              className={inputCls}
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </Field>
           <Field label="Suggested credits">
             <input
@@ -123,7 +139,9 @@ export function ChildInitiative() {
                 </div>
                 <CreditChip amount={i.creditAwarded ?? i.suggestedCredits} />
                 {i.bonusApplied && i.bonusApplied > 0 && <Badge color="amber">+{i.bonusApplied} bonus</Badge>}
-                <Badge color={i.status === "APPROVED" ? "emerald" : i.status === "REJECTED" ? "rose" : "amber"}>
+                <Badge
+                  color={i.status === "APPROVED" ? "emerald" : i.status === "REJECTED" ? "rose" : "amber"}
+                >
                   {i.status}
                 </Badge>
               </li>

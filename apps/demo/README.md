@@ -19,6 +19,7 @@ pnpm all
 `pnpm all` records 20s of screenshots into `frames/` then encodes them to `apps/web/public/demo.gif`.
 
 Override target host:
+
 ```sh
 DEMO_BASE_URL=https://chorechampsweb-production.up.railway.app pnpm record
 ```

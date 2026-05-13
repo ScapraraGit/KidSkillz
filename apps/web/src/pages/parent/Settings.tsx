@@ -23,7 +23,10 @@ export function ParentSettings() {
         ...DEFAULT_FAMILY_SETTINGS,
         ...familyQ.data.settings,
         latePenalty: { ...DEFAULT_FAMILY_SETTINGS.latePenalty, ...(familyQ.data.settings.latePenalty ?? {}) },
-        initiativeBonus: { ...DEFAULT_FAMILY_SETTINGS.initiativeBonus, ...(familyQ.data.settings.initiativeBonus ?? {}) },
+        initiativeBonus: {
+          ...DEFAULT_FAMILY_SETTINGS.initiativeBonus,
+          ...(familyQ.data.settings.initiativeBonus ?? {}),
+        },
         screenTime: { ...DEFAULT_FAMILY_SETTINGS.screenTime, ...(familyQ.data.settings.screenTime ?? {}) },
       });
     }
@@ -90,7 +93,9 @@ export function ParentSettings() {
           <input
             type="checkbox"
             checked={s.initiativeBonus.enabled}
-            onChange={(e) => setS({ ...s, initiativeBonus: { ...s.initiativeBonus, enabled: e.target.checked } })}
+            onChange={(e) =>
+              setS({ ...s, initiativeBonus: { ...s.initiativeBonus, enabled: e.target.checked } })
+            }
           />
           Enable bonus credits for planned-ahead initiative
         </label>
@@ -102,7 +107,10 @@ export function ParentSettings() {
               min={0}
               value={s.initiativeBonus.plannedFlatBonus}
               onChange={(e) =>
-                setS({ ...s, initiativeBonus: { ...s.initiativeBonus, plannedFlatBonus: Number(e.target.value) } })
+                setS({
+                  ...s,
+                  initiativeBonus: { ...s.initiativeBonus, plannedFlatBonus: Number(e.target.value) },
+                })
               }
             />
           </Field>
@@ -115,7 +123,10 @@ export function ParentSettings() {
               max={3}
               value={s.initiativeBonus.plannedMultiplier}
               onChange={(e) =>
-                setS({ ...s, initiativeBonus: { ...s.initiativeBonus, plannedMultiplier: Number(e.target.value) } })
+                setS({
+                  ...s,
+                  initiativeBonus: { ...s.initiativeBonus, plannedMultiplier: Number(e.target.value) },
+                })
               }
             />
           </Field>
@@ -125,8 +136,8 @@ export function ParentSettings() {
       <Card className="space-y-4">
         <h3 className="font-semibold">Late penalty</h3>
         <p className="text-sm text-slate-500">
-          When a task has a deadline (recurring "Due by time" or one-time "Due at"), submissions past it earn fewer credits.
-          Tasks without a deadline are always full credit.
+          When a task has a deadline (recurring "Due by time" or one-time "Due at"), submissions past it earn
+          fewer credits. Tasks without a deadline are always full credit.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -137,7 +148,10 @@ export function ParentSettings() {
           Apply late penalty to tasks with deadlines
         </label>
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Grace minutes" hint="Submissions within this many minutes after the deadline still earn full credit.">
+          <Field
+            label="Grace minutes"
+            hint="Submissions within this many minutes after the deadline still earn full credit."
+          >
             <input
               className={inputCls}
               type="number"
@@ -148,7 +162,10 @@ export function ParentSettings() {
               }
             />
           </Field>
-          <Field label="Late multiplier" hint="Late zone ends at grace × this. Default 2.0 → late zone is twice the grace window.">
+          <Field
+            label="Late multiplier"
+            hint="Late zone ends at grace × this. Default 2.0 → late zone is twice the grace window."
+          >
             <input
               className={inputCls}
               type="number"
@@ -160,7 +177,10 @@ export function ParentSettings() {
               }
             />
           </Field>
-          <Field label="Late percent" hint="Award during the late zone, as a fraction of full credit. 0.5 = 50%.">
+          <Field
+            label="Late percent"
+            hint="Award during the late zone, as a fraction of full credit. 0.5 = 50%."
+          >
             <input
               className={inputCls}
               type="number"
@@ -206,7 +226,10 @@ export function ParentSettings() {
               type="number"
               value={s.screenTime.maxPerRedemptionMinutes}
               onChange={(e) =>
-                setS({ ...s, screenTime: { ...s.screenTime, maxPerRedemptionMinutes: Number(e.target.value) } })
+                setS({
+                  ...s,
+                  screenTime: { ...s.screenTime, maxPerRedemptionMinutes: Number(e.target.value) },
+                })
               }
             />
           </Field>

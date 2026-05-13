@@ -17,7 +17,9 @@ export function LevelCard({ level, variant = "full" }: Props) {
       <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-1">
         <span>Lvl {level.level}</span>
         {title && <span className="opacity-80">· {title}</span>}
-        <span className="opacity-70">{level.xpInLevel}/{level.xpToNext}</span>
+        <span className="opacity-70">
+          {level.xpInLevel}/{level.xpToNext}
+        </span>
       </div>
     );
   }
@@ -47,7 +49,12 @@ export function LevelCard({ level, variant = "full" }: Props) {
       </div>
       <div className="text-xs text-slate-500 mt-1">
         {level.xpInLevel}/{level.xpToNext} XP to Lvl {level.level + 1}
-        {next && <> · next title <strong>{next.name}</strong> at Lvl {next.level}</>}
+        {next && (
+          <>
+            {" "}
+            · next title <strong>{next.name}</strong> at Lvl {next.level}
+          </>
+        )}
       </div>
     </Card>
   );

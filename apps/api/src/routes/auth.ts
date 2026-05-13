@@ -53,7 +53,8 @@ const parentLoginSchema = z.object({
 authRouter.post("/parent/login", async (req, res) => {
   const { email, password } = parentLoginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.role !== "PARENT" || !user.passwordHash) throw HttpError.unauthorized("Invalid credentials");
+  if (!user || user.role !== "PARENT" || !user.passwordHash)
+    throw HttpError.unauthorized("Invalid credentials");
   if (!user.isActive) throw HttpError.forbidden("Account is inactive");
   const ok = await comparePassword(password, user.passwordHash);
   if (!ok) throw HttpError.unauthorized("Invalid credentials");
@@ -63,14 +64,18 @@ authRouter.post("/parent/login", async (req, res) => {
 
 const childLoginSchema = z.object({
   childId: z.string().uuid(),
-  pin: z.string().regex(/^\d{4,8}$/).optional(),
+  pin: z
+    .string()
+    .regex(/^\d{4,8}$/)
+    .optional(),
   familyPassword: z.string().optional(),
 });
 
 authRouter.post("/child/login", async (req, res) => {
   const { childId, pin, familyPassword } = childLoginSchema.parse(req.body);
   const child = await prisma.user.findUnique({ where: { id: childId }, include: { family: true } });
-  if (!child || child.role !== "CHILD" || !child.isActive) throw HttpError.unauthorized("Invalid credentials");
+  if (!child || child.role !== "CHILD" || !child.isActive)
+    throw HttpError.unauthorized("Invalid credentials");
   const settings = await getFamilySettings(child.familyId);
 
   if (settings.childAuthMode === "INDIVIDUAL") {
@@ -136,7 +141,10 @@ authRouter.post("/onboarded", requireAuth, async (req, res) => {
 });
 
 const updateAvatarSchema = z.object({
-  avatarColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  avatarColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
   avatarConfig: avatarConfigSchema.nullable().optional(),
 });
 

@@ -9,25 +9,95 @@ import { PETS } from "../lib/pets";
 
 // Curated DiceBear "avataaars" option pools — keeping the choices kid-friendly.
 const TOPS = [
-  "shortFlat", "shortRound", "shortWaved", "shortCurly", "theCaesar", "theCaesarAndSidePart",
-  "sides", "dreads01", "dreads02", "shaggy", "shaggyMullet", "frizzle",
-  "bigHair", "bob", "bun", "curly", "curvy", "dreads", "frida", "fro", "froBand",
-  "longButNotTooLong", "miaWallace", "shavedSides", "straight01", "straight02", "straightAndStrand",
-  "hat", "hijab", "turban", "winterHat1", "winterHat02", "winterHat03", "winterHat04",
+  "shortFlat",
+  "shortRound",
+  "shortWaved",
+  "shortCurly",
+  "theCaesar",
+  "theCaesarAndSidePart",
+  "sides",
+  "dreads01",
+  "dreads02",
+  "shaggy",
+  "shaggyMullet",
+  "frizzle",
+  "bigHair",
+  "bob",
+  "bun",
+  "curly",
+  "curvy",
+  "dreads",
+  "frida",
+  "fro",
+  "froBand",
+  "longButNotTooLong",
+  "miaWallace",
+  "shavedSides",
+  "straight01",
+  "straight02",
+  "straightAndStrand",
+  "hat",
+  "hijab",
+  "turban",
+  "winterHat1",
+  "winterHat02",
+  "winterHat03",
+  "winterHat04",
 ];
 
-const HAIR_COLORS = ["a55728", "2c1b18", "b58143", "d6b370", "724133", "4a312c", "f59797", "ecdcbf", "c93305", "e8e1e1"];
+const HAIR_COLORS = [
+  "a55728",
+  "2c1b18",
+  "b58143",
+  "d6b370",
+  "724133",
+  "4a312c",
+  "f59797",
+  "ecdcbf",
+  "c93305",
+  "e8e1e1",
+];
 
 const EYES = [
-  "default", "happy", "wink", "winkWacky", "surprised", "squint", "hearts", "side", "closed", "cry", "eyeRoll", "xDizzy",
+  "default",
+  "happy",
+  "wink",
+  "winkWacky",
+  "surprised",
+  "squint",
+  "hearts",
+  "side",
+  "closed",
+  "cry",
+  "eyeRoll",
+  "xDizzy",
 ];
 
 const EYEBROWS = [
-  "default", "defaultNatural", "flatNatural", "raisedExcited", "raisedExcitedNatural", "sadConcerned", "upDown", "angry", "frownNatural", "unibrowNatural",
+  "default",
+  "defaultNatural",
+  "flatNatural",
+  "raisedExcited",
+  "raisedExcitedNatural",
+  "sadConcerned",
+  "upDown",
+  "angry",
+  "frownNatural",
+  "unibrowNatural",
 ];
 
 const MOUTHS = [
-  "default", "smile", "twinkle", "tongue", "serious", "eating", "grimace", "sad", "screamOpen", "disbelief", "concerned",
+  "default",
+  "smile",
+  "twinkle",
+  "tongue",
+  "serious",
+  "eating",
+  "grimace",
+  "sad",
+  "screamOpen",
+  "disbelief",
+  "concerned",
 ];
 
 const ACCESSORIES = ["round", "prescription01", "prescription02", "sunglasses", "wayfarers", "kurt"];
@@ -36,18 +106,49 @@ const FACIAL_HAIR = ["beardLight", "beardMajestic", "beardMedium", "moustacheFan
 
 const FACIAL_HAIR_COLORS = ["2c1b18", "724133", "a55728", "b58143", "d6b370", "ecdcbf"];
 
-const CLOTHING = ["blazerAndShirt", "blazerAndSweater", "collarAndSweater", "graphicShirt", "hoodie", "overall", "shirtCrewNeck", "shirtScoopNeck", "shirtVNeck"];
+const CLOTHING = [
+  "blazerAndShirt",
+  "blazerAndSweater",
+  "collarAndSweater",
+  "graphicShirt",
+  "hoodie",
+  "overall",
+  "shirtCrewNeck",
+  "shirtScoopNeck",
+  "shirtVNeck",
+];
 
 const CLOTHES_COLORS = [
-  "262e33", "3c4f5c", "65c9ff", "5199e4", "25557c", "929598", "a7ffc4", "b1e2ff",
-  "e6e6e6", "ff488e", "ff5c5c", "ffafb9", "ffffb1", "ffffff",
+  "262e33",
+  "3c4f5c",
+  "65c9ff",
+  "5199e4",
+  "25557c",
+  "929598",
+  "a7ffc4",
+  "b1e2ff",
+  "e6e6e6",
+  "ff488e",
+  "ff5c5c",
+  "ffafb9",
+  "ffffb1",
+  "ffffff",
 ];
 
 // DiceBear avataaars skinColor schema requires 6-char hex (not keyword names).
 const SKIN_COLORS = ["fd9841", "f8d25c", "ffdbb4", "edb98a", "d08b5b", "ae5d29", "614335"];
 
 const BACKGROUND_COLORS = [
-  "b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf", "fbe0e2", "c9eed8", "fff1b0", "ffe1a8", "e0f2fe",
+  "b6e3f4",
+  "c0aede",
+  "d1d4f9",
+  "ffd5dc",
+  "ffdfbf",
+  "fbe0e2",
+  "c9eed8",
+  "fff1b0",
+  "ffe1a8",
+  "e0f2fe",
 ];
 
 type Tab = {
@@ -116,7 +217,7 @@ export function defaultAvatarConfig(): AvatarConfig {
 }
 
 interface AvatarStudioTarget {
-  id: string;        // user id (for parents editing a child) — informational only
+  id: string; // user id (for parents editing a child) — informational only
   name: string;
   avatarColor?: string;
   avatarConfig?: AvatarConfig | null;
@@ -134,9 +235,7 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
   const setUser = useAuth((s) => s.setUser);
   const authedUserId = useAuth((s) => s.user?.id);
   const qc = useQueryClient();
-  const [config, setConfig] = useState<AvatarConfig>(
-    () => (user.avatarConfig ?? defaultAvatarConfig()),
-  );
+  const [config, setConfig] = useState<AvatarConfig>(() => user.avatarConfig ?? defaultAvatarConfig());
   const [tab, setTab] = useState<string>("skin");
 
   const save = useMutation({
@@ -168,7 +267,10 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-3xl max-h-[92vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -181,7 +283,9 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
               <p className="text-xs text-slate-500">Make it yours, {user.name}!</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Close">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Close">
+            ✕
+          </button>
         </header>
 
         <div className="grid sm:grid-cols-[200px,1fr] gap-4 p-5 overflow-hidden flex-1 min-h-0">
@@ -190,18 +294,10 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
             <div className="w-40 h-40 sm:w-44 sm:h-44">
               <KidAvatar name={user.name} color={user.avatarColor} config={config} size={176} />
             </div>
-            <Button
-              variant="secondary"
-              onClick={() => setConfig(randomAvatarConfig())}
-              className="w-full"
-            >
+            <Button variant="secondary" onClick={() => setConfig(randomAvatarConfig())} className="w-full">
               🎲 Randomize
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setConfig(defaultAvatarConfig())}
-              className="w-full"
-            >
+            <Button variant="ghost" onClick={() => setConfig(defaultAvatarConfig())} className="w-full">
               Reset
             </Button>
           </div>
@@ -215,7 +311,9 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
                   onClick={() => setTab(t.key)}
                   className={
                     "px-3 py-1.5 rounded-full text-sm font-medium transition " +
-                    (tab === t.key ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")
+                    (tab === t.key
+                      ? "bg-brand-600 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200")
                   }
                 >
                   <span className="mr-1">{t.emoji}</span>
@@ -230,7 +328,9 @@ export function AvatarStudio({ user, childId, onClose, onSaved }: AvatarStudioPr
         </div>
 
         <footer className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : "Save avatar"}
           </Button>
@@ -285,7 +385,9 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
     case "eyes":
       return <PreviewPicker name={name} config={config} field="eyes" options={EYES} onChange={onChange} />;
     case "eyebrows":
-      return <PreviewPicker name={name} config={config} field="eyebrows" options={EYEBROWS} onChange={onChange} />;
+      return (
+        <PreviewPicker name={name} config={config} field="eyebrows" options={EYEBROWS} onChange={onChange} />
+      );
     case "mouth":
       return <PreviewPicker name={name} config={config} field="mouth" options={MOUTHS} onChange={onChange} />;
     case "accessories":
@@ -313,7 +415,9 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
         />
       );
     case "clothing":
-      return <PreviewPicker name={name} config={config} field="clothing" options={CLOTHING} onChange={onChange} />;
+      return (
+        <PreviewPicker name={name} config={config} field="clothing" options={CLOTHING} onChange={onChange} />
+      );
     case "clothesColor":
       return (
         <SwatchPicker
@@ -406,9 +510,7 @@ function PreviewPicker({
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
       {items.map((opt) => {
         const isNone = opt === "__none__";
-        const selected = isNone
-          ? probabilityOff
-          : !probabilityOff && current === opt;
+        const selected = isNone ? probabilityOff : !probabilityOff && current === opt;
         const previewConfig: AvatarConfig = {
           ...config,
           [field]: isNone ? [] : [opt],
@@ -432,7 +534,9 @@ function PreviewPicker({
             }
           >
             <KidAvatar name={name} config={previewConfig} size={64} />
-            <span className="text-[10px] text-slate-500 truncate w-full text-center">{isNone ? (noneLabel ?? "None") : prettyLabel(opt)}</span>
+            <span className="text-[10px] text-slate-500 truncate w-full text-center">
+              {isNone ? (noneLabel ?? "None") : prettyLabel(opt)}
+            </span>
           </button>
         );
       })}
@@ -464,7 +568,9 @@ function SwatchPicker({
             onClick={() => onChange({ ...config, [field]: [value] } as AvatarConfig)}
             className={
               "w-12 h-12 rounded-full border-2 transition " +
-              (selected ? "border-brand-600 ring-2 ring-brand-200" : "border-slate-200 hover:border-slate-400")
+              (selected
+                ? "border-brand-600 ring-2 ring-brand-200"
+                : "border-slate-200 hover:border-slate-400")
             }
             style={{ backgroundColor: swatch }}
             aria-label={value}

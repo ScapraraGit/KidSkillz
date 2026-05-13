@@ -67,11 +67,13 @@ For `<select>` / `<input>` triggers, ALSO add `aria-label` — Radix's accessibl
 - Mention the disabled reason when the button is conditionally disabled.
 
 Good:
+
 - `"Permanently delete this task (history preserved on ledger)"`
 - `"Approve redemption and deduct held credits"`
 - `"Cancel this invitation. PIN/link stops working immediately."`
 
 Bad:
+
 - `"Delete"` — restates the button.
 - `"Click here to do the thing"` — useless.
 - `"This is a button that will permanently and irreversibly delete the task forever from the database…"` — too long.

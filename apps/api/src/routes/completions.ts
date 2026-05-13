@@ -19,7 +19,11 @@ const submitSchema = z.object({
   taskId: z.string().uuid(),
   notes: z.string().max(2000).nullable().optional(),
   photoKey: z.string().nullable().optional(),
-  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  occurrenceDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
 });
 
 completionsRouter.post("/", async (req, res) => {

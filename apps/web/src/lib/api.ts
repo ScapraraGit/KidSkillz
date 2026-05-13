@@ -50,7 +50,11 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
 }
 
 function safeJSON(s: string): unknown {
-  try { return JSON.parse(s); } catch { return null; }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
 }
 
 export function uploadProof(file: File): Promise<{ key: string }> {

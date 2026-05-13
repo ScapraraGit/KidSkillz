@@ -34,13 +34,13 @@ export function PetHero({ petId, level, childName, bounceKey }: Props) {
           {glyph}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-500">{childName}'s {pet.label}</div>
+          <div className="text-xs text-slate-500">
+            {childName}'s {pet.label}
+          </div>
           <div className="font-bold text-lg">{stageName}</div>
           <div className="text-xs text-slate-500 mt-1">Lvl {level.level}</div>
           {nextStageLevel ? (
-            <div className="text-xs text-brand-700 mt-1">
-              Evolves at Lvl {nextStageLevel}
-            </div>
+            <div className="text-xs text-brand-700 mt-1">Evolves at Lvl {nextStageLevel}</div>
           ) : (
             <div className="text-xs text-amber-700 mt-1">Fully evolved!</div>
           )}

@@ -31,7 +31,13 @@ challengesRouter.get("/child/:id", async (req, res) => {
 });
 
 // Parent admin: list, create, update, delete.
-const kindEnum = z.enum(["COMPLETE_N_TASKS", "EARN_N_CREDITS", "INITIATIVE_N_TIMES", "NO_MISSES", "EARLY_BIRD"]);
+const kindEnum = z.enum([
+  "COMPLETE_N_TASKS",
+  "EARN_N_CREDITS",
+  "INITIATIVE_N_TIMES",
+  "NO_MISSES",
+  "EARLY_BIRD",
+]);
 const windowEnum = z.enum(["DAY", "WEEK"]);
 
 const createSchema = z.object({

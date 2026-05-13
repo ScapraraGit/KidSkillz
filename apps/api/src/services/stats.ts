@@ -52,7 +52,8 @@ export async function childStats(familyId: string, childId: string): Promise<Chi
   for (let i = 0; i < 60; i++) {
     const d = format(addDays(todayCal, -i), "yyyy-MM-dd");
     if (days.has(d)) streak++;
-    else if (i === 0) continue; // grace for today not done yet
+    else if (i === 0)
+      continue; // grace for today not done yet
     else break;
   }
 

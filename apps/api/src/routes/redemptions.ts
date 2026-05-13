@@ -36,10 +36,14 @@ redemptionsRouter.get("/", async (req, res) => {
 
 const reviewSchema = z.object({ reason: z.string().max(500).optional() });
 
-redemptionsRouter.post("/:id/approve", requireParentOrCaregiver("canApproveRedemptions"), async (req, res) => {
-  const r = await approveRedemption(req.auth!.fid, req.params.id, req.auth!.sub);
-  res.json({ redemption: serializeRedemption(r) });
-});
+redemptionsRouter.post(
+  "/:id/approve",
+  requireParentOrCaregiver("canApproveRedemptions"),
+  async (req, res) => {
+    const r = await approveRedemption(req.auth!.fid, req.params.id, req.auth!.sub);
+    res.json({ redemption: serializeRedemption(r) });
+  },
+);
 
 redemptionsRouter.post("/:id/reject", requireParentOrCaregiver("canApproveRedemptions"), async (req, res) => {
   const { reason } = reviewSchema.parse(req.body ?? {});

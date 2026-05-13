@@ -7,7 +7,10 @@ import type { ChildDTO, LedgerEntryDTO } from "@chorechamps/shared";
 
 export function ParentLedger() {
   const [childId, setChildId] = useState<string>("");
-  const childrenQ = useQuery({ queryKey: ["children"], queryFn: () => api<{ children: ChildDTO[] }>("/children") });
+  const childrenQ = useQuery({
+    queryKey: ["children"],
+    queryFn: () => api<{ children: ChildDTO[] }>("/children"),
+  });
   const ledgerQ = useQuery({
     queryKey: ["ledger", childId],
     queryFn: () =>
@@ -21,17 +24,19 @@ export function ParentLedger() {
         subtitle="Every credit movement, audit-trail style."
         right={
           <Tooltip label="Filter ledger entries to one kid">
-          <select
-            aria-label="Filter ledger by kid"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            value={childId}
-            onChange={(e) => setChildId(e.target.value)}
-          >
-            <option value="">All kids</option>
-            {childrenQ.data?.children.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <select
+              aria-label="Filter ledger by kid"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              value={childId}
+              onChange={(e) => setChildId(e.target.value)}
+            >
+              <option value="">All kids</option>
+              {childrenQ.data?.children.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </Tooltip>
         }
       />
@@ -66,7 +71,9 @@ export function ParentLedger() {
                     </td>
                     <td className="p-3">{e.reason}</td>
                     <td className="p-3 text-xs text-slate-500">{e.kind}</td>
-                    <td className="p-3 text-right"><CreditChip amount={e.amount} /></td>
+                    <td className="p-3 text-right">
+                      <CreditChip amount={e.amount} />
+                    </td>
                   </tr>
                 );
               })}

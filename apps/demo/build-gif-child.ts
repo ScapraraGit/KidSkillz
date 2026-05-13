@@ -19,10 +19,14 @@ async function main() {
   console.log(`Encoding ${files.length} frames → ${OUT}`);
 
   const args = [
-    "--fps", String(FPS),
-    "--width", String(WIDTH),
-    "--quality", String(QUALITY),
-    "--output", OUT,
+    "--fps",
+    String(FPS),
+    "--width",
+    String(WIDTH),
+    "--quality",
+    String(QUALITY),
+    "--output",
+    OUT,
     ...files,
   ];
 

@@ -1,10 +1,13 @@
-interface Title { level: number; name: string }
+interface Title {
+  level: number;
+  name: string;
+}
 
 const LADDER: Title[] = [
-  { level: 2,  name: "Helper" },
-  { level: 3,  name: "Chore Cub" },
-  { level: 5,  name: "Chore Champ" },
-  { level: 7,  name: "Streak Wizard" },
+  { level: 2, name: "Helper" },
+  { level: 3, name: "Chore Cub" },
+  { level: 5, name: "Chore Champ" },
+  { level: 7, name: "Streak Wizard" },
   { level: 10, name: "Ledger Legend" },
   { level: 15, name: "Initiative Hero" },
   { level: 20, name: "Grand Champion" },

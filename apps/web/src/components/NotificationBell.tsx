@@ -45,7 +45,10 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={wrapRef}>
-      <Tooltip label={unread > 0 ? `${unread} unread notification${unread === 1 ? "" : "s"}` : "Notifications"} side="bottom">
+      <Tooltip
+        label={unread > 0 ? `${unread} unread notification${unread === 1 ? "" : "s"}` : "Notifications"}
+        side="bottom"
+      >
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -85,7 +88,10 @@ export function NotificationBell() {
                 return (
                   <li
                     key={n.id}
-                    className={"px-3 py-2 text-sm cursor-pointer " + (unreadItem ? "bg-brand-50/40 hover:bg-brand-50" : "hover:bg-slate-50")}
+                    className={
+                      "px-3 py-2 text-sm cursor-pointer " +
+                      (unreadItem ? "bg-brand-50/40 hover:bg-brand-50" : "hover:bg-slate-50")
+                    }
                     onClick={() => unreadItem && readOne.mutate(n.id)}
                   >
                     <div className="flex items-start gap-2">
@@ -109,16 +115,26 @@ export function NotificationBell() {
 
 function glyphFor(kind: NotificationDTO["kind"]): string {
   switch (kind) {
-    case "COMPLETION_APPROVED": return "✅";
-    case "COMPLETION_REJECTED": return "↩️";
-    case "REDEMPTION_APPROVED": return "🎁";
-    case "REDEMPTION_REJECTED": return "🚫";
-    case "INITIATIVE_APPROVED": return "🌟";
-    case "INITIATIVE_REJECTED": return "↩️";
-    case "CHALLENGE_COMPLETED": return "🎯";
-    case "LEVEL_UP":            return "⭐";
-    case "KUDOS":               return "💬";
-    default:                    return "🔔";
+    case "COMPLETION_APPROVED":
+      return "✅";
+    case "COMPLETION_REJECTED":
+      return "↩️";
+    case "REDEMPTION_APPROVED":
+      return "🎁";
+    case "REDEMPTION_REJECTED":
+      return "🚫";
+    case "INITIATIVE_APPROVED":
+      return "🌟";
+    case "INITIATIVE_REJECTED":
+      return "↩️";
+    case "CHALLENGE_COMPLETED":
+      return "🎯";
+    case "LEVEL_UP":
+      return "⭐";
+    case "KUDOS":
+      return "💬";
+    default:
+      return "🔔";
   }
 }
 

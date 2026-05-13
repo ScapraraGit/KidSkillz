@@ -1,13 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, uploadUrl } from "../../lib/api";
-import { Avatar, Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  CreditChip,
+  EmptyState,
+  Field,
+  PageHeader,
+  inputCls,
+} from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
-import type {
-  InitiativeRequestDTO,
-  RedemptionDTO,
-  TaskCompletionDTO,
-} from "@chorechamps/shared";
+import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechamps/shared";
 
 export function ParentApprovals() {
   const qc = useQueryClient();
@@ -99,13 +105,13 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
   const fullCredit = completion.task!.creditValue;
   const isReduced = !!suggested && suggested.deadline && suggested.credits < fullCredit;
   const tierBadge =
-    suggested?.tier === "LATE"
-      ? <Badge color="amber">Late · {formatLateness(suggested.lateMinutes)}</Badge>
-      : suggested?.tier === "SEVERE"
-      ? <Badge color="rose">Very late · {formatLateness(suggested.lateMinutes)}</Badge>
-      : suggested?.deadline
-      ? <Badge color="emerald">On time</Badge>
-      : null;
+    suggested?.tier === "LATE" ? (
+      <Badge color="amber">Late · {formatLateness(suggested.lateMinutes)}</Badge>
+    ) : suggested?.tier === "SEVERE" ? (
+      <Badge color="rose">Very late · {formatLateness(suggested.lateMinutes)}</Badge>
+    ) : suggested?.deadline ? (
+      <Badge color="emerald">On time</Badge>
+    ) : null;
 
   return (
     <li className="py-3 flex flex-wrap items-center gap-3">
@@ -116,10 +122,15 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
           {tierBadge}
         </div>
         {completion.notes && <div className="text-xs text-slate-500 italic">"{completion.notes}"</div>}
-        {photoUrl && <a className="text-xs text-brand-700 underline" href={photoUrl} target="_blank" rel="noreferrer">View photo</a>}
+        {photoUrl && (
+          <a className="text-xs text-brand-700 underline" href={photoUrl} target="_blank" rel="noreferrer">
+            View photo
+          </a>
+        )}
         {isReduced && (
           <div className="text-xs text-slate-500 mt-1">
-            Suggested award: <strong>{suggested!.credits}</strong> (full: {fullCredit}). Override below to change.
+            Suggested award: <strong>{suggested!.credits}</strong> (full: {fullCredit}). Override below to
+            change.
           </div>
         )}
       </div>
@@ -146,10 +157,14 @@ function CompletionRow({ completion, onChange }: { completion: TaskCompletionDTO
         />
       </Tooltip>
       <Tooltip label="Award credits and clear from queue">
-        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>
+          Approve
+        </Button>
       </Tooltip>
       <Tooltip label="Deny without penalty (no credit posted)">
-        <Button variant="ghost" size="sm" onClick={() => reject.mutate("")} disabled={reject.isPending}>Reject</Button>
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate("")} disabled={reject.isPending}>
+          Reject
+        </Button>
       </Tooltip>
     </li>
   );
@@ -200,10 +215,14 @@ function InitiativeRow({ initiative, onChange }: { initiative: InitiativeRequest
         />
       </Tooltip>
       <Tooltip label="Award credits for this initiative">
-        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>
+          Approve
+        </Button>
       </Tooltip>
       <Tooltip label="Deny without posting credit">
-        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>
+          Reject
+        </Button>
       </Tooltip>
     </li>
   );
@@ -231,10 +250,14 @@ function RedemptionRow({ redemption, onChange }: { redemption: RedemptionDTO; on
       </div>
       <CreditChip amount={-redemption.creditCost} />
       <Tooltip label="Approve redemption and deduct held credits">
-        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>Approve</Button>
+        <Button variant="success" size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>
+          Approve
+        </Button>
       </Tooltip>
       <Tooltip label="Reject and refund held credits to the kid">
-        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>Reject</Button>
+        <Button variant="ghost" size="sm" onClick={() => reject.mutate()} disabled={reject.isPending}>
+          Reject
+        </Button>
       </Tooltip>
     </li>
   );

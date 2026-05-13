@@ -24,10 +24,10 @@ export function SavingsGoal({ rewardId, balance, weekEarned }: Props) {
     remaining === 0
       ? "You can redeem now!"
       : weeks === Infinity
-      ? "Earn some credits this week to see ETA"
-      : weeks <= 1
-      ? "About 1 week away at this pace"
-      : `About ${Math.ceil(weeks)} weeks away at this pace`;
+        ? "Earn some credits this week to see ETA"
+        : weeks <= 1
+          ? "About 1 week away at this pace"
+          : `About ${Math.ceil(weeks)} weeks away at this pace`;
 
   return (
     <Card
@@ -43,7 +43,9 @@ export function SavingsGoal({ rewardId, balance, weekEarned }: Props) {
           <div className="font-semibold">{reward.name}</div>
         </div>
         <div className="text-right">
-          <div className="text-sm font-bold">{balance}/{reward.creditCost}</div>
+          <div className="text-sm font-bold">
+            {balance}/{reward.creditCost}
+          </div>
           <div className="text-xs text-slate-500">credits</div>
         </div>
       </div>

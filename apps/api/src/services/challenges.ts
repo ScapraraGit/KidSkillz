@@ -62,7 +62,10 @@ function deltaFor(kind: ChallengeKind, event: ChallengeEvent): number {
   }
 }
 
-export async function evaluateChallenges(ctx: EventContext, event: ChallengeEvent): Promise<{
+export async function evaluateChallenges(
+  ctx: EventContext,
+  event: ChallengeEvent,
+): Promise<{
   completed: { challengeId: string; title: string; bonusCredits: number }[];
 }> {
   const client = ctx.tx ?? prisma;
@@ -186,7 +189,11 @@ export interface ChildChallengeRow {
   progress: ChallengeProgressDTO | null;
 }
 
-export async function listChildChallenges(familyId: string, childId: string, now = new Date()): Promise<ChildChallengeRow[]> {
+export async function listChildChallenges(
+  familyId: string,
+  childId: string,
+  now = new Date(),
+): Promise<ChildChallengeRow[]> {
   const settings = await getFamilySettings(familyId);
   const active = await prisma.challenge.findMany({
     where: { familyId, isActive: true },
@@ -231,11 +238,23 @@ interface SeedDef {
 }
 
 const DEFAULT_LIBRARY: SeedDef[] = [
-  { kind: "COMPLETE_N_TASKS",   title: "Finish 3 chores today",       target: 3,  window: "DAY",  rewardCredits: 3 },
-  { kind: "EARLY_BIRD",         title: "Early bird (before noon)",    target: 1,  window: "DAY",  rewardCredits: 2 },
-  { kind: "COMPLETE_N_TASKS",   title: "Finish 10 chores this week",  target: 10, window: "WEEK", rewardCredits: 10 },
-  { kind: "EARN_N_CREDITS",     title: "Earn 30 credits this week",   target: 30, window: "WEEK", rewardCredits: 8 },
-  { kind: "INITIATIVE_N_TIMES", title: "Show initiative twice",       target: 2,  window: "WEEK", rewardCredits: 6 },
+  { kind: "COMPLETE_N_TASKS", title: "Finish 3 chores today", target: 3, window: "DAY", rewardCredits: 3 },
+  { kind: "EARLY_BIRD", title: "Early bird (before noon)", target: 1, window: "DAY", rewardCredits: 2 },
+  {
+    kind: "COMPLETE_N_TASKS",
+    title: "Finish 10 chores this week",
+    target: 10,
+    window: "WEEK",
+    rewardCredits: 10,
+  },
+  {
+    kind: "EARN_N_CREDITS",
+    title: "Earn 30 credits this week",
+    target: 30,
+    window: "WEEK",
+    rewardCredits: 8,
+  },
+  { kind: "INITIATIVE_N_TIMES", title: "Show initiative twice", target: 2, window: "WEEK", rewardCredits: 6 },
 ];
 
 export async function seedDefaultChallenges(familyId: string, tx?: Prisma.TransactionClient): Promise<void> {
@@ -387,7 +406,11 @@ export async function resolveNoMisses(now = new Date()): Promise<{ resolved: num
   return { resolved };
 }
 
-interface PreviousPeriod { startUtc: Date; endUtc: Date; periodKey: string }
+interface PreviousPeriod {
+  startUtc: Date;
+  endUtc: Date;
+  periodKey: string;
+}
 
 function previousCompletedPeriod(window: ChallengeWindow, tz: string, now: Date): PreviousPeriod {
   if (window === "DAY") {

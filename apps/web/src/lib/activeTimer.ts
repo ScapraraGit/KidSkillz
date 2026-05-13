@@ -5,7 +5,7 @@
 export interface ActiveTimer {
   taskId: string;
   taskTitle: string;
-  startedAt: number;   // ms epoch
+  startedAt: number; // ms epoch
   durationMs: number;
   childId: string;
 }
@@ -22,7 +22,8 @@ export function loadTimer(childId: string): ActiveTimer | null {
       typeof parsed?.startedAt !== "number" ||
       typeof parsed?.durationMs !== "number" ||
       typeof parsed?.childId !== "string"
-    ) return null;
+    )
+      return null;
     if (parsed.childId !== childId) return null;
     return parsed;
   } catch {

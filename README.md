@@ -27,12 +27,12 @@ The API container runs `prisma db push` and `prisma seed` on first boot.
 
 ### Demo logins
 
-| Role | Email / ID | Password / PIN |
-|---|---|---|
-| Parent | `dad@example.com` | `password123` |
-| Parent | `mom@example.com` | `password123` |
-| Child — Ava | (lookup family "Caprara") | PIN `1234` |
-| Child — Leo | (lookup family "Caprara") | PIN `4321` |
+| Role        | Email / ID                | Password / PIN |
+| ----------- | ------------------------- | -------------- |
+| Parent      | `dad@example.com`         | `password123`  |
+| Parent      | `mom@example.com`         | `password123`  |
+| Child — Ava | (lookup family "Caprara") | PIN `1234`     |
+| Child — Leo | (lookup family "Caprara") | PIN `4321`     |
 
 The seed creates an Ava task awaiting approval, a planned-initiative request from Ava, a pending screen-time redemption from Leo, a few approved tasks, and a positive adjustment so balances aren't zero.
 
@@ -121,24 +121,24 @@ Every domain table carries `familyId`. Every authenticated request resolves to a
 
 ## API surface
 
-| Method | Path | Notes |
-|---|---|---|
-| POST | `/auth/parent/login` | email + password |
-| POST | `/auth/child/login` | `{childId, pin}` (individual mode) or `{childId, familyPassword}` (shared mode) |
-| GET  | `/auth/families/lookup?name=` | lightweight family lookup for shared-device profile picker |
-| GET  | `/auth/me` | session check |
-| GET  | `/family` · PATCH `/family/settings` | parent settings |
-| GET/POST/PATCH | `/children`, `/children/:id` | parents create/edit; pause flags here |
-| GET  | `/children/:id/balance`, `/children/:id/stats` | derived from ledger |
-| CRUD | `/tasks` · GET `/tasks/today` | today resolves recurring on the fly |
-| GET/POST | `/completions`, `/completions/:id/{approve,reject}` | child submits, parent reviews |
-| GET/POST | `/initiative`, `/initiative/:id/{approve,reject}` | bonus on PLANNED |
-| CRUD | `/rewards` |  |
-| GET/POST | `/redemptions`, `/redemptions/:id/{approve,reject}` |  |
-| POST | `/adjustments` | parent-only, signed amount |
-| GET  | `/ledger?childId=&limit=` | audit trail |
-| GET  | `/dashboard/parent` · `/dashboard/child` | aggregates everything for landing pages |
-| POST | `/uploads/proof` (multipart) · GET `/uploads/:key` | proof storage |
+| Method         | Path                                                | Notes                                                                           |
+| -------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| POST           | `/auth/parent/login`                                | email + password                                                                |
+| POST           | `/auth/child/login`                                 | `{childId, pin}` (individual mode) or `{childId, familyPassword}` (shared mode) |
+| GET            | `/auth/families/lookup?name=`                       | lightweight family lookup for shared-device profile picker                      |
+| GET            | `/auth/me`                                          | session check                                                                   |
+| GET            | `/family` · PATCH `/family/settings`                | parent settings                                                                 |
+| GET/POST/PATCH | `/children`, `/children/:id`                        | parents create/edit; pause flags here                                           |
+| GET            | `/children/:id/balance`, `/children/:id/stats`      | derived from ledger                                                             |
+| CRUD           | `/tasks` · GET `/tasks/today`                       | today resolves recurring on the fly                                             |
+| GET/POST       | `/completions`, `/completions/:id/{approve,reject}` | child submits, parent reviews                                                   |
+| GET/POST       | `/initiative`, `/initiative/:id/{approve,reject}`   | bonus on PLANNED                                                                |
+| CRUD           | `/rewards`                                          |                                                                                 |
+| GET/POST       | `/redemptions`, `/redemptions/:id/{approve,reject}` |                                                                                 |
+| POST           | `/adjustments`                                      | parent-only, signed amount                                                      |
+| GET            | `/ledger?childId=&limit=`                           | audit trail                                                                     |
+| GET            | `/dashboard/parent` · `/dashboard/child`            | aggregates everything for landing pages                                         |
+| POST           | `/uploads/proof` (multipart) · GET `/uploads/:key`  | proof storage                                                                   |
 
 All endpoints return `{ error, message }` on failure and 401 on missing/expired tokens.
 
@@ -165,7 +165,7 @@ All endpoints return `{ error, message }` on failure and 401 on missing/expired 
 - Email notifications, push notifications
 - Background scheduler (no separate job runner — recurring task occurrences compute on demand)
 - Rate limiting / WAF
-- Audit log of *who saw what* (only the credit ledger is audited)
+- Audit log of _who saw what_ (only the credit ledger is audited)
 - Hardened image processing (no virus scan, no resize/strip-EXIF)
 - Test suite (a couple of service unit tests would slot in cleanly under `apps/api/src/services/__tests__/`)
 - Auto-approval branch when `reward.requiresApproval = false` (today all redemptions go through the approval queue, even auto-eligible ones)

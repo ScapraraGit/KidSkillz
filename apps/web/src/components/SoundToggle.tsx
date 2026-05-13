@@ -27,7 +27,9 @@ export function KidPrefsToolbar() {
   const isYounger = viewMode === "YOUNGER";
 
   const soundLabel = soundEnabled ? "Sounds on — click to mute" : "Sounds off — click to enable";
-  const viewLabel = isYounger ? "Younger view (pet) — switch to older" : "Older view (stats) — switch to younger";
+  const viewLabel = isYounger
+    ? "Younger view (pet) — switch to older"
+    : "Older view (stats) — switch to younger";
 
   const disabled = !me.data || patch.isPending;
 

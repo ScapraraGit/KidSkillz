@@ -83,7 +83,10 @@ export async function requestRedemption(familyId: string, input: RequestRedempti
   });
 }
 
-export async function listRedemptions(familyId: string, opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string }) {
+export async function listRedemptions(
+  familyId: string,
+  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+) {
   return prisma.redemption.findMany({
     where: {
       reward: { familyId },

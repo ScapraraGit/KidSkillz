@@ -10,7 +10,13 @@ interface InfoButtonProps {
   tone?: "default" | "onDark";
 }
 
-export function InfoButton({ title, body, placement = "bottom", className, tone = "default" }: InfoButtonProps) {
+export function InfoButton({
+  title,
+  body,
+  placement = "bottom",
+  className,
+  tone = "default",
+}: InfoButtonProps) {
   const ref = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
 

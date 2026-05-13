@@ -9,7 +9,10 @@ adjustmentsRouter.use(requireAuth, requireRole("PARENT"));
 
 const schema = z.object({
   childId: z.string().uuid(),
-  amount: z.number().int().refine((n) => n !== 0, "Amount cannot be zero"),
+  amount: z
+    .number()
+    .int()
+    .refine((n) => n !== 0, "Amount cannot be zero"),
   reason: z.string().min(1).max(500),
 });
 

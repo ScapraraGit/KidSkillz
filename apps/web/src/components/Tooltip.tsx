@@ -19,7 +19,14 @@ interface TooltipProps {
   asChild?: boolean;
 }
 
-export function Tooltip({ label, side = "top", align = "center", children, disabled, asChild = true }: TooltipProps) {
+export function Tooltip({
+  label,
+  side = "top",
+  align = "center",
+  children,
+  disabled,
+  asChild = true,
+}: TooltipProps) {
   if (disabled || !label) return <>{children}</>;
   return (
     <RT.Root>

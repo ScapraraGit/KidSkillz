@@ -94,7 +94,10 @@ function positionFor(rect: Rect, placement: PopoverPlacement): React.CSSProperti
   const margin = 8;
   switch (placement) {
     case "top":
-      return { left: clamp(rect.left, margin, vw - 320 - margin), bottom: window.innerHeight - rect.top + gap };
+      return {
+        left: clamp(rect.left, margin, vw - 320 - margin),
+        bottom: window.innerHeight - rect.top + gap,
+      };
     case "right":
       return { left: rect.right + gap, top: rect.top };
     case "left":

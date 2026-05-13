@@ -2,7 +2,11 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { prisma } from "../db.js";
 import { listChildren, getChild } from "../services/children.js";
-import { listCompletions, serializeCompletion, serializePendingCompletions } from "../services/completions.js";
+import {
+  listCompletions,
+  serializeCompletion,
+  serializePendingCompletions,
+} from "../services/completions.js";
 import { listInitiative, serializeInitiative } from "../services/initiative.js";
 import { listRedemptions, serializeRedemption } from "../services/redemptions.js";
 import { listTodayForChild } from "../services/tasks.js";
@@ -18,17 +22,18 @@ dashboardRouter.use(requireAuth);
 dashboardRouter.get("/parent", async (req, res) => {
   if (req.auth!.role !== "PARENT") throw HttpError.forbidden();
   const familyId = req.auth!.fid;
-  const [children, pendingCompletions, pendingInitiative, pendingRedemptions, recentLedger] = await Promise.all([
-    listChildren(familyId),
-    listCompletions(familyId, { status: "PENDING" }),
-    listInitiative(familyId, { status: "PENDING" }),
-    listRedemptions(familyId, { status: "PENDING" }),
-    prisma.ledgerEntry.findMany({
-      where: { familyId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    }),
-  ]);
+  const [children, pendingCompletions, pendingInitiative, pendingRedemptions, recentLedger] =
+    await Promise.all([
+      listChildren(familyId),
+      listCompletions(familyId, { status: "PENDING" }),
+      listInitiative(familyId, { status: "PENDING" }),
+      listRedemptions(familyId, { status: "PENDING" }),
+      prisma.ledgerEntry.findMany({
+        where: { familyId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+    ]);
 
   const { timezone } = await getFamilySettings(familyId);
   const weekStart = startOfWeekInTz(timezone);

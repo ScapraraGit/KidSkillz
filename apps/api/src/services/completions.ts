@@ -56,7 +56,7 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
 
   const occurrenceDate =
     task.kind === "RECURRING"
-      ? input.occurrenceDate ?? todayInTz((await getFamilySettings(familyId)).timezone)
+      ? (input.occurrenceDate ?? todayInTz((await getFamilySettings(familyId)).timezone))
       : null;
 
   // Reject duplicate active completion for this occurrence
@@ -82,7 +82,10 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
   });
 }
 
-export async function listCompletions(familyId: string, opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string }) {
+export async function listCompletions(
+  familyId: string,
+  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+) {
   return prisma.taskCompletion.findMany({
     where: {
       task: { familyId },
@@ -185,7 +188,12 @@ export async function approveCompletion(
   return updated;
 }
 
-export async function rejectCompletion(familyId: string, completionId: string, parentUserId: string, reason?: string) {
+export async function rejectCompletion(
+  familyId: string,
+  completionId: string,
+  parentUserId: string,
+  reason?: string,
+) {
   const c = await prisma.taskCompletion.findFirst({
     where: { id: completionId, task: { familyId } },
     include: { task: true },

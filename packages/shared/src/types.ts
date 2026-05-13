@@ -43,21 +43,21 @@ export interface FamilySettings {
   allowNegativeBalance: boolean;
   initiativeBonus: {
     enabled: boolean;
-    plannedFlatBonus: number;     // credits added on top when planned-initiative is approved
-    plannedMultiplier: number;    // 1 = none, 1.5 = +50% of suggested
+    plannedFlatBonus: number; // credits added on top when planned-initiative is approved
+    plannedMultiplier: number; // 1 = none, 1.5 = +50% of suggested
   };
   latePenalty: {
     enabled: boolean;
-    graceMinutes: number;         // grace window after deadline still considered on-time
-    lateMultiplier: number;       // late zone extends from deadline+grace to deadline + grace*lateMultiplier
-    latePercent: number;          // 0..1; portion of creditValue awarded during late zone
-    creditFloor: number;          // award beyond late zone (0 for strict, 1 for gentle)
+    graceMinutes: number; // grace window after deadline still considered on-time
+    lateMultiplier: number; // late zone extends from deadline+grace to deadline + grace*lateMultiplier
+    latePercent: number; // 0..1; portion of creditValue awarded during late zone
+    creditFloor: number; // award beyond late zone (0 for strict, 1 for gentle)
   };
   screenTime: {
-    incrementMinutes: number;     // 30
+    incrementMinutes: number; // 30
     maxPerRedemptionMinutes: number; // 60
   };
-  timezone: string;               // IANA, e.g. "America/Phoenix"
+  timezone: string; // IANA, e.g. "America/Phoenix"
 }
 
 export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
@@ -91,8 +91,8 @@ export interface Recurrence {
 
 export interface RewardMetadata {
   // SCREEN_TIME / GAME_TIME — quantity-based
-  unitMinutes?: number;       // step size (e.g. 30)
-  maxPerRedemption?: number;  // e.g. 60
+  unitMinutes?: number; // step size (e.g. 30)
+  maxPerRedemption?: number; // e.g. 60
   // MONEY
   currency?: string;
   amountPerCredit?: number;
@@ -170,7 +170,7 @@ export interface TaskDTO {
   kind: TaskKind;
   recurrence?: Recurrence | null;
   dueAt?: string | null;
-  dueByTime?: string | null;       // "HH:MM" family TZ — recurring tasks only
+  dueByTime?: string | null; // "HH:MM" family TZ — recurring tasks only
   defaultDurationMinutes?: number | null; // optional kid-focus timer suggestion
   proofRequirement: ProofRequirement;
   isActive: boolean;
@@ -180,10 +180,10 @@ export interface TaskDTO {
 export type LateTier = "ON_TIME" | "LATE" | "SEVERE";
 
 export interface SuggestedAwardDTO {
-  credits: number;          // recommended award after applying decay
-  tier: LateTier;           // which bucket the submission fell into
-  lateMinutes: number;      // submittedAt - deadline (0 if on time)
-  deadline: string | null;  // ISO timestamp of the computed deadline; null if task has no time-window
+  credits: number; // recommended award after applying decay
+  tier: LateTier; // which bucket the submission fell into
+  lateMinutes: number; // submittedAt - deadline (0 if on time)
+  deadline: string | null; // ISO timestamp of the computed deadline; null if task has no time-window
 }
 
 export interface TodayTaskOccurrenceDTO {
@@ -332,9 +332,9 @@ export const CHALLENGE_PERIOD_KEY_PATTERN = /^(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2})$/
 
 export interface LevelDTO {
   level: number;
-  xp: number;          // lifetime positive ledger sum
-  xpInLevel: number;   // xp above current level threshold
-  xpToNext: number;    // xp needed to reach next level from current threshold
+  xp: number; // lifetime positive ledger sum
+  xpInLevel: number; // xp above current level threshold
+  xpToNext: number; // xp needed to reach next level from current threshold
 }
 
 export interface NotificationDTO {

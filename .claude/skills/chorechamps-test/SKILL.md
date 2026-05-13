@@ -19,10 +19,11 @@ Naming: prefer the `__tests__` folder over co-located `*.test.ts` to keep servic
 
 The single biggest win is testing logic that does **not** touch Prisma. Examples already in repo:
 
-- [apps/api/src/services/__tests__/awards.test.ts](apps/api/src/services/__tests__/awards.test.ts) — `computeSuggestedAward` deadline + tier math.
-- [apps/api/src/lib/__tests__/time.test.ts](apps/api/src/lib/__tests__/time.test.ts) — TZ helpers.
+- [apps/api/src/services/**tests**/awards.test.ts](apps/api/src/services/__tests__/awards.test.ts) — `computeSuggestedAward` deadline + tier math.
+- [apps/api/src/lib/**tests**/time.test.ts](apps/api/src/lib/__tests__/time.test.ts) — TZ helpers.
 
 Patterns that are pure and worth covering:
+
 - `awards.ts` — every tier branch.
 - `tasks.ts` `recurrenceMatchesDate` — every frequency × DOW combo, expiresAt boundary.
 - `completions.ts` `proofMet` — six ProofRequirement levels.
@@ -63,7 +64,9 @@ const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 render(
   <QueryClientProvider client={qc}>
-    <MemoryRouter><MyComponent /></MemoryRouter>
+    <MemoryRouter>
+      <MyComponent />
+    </MemoryRouter>
   </QueryClientProvider>,
 );
 ```

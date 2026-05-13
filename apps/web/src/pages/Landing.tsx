@@ -14,7 +14,9 @@ export function Landing() {
         </div>
         <div className="flex items-center gap-2">
           <Link to="/login">
-            <Button variant="ghost" size="sm">Sign in</Button>
+            <Button variant="ghost" size="sm">
+              Sign in
+            </Button>
           </Link>
           <Link to="/signup">
             <Button size="sm">Create family</Button>
@@ -31,14 +33,17 @@ export function Landing() {
             Chores done. Credits earned. Kids that <span className="text-brand-600">own it</span>.
           </h1>
           <p className="text-lg text-slate-600 mt-5">
-            ChoreChamps turns the daily chore battle into a game your kids actually want to play. Assign tasks, approve completions, hand out credits, and let kids redeem rewards you control.
+            ChoreChamps turns the daily chore battle into a game your kids actually want to play. Assign
+            tasks, approve completions, hand out credits, and let kids redeem rewards you control.
           </p>
           <div className="flex flex-wrap gap-3 mt-7">
             <Link to="/signup">
               <Button size="lg">Start your family — free</Button>
             </Link>
             <Link to="/login">
-              <Button variant="secondary" size="lg">I already have an account</Button>
+              <Button variant="secondary" size="lg">
+                I already have an account
+              </Button>
             </Link>
           </div>
           <p className="text-xs text-slate-500 mt-3">No credit card. Set up in under 2 minutes.</p>
@@ -65,7 +70,8 @@ export function Landing() {
         <div className="max-w-6xl mx-auto px-4 py-16">
           <h2 className="text-3xl font-bold text-center text-slate-900">Why parents love it</h2>
           <p className="text-center text-slate-600 mt-2 max-w-2xl mx-auto">
-            Stop being the nag. Start being the cheerleader. ChoreChamps gives kids agency and gives you back your weekend.
+            Stop being the nag. Start being the cheerleader. ChoreChamps gives kids agency and gives you back
+            your weekend.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
             {[
@@ -113,14 +119,17 @@ export function Landing() {
       <section className="max-w-4xl mx-auto px-4 py-20 text-center">
         <h2 className="text-3xl font-bold text-slate-900">Ready to flip the chore script?</h2>
         <p className="text-slate-600 mt-3">
-          Create your family in under two minutes. Add your kids, drop in a few chores, and watch the credits start rolling.
+          Create your family in under two minutes. Add your kids, drop in a few chores, and watch the credits
+          start rolling.
         </p>
         <div className="flex justify-center gap-3 mt-7">
           <Link to="/signup">
             <Button size="lg">Create family — free</Button>
           </Link>
           <Link to="/login">
-            <Button variant="secondary" size="lg">Sign in</Button>
+            <Button variant="secondary" size="lg">
+              Sign in
+            </Button>
           </Link>
         </div>
       </section>

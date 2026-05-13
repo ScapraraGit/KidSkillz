@@ -2,7 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, uploadProof } from "../../lib/api";
-import { Badge, Button, Card, CreditChip, EmptyState, Field, PageHeader, ProgressBar, inputCls } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CreditChip,
+  EmptyState,
+  Field,
+  PageHeader,
+  ProgressBar,
+  inputCls,
+} from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio } from "../../components/AvatarStudio";
@@ -16,9 +26,18 @@ import { StreakSaver } from "../../components/StreakSaver";
 import { SavingsGoal } from "../../components/SavingsGoal";
 import { ActiveTimerCard } from "../../components/ActiveTimerCard";
 import { useActiveTimer } from "../../hooks/useActiveTimer";
-import type { ChallengeDTO, ChallengeProgressDTO, ChildDashboardDTO, LevelDTO, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
+import type {
+  ChallengeDTO,
+  ChallengeProgressDTO,
+  ChildDashboardDTO,
+  LevelDTO,
+  TodayTaskOccurrenceDTO,
+} from "@chorechamps/shared";
 
-interface ChallengeRow { challenge: ChallengeDTO; progress: ChallengeProgressDTO | null }
+interface ChallengeRow {
+  challenge: ChallengeDTO;
+  progress: ChallengeProgressDTO | null;
+}
 
 export function ChildDashboard() {
   const dash = useQuery({
@@ -114,22 +133,42 @@ export function ChildDashboard() {
                 className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
               >
                 {isYounger ? (
-                  <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={56} />
+                  <KidAvatar
+                    name={d.child.name}
+                    color={d.child.avatarColor}
+                    config={d.child.avatarConfig}
+                    size={56}
+                  />
                 ) : (
                   <LevelRing level={level} size={64} stroke={4}>
-                    <KidAvatar name={d.child.name} color={d.child.avatarColor} config={d.child.avatarConfig} size={52} />
+                    <KidAvatar
+                      name={d.child.name}
+                      color={d.child.avatarColor}
+                      config={d.child.avatarConfig}
+                      size={52}
+                    />
                   </LevelRing>
                 )}
-                <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">✏️</span>
+                <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">
+                  ✏️
+                </span>
               </button>
             </Tooltip>
-            <span>{greeting}, {d.child.name}!</span>
+            <span>
+              {greeting}, {d.child.name}!
+            </span>
             {!isYounger && (
-              <span className="ml-1"><LevelCard level={level} variant="compact" /></span>
+              <span className="ml-1">
+                <LevelCard level={level} variant="compact" />
+              </span>
             )}
           </span>
         }
-        subtitle={d.child.redemptionPaused ? "Heads up: redemption is paused right now." : "Earn credits and crush your day."}
+        subtitle={
+          d.child.redemptionPaused
+            ? "Heads up: redemption is paused right now."
+            : "Earn credits and crush your day."
+        }
       />
 
       {isYounger ? (
@@ -156,7 +195,10 @@ export function ChildDashboard() {
         timezone={settings?.timezone ?? "America/Phoenix"}
         streakDays={d.stats.streakDays}
         openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
-        completionsToday={d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING").length}
+        completionsToday={
+          d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING")
+            .length
+        }
       />
 
       {d.child.savingsGoalRewardId && (
@@ -232,7 +274,9 @@ export function ChildDashboard() {
           <div className="text-sm font-medium mb-2">Badges</div>
           <div className="flex flex-wrap gap-2">
             {d.stats.badges.map((b) => (
-              <Badge key={b} color="amber">🏅 {b}</Badge>
+              <Badge key={b} color="amber">
+                🏅 {b}
+              </Badge>
             ))}
           </div>
         </Card>
@@ -247,27 +291,45 @@ export function ChildDashboard() {
       >
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Today's tasks</h3>
-          <Link to="/me/initiative" className="text-sm text-brand-700 font-medium">+ Suggest initiative</Link>
+          <Link to="/me/initiative" className="text-sm text-brand-700 font-medium">
+            + Suggest initiative
+          </Link>
         </div>
         {d.todayTasks.length === 0 ? (
           <EmptyState title="Nothing scheduled — enjoy the day!" />
         ) : (
           <ul className="divide-y divide-slate-100">
             {d.todayTasks.map((occ) => (
-              <li key={`${occ.task.id}-${occ.occurrenceDate}`} className="py-3 flex flex-wrap items-center gap-3">
+              <li
+                key={`${occ.task.id}-${occ.occurrenceDate}`}
+                className="py-3 flex flex-wrap items-center gap-3"
+              >
                 <div className="flex-1 min-w-[150px]">
                   <div className="font-medium">{occ.task.title}</div>
-                  {occ.task.description && <div className="text-xs text-slate-500">{occ.task.description}</div>}
+                  {occ.task.description && (
+                    <div className="text-xs text-slate-500">{occ.task.description}</div>
+                  )}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {occ.task.dueByTime && (
                       <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
                     )}
                     {occ.task.kind === "ONE_TIME" && occ.task.dueAt && (
-                      <Badge color="brand">Due {new Date(occ.task.dueAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</Badge>
+                      <Badge color="brand">
+                        Due{" "}
+                        {new Date(occ.task.dueAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </Badge>
                     )}
-                    {occ.task.proofRequirement !== "NONE" && occ.task.proofRequirement !== "NOTES_OPTIONAL" && (
-                      <Badge color="amber">Proof: {occ.task.proofRequirement.replace(/_/g, " ").toLowerCase()}</Badge>
-                    )}
+                    {occ.task.proofRequirement !== "NONE" &&
+                      occ.task.proofRequirement !== "NOTES_OPTIONAL" && (
+                        <Badge color="amber">
+                          Proof: {occ.task.proofRequirement.replace(/_/g, " ").toLowerCase()}
+                        </Badge>
+                      )}
                   </div>
                 </div>
                 <CreditChip amount={occ.task.creditValue} />
@@ -286,7 +348,13 @@ export function ChildDashboard() {
                         timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs })
                       }
                     />
-                    <Tooltip label={d.child.earningPaused ? "Earning is paused — ask a parent" : "Submit this task for parent approval"}>
+                    <Tooltip
+                      label={
+                        d.child.earningPaused
+                          ? "Earning is paused — ask a parent"
+                          : "Submit this task for parent approval"
+                      }
+                    >
                       <Button size="sm" onClick={() => setCompleting(occ)} disabled={d.child.earningPaused}>
                         Mark done
                       </Button>
@@ -344,9 +412,7 @@ export function ChildDashboard() {
         </div>
       )}
 
-      {studioOpen && user && (
-        <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />
-      )}
+      {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
     </div>
   );
 }
@@ -399,14 +465,12 @@ function CompleteModal({
       title={occurrence.task.title}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             onClick={() => submit.mutate()}
-            disabled={
-              submit.isPending ||
-              (notesNeeded && !notes.trim()) ||
-              (photoNeeded && !photo)
-            }
+            disabled={submit.isPending || (notesNeeded && !notes.trim()) || (photoNeeded && !photo)}
           >
             {submit.isPending ? "Submitting…" : "I'm done!"}
           </Button>
@@ -415,11 +479,17 @@ function CompleteModal({
     >
       <div className="space-y-3">
         <div className="text-sm text-slate-600">
-          Worth <strong>{occurrence.task.creditValue} 🪙</strong>. Proof: {proof.replace(/_/g, " ").toLowerCase()}.
+          Worth <strong>{occurrence.task.creditValue} 🪙</strong>. Proof:{" "}
+          {proof.replace(/_/g, " ").toLowerCase()}.
         </div>
         {(notesNeeded || proof === "NOTES_OPTIONAL") && (
           <Field label={`Notes${notesNeeded ? " (required)" : " (optional)"}`}>
-            <textarea className={inputCls} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea
+              className={inputCls}
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </Field>
         )}
         {photoAllowed && (
@@ -465,9 +535,10 @@ function StartTimerButton({
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  const presets = defaultMinutes && !TIMER_PRESETS.includes(defaultMinutes)
-    ? [defaultMinutes, ...TIMER_PRESETS].sort((a, b) => a - b)
-    : TIMER_PRESETS;
+  const presets =
+    defaultMinutes && !TIMER_PRESETS.includes(defaultMinutes)
+      ? [defaultMinutes, ...TIMER_PRESETS].sort((a, b) => a - b)
+      : TIMER_PRESETS;
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -483,7 +554,10 @@ function StartTimerButton({
             <button
               key={m}
               type="button"
-              onClick={() => { onStart(m * 60_000); setOpen(false); }}
+              onClick={() => {
+                onStart(m * 60_000);
+                setOpen(false);
+              }}
               className="text-sm px-3 py-1.5 text-left rounded-lg hover:bg-brand-50 hover:text-brand-700"
             >
               {m} min{defaultMinutes === m ? " (suggested)" : ""}

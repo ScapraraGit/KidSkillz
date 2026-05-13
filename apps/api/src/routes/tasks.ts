@@ -52,10 +52,7 @@ tasksRouter.get("/", async (req, res) => {
 });
 
 tasksRouter.get("/today", async (req, res) => {
-  const childId =
-    req.auth!.role === "CHILD"
-      ? req.auth!.sub
-      : (req.query.childId as string | undefined);
+  const childId = req.auth!.role === "CHILD" ? req.auth!.sub : (req.query.childId as string | undefined);
   if (!childId) return res.status(400).json({ error: "childId required" });
   res.json({ occurrences: await listTodayForChild(req.auth!.fid, childId) });
 });

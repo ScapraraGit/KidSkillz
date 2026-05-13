@@ -20,14 +20,14 @@ The `LedgerEntry` table is the single source of truth for child credit balances.
 
 ## Allowed `LedgerKind` values per flow
 
-| Flow | Kind | Amount sign |
-|---|---|---|
-| Approved task completion | `TASK` | positive |
-| Planned-initiative approval bonus | `INITIATIVE_BONUS` | positive |
-| Write-in initiative (no bonus) | `TASK` (or `INITIATIVE`) | positive |
-| Reward redemption approval | `REDEMPTION` | negative |
-| Parent adjustment | `ADJUSTMENT` | signed |
-| Correction / reversal | `ADJUSTMENT` | signed (opposite of original) |
+| Flow                              | Kind                     | Amount sign                   |
+| --------------------------------- | ------------------------ | ----------------------------- |
+| Approved task completion          | `TASK`                   | positive                      |
+| Planned-initiative approval bonus | `INITIATIVE_BONUS`       | positive                      |
+| Write-in initiative (no bonus)    | `TASK` (or `INITIATIVE`) | positive                      |
+| Reward redemption approval        | `REDEMPTION`             | negative                      |
+| Parent adjustment                 | `ADJUSTMENT`             | signed                        |
+| Correction / reversal             | `ADJUSTMENT`             | signed (opposite of original) |
 
 ## Code patterns
 
@@ -68,4 +68,4 @@ Never sum ledger entries inline — always go through `getBalance` or `prisma.le
 
 ## Tests
 
-Add cases for: zero-amount rejection, negative-balance enforcement with `allowNegativeBalance` on/off, idempotent re-approval, transactional rollback when ledger fails. Pure-logic tests over `awards.ts` are already in [apps/api/src/services/__tests__/awards.test.ts](apps/api/src/services/__tests__/awards.test.ts).
+Add cases for: zero-amount rejection, negative-balance enforcement with `allowNegativeBalance` on/off, idempotent re-approval, transactional rollback when ledger fails. Pure-logic tests over `awards.ts` are already in [apps/api/src/services/**tests**/awards.test.ts](apps/api/src/services/__tests__/awards.test.ts).

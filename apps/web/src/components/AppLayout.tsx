@@ -174,9 +174,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       {tourActive && (
         <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
       )}
-      {studioOpen && user && (
-        <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />
-      )}
+      {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
     </div>
   );
 }

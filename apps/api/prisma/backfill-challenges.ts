@@ -11,7 +11,9 @@ async function main() {
   });
 
   const targets = families.filter((f) => f._count.challenges === 0);
-  console.log(`[backfill-challenges] ${families.length} families total, ${targets.length} missing challenges`);
+  console.log(
+    `[backfill-challenges] ${families.length} families total, ${targets.length} missing challenges`,
+  );
 
   for (const f of targets) {
     await seedDefaultChallenges(f.id);

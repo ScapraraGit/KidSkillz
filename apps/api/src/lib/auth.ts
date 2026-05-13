@@ -4,8 +4,8 @@ import { env } from "../env.js";
 import type { Role } from "@prisma/client";
 
 export interface JWTPayload {
-  sub: string;          // user id
-  fid: string;          // family id
+  sub: string; // user id
+  fid: string; // family id
   role: Role;
 }
 

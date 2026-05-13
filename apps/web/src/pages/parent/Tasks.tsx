@@ -18,7 +18,10 @@ export function ParentTasks() {
   const childIdParam = params.get("childId") ?? "";
   const assignedFilter: AssignedFilter = childIdParam === "" ? "all" : childIdParam;
   const tasksQ = useQuery({ queryKey: ["tasks"], queryFn: () => api<{ tasks: TaskDTO[] }>("/tasks") });
-  const childrenQ = useQuery({ queryKey: ["children"], queryFn: () => api<{ children: ChildDTO[] }>("/children") });
+  const childrenQ = useQuery({
+    queryKey: ["children"],
+    queryFn: () => api<{ children: ChildDTO[] }>("/children"),
+  });
   const [editing, setEditing] = useState<TaskDTO | "new" | null>(null);
 
   const del = useMutation({
@@ -48,18 +51,14 @@ export function ParentTasks() {
   });
 
   const filteredChild =
-    assignedFilter !== "all"
-      ? childrenQ.data?.children.find((c) => c.id === assignedFilter)
-      : undefined;
+    assignedFilter !== "all" ? childrenQ.data?.children.find((c) => c.id === assignedFilter) : undefined;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tasks & Chores"
         subtitle={
-          filteredChild
-            ? `Showing tasks for ${filteredChild.name}.`
-            : "One-time and recurring assignments."
+          filteredChild ? `Showing tasks for ${filteredChild.name}.` : "One-time and recurring assignments."
         }
         right={
           <Tooltip label="Create a new chore template (one-time or recurring)">
@@ -87,7 +86,9 @@ export function ParentTasks() {
                     >
                       <option value="all">All</option>
                       {childrenQ.data?.children.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -141,7 +142,9 @@ export function ParentTasks() {
                     <td className="p-3 text-right font-semibold">{t.creditValue} 🪙</td>
                     <td className="p-3 text-right whitespace-nowrap">
                       <Tooltip label="Edit task fields, schedule, proof requirement">
-                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>Edit</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+                          Edit
+                        </Button>
                       </Tooltip>
                       <Tooltip label="Create a copy of this task for every other kid">
                         <Button
@@ -156,7 +159,11 @@ export function ParentTasks() {
                         </Button>
                       </Tooltip>
                       <Tooltip label="Permanently delete this task (history preserved on ledger)">
-                        <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(t.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => confirm("Delete?") && del.mutate(t.id)}
+                        >
                           Delete
                         </Button>
                       </Tooltip>
@@ -252,7 +259,9 @@ function TaskFormModal({
       title={initial ? "Edit task" : "New task"}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || !title || !assignedToId}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>
@@ -264,14 +273,30 @@ function TaskFormModal({
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required />
         </Field>
         <Field label="Description">
-          <textarea className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          <textarea
+            className={inputCls}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Credit value">
-            <input className={inputCls} type="number" min={0} value={creditValue} onChange={(e) => setCreditValue(Number(e.target.value))} />
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              value={creditValue}
+              onChange={(e) => setCreditValue(Number(e.target.value))}
+            />
           </Field>
           <Field label="Category">
-            <input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Kitchen, Outside…" />
+            <input
+              className={inputCls}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Kitchen, Outside…"
+            />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -281,11 +306,23 @@ function TaskFormModal({
               <option value="RECURRING">Recurring</option>
             </select>
           </Field>
-          <Field label="Assigned to" hint="Tasks always belong to one kid. Use 'Copy to all kids' from the table for shared chores.">
-            <select className={inputCls} value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)} required>
-              <option value="" disabled>Select a kid…</option>
+          <Field
+            label="Assigned to"
+            hint="Tasks always belong to one kid. Use 'Copy to all kids' from the table for shared chores."
+          >
+            <select
+              className={inputCls}
+              value={assignedToId}
+              onChange={(e) => setAssignedToId(e.target.value)}
+              required
+            >
+              <option value="" disabled>
+                Select a kid…
+              </option>
               {kids.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </Field>
@@ -293,7 +330,11 @@ function TaskFormModal({
         {kind === "RECURRING" && (
           <>
             <Field label="Frequency">
-              <select className={inputCls} value={frequency} onChange={(e) => setFrequency(e.target.value as any)}>
+              <select
+                className={inputCls}
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as any)}
+              >
                 <option value="DAILY">Daily</option>
                 <option value="WEEKLY">Weekly</option>
                 <option value="CUSTOM">Custom days</option>
@@ -307,10 +348,14 @@ function TaskFormModal({
                       key={i}
                       type="button"
                       onClick={() =>
-                        setDaysOfWeek((arr) => (arr.includes(i) ? arr.filter((x) => x !== i) : [...arr, i].sort()))
+                        setDaysOfWeek((arr) =>
+                          arr.includes(i) ? arr.filter((x) => x !== i) : [...arr, i].sort(),
+                        )
                       }
                       className={`px-2 py-1 rounded-lg text-xs font-medium border ${
-                        daysOfWeek.includes(i) ? "bg-brand-600 text-white border-brand-600" : "bg-white border-slate-300"
+                        daysOfWeek.includes(i)
+                          ? "bg-brand-600 text-white border-brand-600"
+                          : "bg-white border-slate-300"
                       }`}
                     >
                       {d}
@@ -319,7 +364,10 @@ function TaskFormModal({
                 </div>
               </Field>
             )}
-            <Field label="Due by time" hint="Optional. HH:MM (24h) in your family timezone. When set, late submissions earn fewer credits per family settings.">
+            <Field
+              label="Due by time"
+              hint="Optional. HH:MM (24h) in your family timezone. When set, late submissions earn fewer credits per family settings."
+            >
               <input
                 className={inputCls}
                 type="time"
@@ -330,7 +378,10 @@ function TaskFormModal({
           </>
         )}
         {kind === "ONE_TIME" && (
-          <Field label="Due at" hint="Optional deadline. When set, late submissions earn fewer credits per family settings.">
+          <Field
+            label="Due at"
+            hint="Optional deadline. When set, late submissions earn fewer credits per family settings."
+          >
             <input
               className={inputCls}
               type="datetime-local"
@@ -339,7 +390,10 @@ function TaskFormModal({
             />
           </Field>
         )}
-        <Field label="Suggested timer (minutes)" hint="Optional. Default duration kid sees when starting a focus timer for this task. 1–240. Leave blank to omit.">
+        <Field
+          label="Suggested timer (minutes)"
+          hint="Optional. Default duration kid sees when starting a focus timer for this task. 1–240. Leave blank to omit."
+        >
           <input
             className={inputCls}
             type="number"
@@ -351,7 +405,11 @@ function TaskFormModal({
           />
         </Field>
         <Field label="Proof requirement">
-          <select className={inputCls} value={proofRequirement} onChange={(e) => setProofRequirement(e.target.value as any)}>
+          <select
+            className={inputCls}
+            value={proofRequirement}
+            onChange={(e) => setProofRequirement(e.target.value as any)}
+          >
             <option value="NONE">None</option>
             <option value="NOTES_OPTIONAL">Notes optional</option>
             <option value="NOTES_REQUIRED">Notes required</option>

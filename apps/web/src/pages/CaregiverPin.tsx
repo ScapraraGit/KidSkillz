@@ -30,7 +30,9 @@ export function CaregiverPin() {
       );
       setFamilies(r.families);
       if (r.families.length === 1) setFamilyId(r.families[0].id);
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) {
+      setErr(e.message);
+    }
   };
 
   return (
@@ -46,12 +48,22 @@ export function CaregiverPin() {
             <>
               <Field label="Family name">
                 <div className="flex gap-2">
-                  <input className={inputCls} value={familyName} onChange={(e) => setFamilyName(e.target.value)} />
-                  <Button type="button" variant="secondary" onClick={lookup}>Find</Button>
+                  <input
+                    className={inputCls}
+                    value={familyName}
+                    onChange={(e) => setFamilyName(e.target.value)}
+                  />
+                  <Button type="button" variant="secondary" onClick={lookup}>
+                    Find
+                  </Button>
                 </div>
               </Field>
               {families.map((f) => (
-                <button key={f.id} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50" onClick={() => setFamilyId(f.id)}>
+                <button
+                  key={f.id}
+                  className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50"
+                  onClick={() => setFamilyId(f.id)}
+                >
                   <div className="font-medium">{f.name}</div>
                 </button>
               ))}
@@ -61,7 +73,8 @@ export function CaregiverPin() {
               className="space-y-3"
               onSubmit={async (e) => {
                 e.preventDefault();
-                setErr(null); setBusy(true);
+                setErr(null);
+                setBusy(true);
                 try {
                   const r = await api<{ token: string; user: AuthUserDTO }>("/invitations/pin-login", {
                     body: { familyId, pin, name: name || undefined },
@@ -70,11 +83,21 @@ export function CaregiverPin() {
                   const me = await api<{ settings: FamilySettings }>("/auth/me");
                   setSettings(me.settings);
                   nav("/parent");
-                } catch (e: any) { setErr(e.message ?? "Invalid PIN"); } finally { setBusy(false); }
+                } catch (e: any) {
+                  setErr(e.message ?? "Invalid PIN");
+                } finally {
+                  setBusy(false);
+                }
               }}
             >
               <Field label="Your name (shown on history)">
-                <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Grandma Jane" maxLength={80} />
+                <input
+                  className={inputCls}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Grandma Jane"
+                  maxLength={80}
+                />
               </Field>
               <Field label="PIN">
                 <input
@@ -88,8 +111,12 @@ export function CaregiverPin() {
                 />
               </Field>
               {err && <div className="text-sm text-rose-600">{err}</div>}
-              <Button type="submit" className="w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</Button>
-              <button type="button" className="text-xs text-slate-500" onClick={() => setFamilyId(null)}>← change family</button>
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? "Signing in…" : "Sign in"}
+              </Button>
+              <button type="button" className="text-xs text-slate-500" onClick={() => setFamilyId(null)}>
+                ← change family
+              </button>
             </form>
           )}
         </Card>

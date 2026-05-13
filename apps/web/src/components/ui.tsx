@@ -8,7 +8,10 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 export function Card({ className, children, info, ...rest }: CardProps) {
   return (
-    <div className={clsx("relative bg-white rounded-2xl shadow-soft border border-slate-200/60 p-5", className)} {...rest}>
+    <div
+      className={clsx("relative bg-white rounded-2xl shadow-soft border border-slate-200/60 p-5", className)}
+      {...rest}
+    >
       {info && (
         <div className="absolute top-2 right-2">
           <InfoButton title={info.title} body={info.body} tone={info.tone} placement="bottom" />
@@ -19,7 +22,15 @@ export function Card({ className, children, info, ...rest }: CardProps) {
   );
 }
 
-export function PageHeader({ title, subtitle, right }: { title: ReactNode; subtitle?: ReactNode; right?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  right,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  right?: ReactNode;
+}) {
   return (
     <div className="flex items-end justify-between gap-4 mb-6">
       <div>
@@ -74,7 +85,13 @@ export function Avatar({ name, color, size = 40 }: { name: string; color?: strin
   );
 }
 
-export function Badge({ children, color = "slate" }: { children: ReactNode; color?: "slate" | "brand" | "emerald" | "amber" | "rose" }) {
+export function Badge({
+  children,
+  color = "slate",
+}: {
+  children: ReactNode;
+  color?: "slate" | "brand" | "emerald" | "amber" | "rose";
+}) {
   const cls = {
     slate: "bg-slate-100 text-slate-700",
     brand: "bg-brand-100 text-brand-800",
@@ -82,14 +99,25 @@ export function Badge({ children, color = "slate" }: { children: ReactNode; colo
     amber: "bg-amber-100 text-amber-800",
     rose: "bg-rose-100 text-rose-800",
   }[color];
-  return <span className={clsx("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", cls)}>{children}</span>;
+  return (
+    <span className={clsx("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", cls)}>
+      {children}
+    </span>
+  );
 }
 
 export function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div>
-      {label && <div className="flex justify-between text-xs text-slate-500 mb-1"><span>{label}</span><span>{value} / {max}</span></div>}
+      {label && (
+        <div className="flex justify-between text-xs text-slate-500 mb-1">
+          <span>{label}</span>
+          <span>
+            {value} / {max}
+          </span>
+        </div>
+      )}
       <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
         <div className="h-full bg-brand-500 transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>

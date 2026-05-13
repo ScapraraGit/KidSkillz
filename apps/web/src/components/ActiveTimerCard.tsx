@@ -9,8 +9,14 @@ interface Props {
 }
 
 export function ActiveTimerCard({ timer, timeLeft, expired, onCancel }: Props) {
-  const pct = expired ? 100 : Math.min(100, Math.round(((timer.durationMs - timeLeft) / timer.durationMs) * 100));
-  const tone = expired ? "bg-emerald-50 border-emerald-200" : timeLeft < 60_000 ? "bg-amber-50 border-amber-200" : "bg-brand-50 border-brand-200";
+  const pct = expired
+    ? 100
+    : Math.min(100, Math.round(((timer.durationMs - timeLeft) / timer.durationMs) * 100));
+  const tone = expired
+    ? "bg-emerald-50 border-emerald-200"
+    : timeLeft < 60_000
+      ? "bg-amber-50 border-amber-200"
+      : "bg-brand-50 border-brand-200";
 
   return (
     <Card
@@ -25,11 +31,15 @@ export function ActiveTimerCard({ timer, timeLeft, expired, onCancel }: Props) {
           {expired ? "🏁" : formatMmSs(timeLeft)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-500">{expired ? "Time's up — finish strong!" : "Working on"}</div>
+          <div className="text-xs text-slate-500">
+            {expired ? "Time's up — finish strong!" : "Working on"}
+          </div>
           <div className="font-semibold truncate">{timer.taskTitle}</div>
           <div className="mt-2 h-2 rounded-full bg-white/60 overflow-hidden">
             <div
-              className={"h-full transition-all duration-500 " + (expired ? "bg-emerald-500" : "bg-brand-500")}
+              className={
+                "h-full transition-all duration-500 " + (expired ? "bg-emerald-500" : "bg-brand-500")
+              }
               style={{ width: `${pct}%` }}
             />
           </div>

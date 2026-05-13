@@ -7,7 +7,6 @@ const prisma = new PrismaClient();
 async function main() {
   const existing = await prisma.family.findFirst({ where: { name: "The Caprara Family" } });
   if (existing) {
-     
     console.log("[seed] Family already exists, skipping seed.");
     return;
   }
@@ -233,7 +232,13 @@ async function main() {
   });
 
   // Approved task completions (some history) so balances aren't zero
-  const approve = async (taskId: string, childId: string, occurrenceDate: string | null, credits: number, parentId: string) => {
+  const approve = async (
+    taskId: string,
+    childId: string,
+    occurrenceDate: string | null,
+    credits: number,
+    parentId: string,
+  ) => {
     const c = await prisma.taskCompletion.create({
       data: {
         taskId,
@@ -306,13 +311,11 @@ async function main() {
     },
   });
 
-   
   console.log("[seed] Done. Login: dad@example.com / password123 — kids PINs Ava=1234, Leo=4321");
 }
 
 main()
   .catch((e) => {
-     
     console.error(e);
     process.exit(1);
   })

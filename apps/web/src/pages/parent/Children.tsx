@@ -8,13 +8,25 @@ import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
 import { getPet, petStageForLevel, PET_STAGE_NAMES } from "../../lib/pets";
-import type { AvatarConfig, ChallengeDTO, ChallengeProgressDTO, ChildDTO, LevelDTO } from "@chorechamps/shared";
+import type {
+  AvatarConfig,
+  ChallengeDTO,
+  ChallengeProgressDTO,
+  ChildDTO,
+  LevelDTO,
+} from "@chorechamps/shared";
 
-interface ChallengeRow { challenge: ChallengeDTO; progress: ChallengeProgressDTO | null }
+interface ChallengeRow {
+  challenge: ChallengeDTO;
+  progress: ChallengeProgressDTO | null;
+}
 
 export function ParentChildren() {
   const qc = useQueryClient();
-  const childrenQ = useQuery({ queryKey: ["children"], queryFn: () => api<{ children: ChildDTO[] }>("/children") });
+  const childrenQ = useQuery({
+    queryKey: ["children"],
+    queryFn: () => api<{ children: ChildDTO[] }>("/children"),
+  });
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ChildDTO | null>(null);
   const [adjusting, setAdjusting] = useState<ChildDTO | null>(null);
@@ -58,10 +70,14 @@ export function ParentChildren() {
             <KidGamificationStrip child={c} />
             <div className="flex flex-wrap gap-2">
               <Tooltip label="Edit name, PIN, avatar, pause flags">
-                <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>Edit</Button>
+                <Button variant="secondary" size="sm" onClick={() => setEditing(c)}>
+                  Edit
+                </Button>
               </Tooltip>
               <Tooltip label="Manually add or subtract credits with a reason (posts to ledger)">
-                <Button variant="secondary" size="sm" onClick={() => setAdjusting(c)}>Adjust credits</Button>
+                <Button variant="secondary" size="sm" onClick={() => setAdjusting(c)}>
+                  Adjust credits
+                </Button>
               </Tooltip>
             </div>
           </Card>
@@ -143,14 +159,21 @@ function KidGamificationStrip({ child }: { child: ChildDTO }) {
   );
 }
 
-function CreateChildModal({ onClose, onCreated }: { onClose: () => void; onCreated: (child: ChildDTO) => void }) {
+function CreateChildModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (child: ChildDTO) => void;
+}) {
   const nav = useNavigate();
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [avatarColor, setAvatarColor] = useState("#22c55e");
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
   const save = useMutation({
-    mutationFn: () => api<{ child: ChildDTO }>("/children", { body: { name, pin: pin || null, avatarColor, avatarConfig } }),
+    mutationFn: () =>
+      api<{ child: ChildDTO }>("/children", { body: { name, pin: pin || null, avatarColor, avatarConfig } }),
     onSuccess: (r) => {
       onCreated(r.child);
       nav(`/parent/tasks?childId=${r.child.id}`);
@@ -163,8 +186,12 @@ function CreateChildModal({ onClose, onCreated }: { onClose: () => void; onCreat
       title="Add kid"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !name}>Save</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !name}>
+            Save
+          </Button>
         </>
       }
     >
@@ -181,14 +208,23 @@ function CreateChildModal({ onClose, onCreated }: { onClose: () => void; onCreat
           />
         </Field>
         <Field label="Avatar color (fallback)">
-          <input className={inputCls} type="color" value={avatarColor} onChange={(e) => setAvatarColor(e.target.value)} />
+          <input
+            className={inputCls}
+            type="color"
+            value={avatarColor}
+            onChange={(e) => setAvatarColor(e.target.value)}
+          />
         </Field>
         <Field label="Avatar" hint="Pick a random starter avatar — the kid can fully customize it later.">
           <div className="flex items-center gap-3">
             <KidAvatar name={name || "?"} color={avatarColor} config={avatarConfig} size={56} />
-            <Button type="button" variant="secondary" onClick={() => setAvatarConfig(randomAvatarConfig())}>🎲 Randomize</Button>
+            <Button type="button" variant="secondary" onClick={() => setAvatarConfig(randomAvatarConfig())}>
+              🎲 Randomize
+            </Button>
             {avatarConfig && (
-              <Button type="button" variant="ghost" onClick={() => setAvatarConfig(null)}>Clear</Button>
+              <Button type="button" variant="ghost" onClick={() => setAvatarConfig(null)}>
+                Clear
+              </Button>
             )}
           </div>
         </Field>
@@ -236,8 +272,12 @@ function EditChildModal({
         title={`Edit ${child.name}`}
         footer={
           <>
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              Save
+            </Button>
           </>
         }
       >
@@ -262,15 +302,28 @@ function EditChildModal({
             />
           </Field>
           <Field label="Avatar color (fallback)">
-            <input className={inputCls} type="color" value={avatarColor} onChange={(e) => setAvatarColor(e.target.value)} />
+            <input
+              className={inputCls}
+              type="color"
+              value={avatarColor}
+              onChange={(e) => setAvatarColor(e.target.value)}
+            />
           </Field>
           <div className="space-y-2 text-sm">
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={redemptionPaused} onChange={(e) => setRedemptionPaused(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={redemptionPaused}
+                onChange={(e) => setRedemptionPaused(e.target.checked)}
+              />
               Pause redemption (kid can earn but not spend)
             </label>
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={earningPaused} onChange={(e) => setEarningPaused(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={earningPaused}
+                onChange={(e) => setEarningPaused(e.target.checked)}
+              />
               Pause earning (kid cannot submit completions)
             </label>
           </div>
@@ -278,7 +331,12 @@ function EditChildModal({
       </Modal>
       {studioOpen && (
         <AvatarStudio
-          user={{ id: child.id, name: child.name, avatarColor: child.avatarColor, avatarConfig: child.avatarConfig }}
+          user={{
+            id: child.id,
+            name: child.name,
+            avatarColor: child.avatarColor,
+            avatarConfig: child.avatarConfig,
+          }}
           childId={child.id}
           onClose={() => setStudioOpen(false)}
           onSaved={onSaved}
@@ -310,7 +368,9 @@ function AdjustModal({
       title={`Adjust ${child.name}'s credits`}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || amount === 0 || !reason}>
             Apply
           </Button>
@@ -319,10 +379,16 @@ function AdjustModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
-          Use positive numbers for bonuses, negative for penalties. Current balance: <strong>{child.balance}</strong>.
+          Use positive numbers for bonuses, negative for penalties. Current balance:{" "}
+          <strong>{child.balance}</strong>.
         </p>
         <Field label="Amount">
-          <input className={inputCls} type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+          <input
+            className={inputCls}
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+          />
         </Field>
         <Field label="Reason">
           <input

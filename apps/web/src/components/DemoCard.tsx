@@ -3,7 +3,9 @@ export function DemoCard() {
     <div className="relative">
       <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 rotate-1">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-xl">🧒</div>
+          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-xl">
+            🧒
+          </div>
           <div>
             <div className="font-semibold">Ava's day</div>
             <div className="text-xs text-slate-500">🪙 24 credits today</div>

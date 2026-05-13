@@ -6,12 +6,26 @@ import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import type { ChildDTO, RewardDTO, RewardType } from "@chorechamps/shared";
 
-const TYPES: RewardType[] = ["SCREEN_TIME", "GAME_TIME", "MOVIE_NIGHT", "MONEY", "TREAT", "ACTIVITY", "CUSTOM"];
+const TYPES: RewardType[] = [
+  "SCREEN_TIME",
+  "GAME_TIME",
+  "MOVIE_NIGHT",
+  "MONEY",
+  "TREAT",
+  "ACTIVITY",
+  "CUSTOM",
+];
 
 export function ParentRewards() {
   const qc = useQueryClient();
-  const rewardsQ = useQuery({ queryKey: ["rewards"], queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards") });
-  const childrenQ = useQuery({ queryKey: ["children"], queryFn: () => api<{ children: ChildDTO[] }>("/children") });
+  const rewardsQ = useQuery({
+    queryKey: ["rewards"],
+    queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards"),
+  });
+  const childrenQ = useQuery({
+    queryKey: ["children"],
+    queryFn: () => api<{ children: ChildDTO[] }>("/children"),
+  });
   const [editing, setEditing] = useState<RewardDTO | "new" | null>(null);
 
   const del = useMutation({
@@ -55,7 +69,9 @@ export function ParentRewards() {
             )}
             <div className="mt-3 flex gap-2">
               <Tooltip label="Edit name, cost, limits, eligibility">
-                <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>Edit</Button>
+                <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>
+                  Edit
+                </Button>
               </Tooltip>
               <Tooltip label="Permanently delete this reward">
                 <Button variant="ghost" size="sm" onClick={() => confirm("Delete?") && del.mutate(r.id)}>
@@ -102,7 +118,9 @@ function RewardFormModal({
   const [weeklyLimit, setWeeklyLimit] = useState<string>(initial?.weeklyLimit?.toString() ?? "");
   const [dailyLimit, setDailyLimit] = useState<string>(initial?.dailyLimit?.toString() ?? "");
   const [unitMinutes, setUnitMinutes] = useState<string>(initial?.metadata.unitMinutes?.toString() ?? "30");
-  const [maxPerRedemption, setMaxPerRedemption] = useState<string>(initial?.metadata.maxPerRedemption?.toString() ?? "60");
+  const [maxPerRedemption, setMaxPerRedemption] = useState<string>(
+    initial?.metadata.maxPerRedemption?.toString() ?? "60",
+  );
   const [eligibleChildIds, setEligibleChildIds] = useState<string[]>(initial?.eligibleChildIds ?? []);
 
   const save = useMutation({
@@ -138,7 +156,9 @@ function RewardFormModal({
       title={initial ? "Edit reward" : "New reward"}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || !name}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>
@@ -150,34 +170,73 @@ function RewardFormModal({
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
         <Field label="Description">
-          <textarea className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          <textarea
+            className={inputCls}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Credit cost">
-            <input className={inputCls} type="number" min={0} value={creditCost} onChange={(e) => setCreditCost(Number(e.target.value))} />
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              value={creditCost}
+              onChange={(e) => setCreditCost(Number(e.target.value))}
+            />
           </Field>
           <Field label="Type">
             <select className={inputCls} value={type} onChange={(e) => setType(e.target.value as RewardType)}>
-              {TYPES.map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.replace("_", " ")}
+                </option>
+              ))}
             </select>
           </Field>
         </div>
         {(type === "SCREEN_TIME" || type === "GAME_TIME") && (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Increment minutes" hint="e.g. 30">
-              <input className={inputCls} type="number" min={5} value={unitMinutes} onChange={(e) => setUnitMinutes(e.target.value)} />
+              <input
+                className={inputCls}
+                type="number"
+                min={5}
+                value={unitMinutes}
+                onChange={(e) => setUnitMinutes(e.target.value)}
+              />
             </Field>
             <Field label="Max minutes / redemption" hint="e.g. 60">
-              <input className={inputCls} type="number" min={5} value={maxPerRedemption} onChange={(e) => setMaxPerRedemption(e.target.value)} />
+              <input
+                className={inputCls}
+                type="number"
+                min={5}
+                value={maxPerRedemption}
+                onChange={(e) => setMaxPerRedemption(e.target.value)}
+              />
             </Field>
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Daily limit (optional)">
-            <input className={inputCls} type="number" min={0} value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} />
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              value={dailyLimit}
+              onChange={(e) => setDailyLimit(e.target.value)}
+            />
           </Field>
           <Field label="Weekly limit (optional)">
-            <input className={inputCls} type="number" min={0} value={weeklyLimit} onChange={(e) => setWeeklyLimit(e.target.value)} />
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              value={weeklyLimit}
+              onChange={(e) => setWeeklyLimit(e.target.value)}
+            />
           </Field>
         </div>
         <Field label="Eligible kids" hint="Leave empty for all">
@@ -198,7 +257,11 @@ function RewardFormModal({
         </Field>
         <div className="flex gap-4 text-sm">
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={requiresApproval}
+              onChange={(e) => setRequiresApproval(e.target.checked)}
+            />
             Requires approval
           </label>
           <label className="flex items-center gap-2">

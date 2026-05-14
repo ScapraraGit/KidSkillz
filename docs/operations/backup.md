@@ -4,14 +4,14 @@ ChoreChampz stores authoritative state in Postgres (Neon in production). Restore
 
 ## What's stored where
 
-| Asset                             | Location                                         | Restoration source       |
-| --------------------------------- | ------------------------------------------------ | ------------------------ |
-| All relational data (Family, User, LedgerEntry, etc.) | Postgres (Neon)                                 | Neon PITR / branch       |
-| Proof photos                      | `apps/api/data/uploads` (Docker) or S3 (planned) | Object-store backup      |
-| Migration history                 | `apps/api/prisma/migrations/*` (in git)          | git                      |
-| Family settings JSON              | `Family.settings` column                         | Postgres                 |
-| Audit trail                       | `AuditEvent` + `LedgerEntry` (append-only)       | Postgres                 |
-| Secrets (JWT signing, Resend key) | `.env` / hosting provider                        | Your secret manager      |
+| Asset                                                 | Location                                         | Restoration source  |
+| ----------------------------------------------------- | ------------------------------------------------ | ------------------- |
+| All relational data (Family, User, LedgerEntry, etc.) | Postgres (Neon)                                  | Neon PITR / branch  |
+| Proof photos                                          | `apps/api/data/uploads` (Docker) or S3 (planned) | Object-store backup |
+| Migration history                                     | `apps/api/prisma/migrations/*` (in git)          | git                 |
+| Family settings JSON                                  | `Family.settings` column                         | Postgres            |
+| Audit trail                                           | `AuditEvent` + `LedgerEntry` (append-only)       | Postgres            |
+| Secrets (JWT signing, Resend key)                     | `.env` / hosting provider                        | Your secret manager |
 
 Everything except the photos and secrets is plain Postgres, so restoring the database recovers the application.
 
@@ -35,12 +35,12 @@ Neon retains write-ahead logs for the lifetime of your plan's history window. Re
 
 ### Common scenarios
 
-| Scenario                                        | First move                                                                              |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Accidental destructive query (`DELETE`, `DROP`) | Restore branch 1 minute before incident; copy missing rows back.                        |
-| Compromised credential, want clean state        | Restore branch just before suspected breach; rotate `JWT_SECRET` (invalidates all sessions). |
+| Scenario                                        | First move                                                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Accidental destructive query (`DELETE`, `DROP`) | Restore branch 1 minute before incident; copy missing rows back.                                                          |
+| Compromised credential, want clean state        | Restore branch just before suspected breach; rotate `JWT_SECRET` (invalidates all sessions).                              |
 | Bad migration deployed to prod                  | Restore branch _before_ migration; redeploy with corrected forward-only migration (see [migrations.md](./migrations.md)). |
-| Schema fine but ledger corrupted by a bug       | Restore branch, then export only `LedgerEntry` and `LedgerKind`-affected tables; replay into primary. |
+| Schema fine but ledger corrupted by a bug       | Restore branch, then export only `LedgerEntry` and `LedgerKind`-affected tables; replay into primary.                     |
 
 ## Proof photos
 

@@ -153,15 +153,7 @@ export function ParentChildren() {
   );
 }
 
-function KidTasksModal({
-  child,
-  kids,
-  onClose,
-}: {
-  child: ChildDTO;
-  kids: ChildDTO[];
-  onClose: () => void;
-}) {
+function KidTasksModal({ child, kids, onClose }: { child: ChildDTO; kids: ChildDTO[]; onClose: () => void }) {
   const qc = useQueryClient();
   const tasksQ = useQuery({
     queryKey: ["tasks"],
@@ -175,10 +167,7 @@ function KidTasksModal({
 
   // Show kid's directly-assigned tasks plus pool tasks the kid could grab/join.
   const tasks = (tasksQ.data?.tasks ?? []).filter(
-    (t) =>
-      t.assignedToId === child.id ||
-      t.assignmentMode === "UP_FOR_GRABS" ||
-      t.assignmentMode === "TEAM",
+    (t) => t.assignedToId === child.id || t.assignmentMode === "UP_FOR_GRABS" || t.assignmentMode === "TEAM",
   );
 
   return (
@@ -198,9 +187,7 @@ function KidTasksModal({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{t.title}</div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {t.assignmentMode === "UP_FOR_GRABS" && (
-                      <Badge color="amber">🙋 Up for Grabs</Badge>
-                    )}
+                    {t.assignmentMode === "UP_FOR_GRABS" && <Badge color="amber">🙋 Up for Grabs</Badge>}
                     {t.assignmentMode === "TEAM" && <Badge color="brand">👥 Team</Badge>}
                     {t.kind === "ONE_TIME" ? (
                       <Badge>One-time</Badge>
@@ -223,9 +210,7 @@ function KidTasksModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        confirm(`Delete "${t.title}"?`) && del.mutate(t.id)
-                      }
+                      onClick={() => confirm(`Delete "${t.title}"?`) && del.mutate(t.id)}
                     >
                       Delete
                     </Button>
@@ -326,10 +311,7 @@ function CreateChildModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={save.isPending || !name || !consentAcknowledged}
-          >
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !name || !consentAcknowledged}>
             Save
           </Button>
         </>
@@ -387,8 +369,8 @@ function CreateChildModal({
               <Link to="/privacy" target="_blank" className="underline">
                 Privacy Policy
               </Link>{" "}
-              to create this profile. I am responsible for supervising this child's use of ChoreChampz and
-              for reviewing all content uploaded under this profile.
+              to create this profile. I am responsible for supervising this child's use of ChoreChampz and for
+              reviewing all content uploaded under this profile.
             </span>
           </label>
         </div>

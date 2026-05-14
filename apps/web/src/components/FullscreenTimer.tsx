@@ -59,10 +59,7 @@ export function FullscreenTimer({ timer, timeLeft, expired, onCancel, onMinimize
         </div>
         <div className="mt-8 w-full max-w-2xl">
           <div className="h-4 sm:h-6 rounded-full bg-white/25 overflow-hidden">
-            <div
-              className="h-full bg-white/90 transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
+            <div className="h-full bg-white/90 transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-3 text-center text-lg sm:text-2xl font-medium opacity-95">
             {expired ? "Time's up — finish strong!" : "You got this. Stay focused!"}

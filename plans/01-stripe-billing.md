@@ -1,6 +1,7 @@
 # Plan 1 — Stripe Billing (beta-hidden)
 
 ## Goal
+
 Charge for family access. 10-day free trial → paid. Hide UI behind flag during beta. Allow premium tier upcharge.
 
 ## Schema (apps/api/prisma/schema.prisma)
@@ -18,10 +19,12 @@ cancelAtPeriodEnd     Boolean  @default(false)
 ```
 
 New enums:
+
 - `SubscriptionStatus` — TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE, UNPAID
 - `PlanTier` — BASIC, PREMIUM
 
 New model `StripeEvent`:
+
 - `id` (Stripe event id, unique), `type`, `payload Json`, `processedAt`, `familyId?`
 - Idempotency for webhook replay.
 
@@ -49,6 +52,7 @@ Both default `false` for beta. Flip later. Hide every billing UI surface behind 
 ## Service layer (apps/api/src/services/billing.ts — new)
 
 Functions, all `familyId`-scoped:
+
 - `ensureStripeCustomer(familyId)` — lazy-create on first need.
 - `startTrial(familyId)` — set TRIALING + `trialEndsAt = now+10d` on family creation. No Stripe call yet.
 - `createCheckoutSession(familyId, plan: PlanTier)` — Stripe Checkout, success/cancel URLs back to web.
@@ -60,6 +64,7 @@ Functions, all `familyId`-scoped:
 ## Routes (apps/api/src/routes/billing.ts — new)
 
 Thin per CLAUDE.md:
+
 - `POST /billing/checkout` — body `{plan}`, parent-only, returns Checkout URL.
 - `POST /billing/portal` — parent-only, returns portal URL.
 - `GET /billing/status` — entitlement payload for current family.
@@ -69,6 +74,7 @@ Thin per CLAUDE.md:
 ## Middleware
 
 New `requirePaidEntitlement` in `apps/api/src/middleware/billing.ts`:
+
 - Reads `getEntitlement(familyId)`.
 - TRIALING + `trialEndsAt > now` → allow.
 - ACTIVE → allow.
@@ -83,6 +89,7 @@ Premium gate: `requirePremium` for premium-only endpoints.
 ## Premium-tier candidate features (upcharge)
 
 Pick from existing surface:
+
 - Unlimited children (BASIC = 3).
 - Custom reward catalog beyond N entries.
 - Photo proof storage retention >30 days.
@@ -100,6 +107,7 @@ In `POST /auth/parent/register` (auth.ts:40): after Family create, call `startTr
 ## Web (all behind `VITE_BILLING_ENABLED`)
 
 New files:
+
 - `apps/web/src/pages/parent/Billing.tsx` — plan picker, current status, "Manage" button → portal.
 - `apps/web/src/components/TrialBanner.tsx` — countdown banner in AppLayout when trialing.
 - `apps/web/src/components/UpgradePrompt.tsx` — modal when 402/PREMIUM_REQUIRED returned.

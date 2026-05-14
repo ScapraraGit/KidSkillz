@@ -23,11 +23,7 @@ import {
   DEFAULT_FAMILY_SETTINGS,
   type AvatarConfig,
 } from "@chorechampz/shared";
-import {
-  clientIpFrom,
-  recordLegalAcceptance,
-  userAgentFrom,
-} from "../services/legal-acceptance.js";
+import { clientIpFrom, recordLegalAcceptance, userAgentFrom } from "../services/legal-acceptance.js";
 
 export const authRouter = Router();
 

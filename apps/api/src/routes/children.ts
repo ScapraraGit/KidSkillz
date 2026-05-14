@@ -5,11 +5,7 @@ import { createChild, getChild, listChildren, updateChild } from "../services/ch
 import { childStats } from "../services/stats.js";
 import { getChildLevel } from "../services/levels.js";
 import { HttpError } from "../errors.js";
-import {
-  clientIpFrom,
-  recordLegalAcceptance,
-  userAgentFrom,
-} from "../services/legal-acceptance.js";
+import { clientIpFrom, recordLegalAcceptance, userAgentFrom } from "../services/legal-acceptance.js";
 import { CURRENT_TERMS_VERSION } from "@chorechampz/shared";
 import { recordAudit } from "../services/audit.js";
 import { proofRequirementSchema } from "../lib/features.js";
@@ -62,8 +58,7 @@ const createSchema = z.object({
   avatarConfig: avatarConfigSchema.nullable().optional(),
   consentAcknowledged: z.literal(true, {
     errorMap: () => ({
-      message:
-        "Guardian consent acknowledgement is required to create a child profile.",
+      message: "Guardian consent acknowledgement is required to create a child profile.",
     }),
   }),
 });

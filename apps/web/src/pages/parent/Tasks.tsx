@@ -52,8 +52,7 @@ export function ParentTasks() {
   });
 
   const parentClaim = useMutation({
-    mutationFn: (taskId: string) =>
-      api(`/tasks/${taskId}/parent-claim`, { method: "POST", body: {} }),
+    mutationFn: (taskId: string) => api(`/tasks/${taskId}/parent-claim`, { method: "POST", body: {} }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["missed-opportunities", "recent"] });
@@ -332,11 +331,7 @@ export function TaskFormModal({
           </Button>
           <Button
             onClick={() => save.mutate()}
-            disabled={
-              save.isPending ||
-              !title ||
-              (assignmentMode === "ASSIGNED" && !assignedToId)
-            }
+            disabled={save.isPending || !title || (assignmentMode === "ASSIGNED" && !assignedToId)}
           >
             {save.isPending ? "Saving…" : "Save"}
           </Button>

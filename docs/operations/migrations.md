@@ -45,20 +45,20 @@ Renaming or dropping a column safely takes two deploys.
 
 ### Drop a column
 
-| Deploy | Migration                                                       | App behavior                            |
-| ------ | --------------------------------------------------------------- | --------------------------------------- |
-| 1      | Stop reading and writing the column in app code                 | Existing column ignored; data preserved |
-| 2      | `ALTER TABLE ... DROP COLUMN ...`                               | Column is gone                          |
+| Deploy | Migration                                       | App behavior                            |
+| ------ | ----------------------------------------------- | --------------------------------------- |
+| 1      | Stop reading and writing the column in app code | Existing column ignored; data preserved |
+| 2      | `ALTER TABLE ... DROP COLUMN ...`               | Column is gone                          |
 
 Skipping deploy 1 means a brief window where prod code expects the column but the DB has dropped it → 500s.
 
 ### Rename a column
 
-| Deploy | Migration                                                              | App behavior                                 |
-| ------ | ---------------------------------------------------------------------- | -------------------------------------------- |
+| Deploy | Migration                                                                     | App behavior                                      |
+| ------ | ----------------------------------------------------------------------------- | ------------------------------------------------- |
 | 1      | `ALTER TABLE t ADD COLUMN new_name <type>; UPDATE t SET new_name = old_name;` | App writes to both columns; reads from `old_name` |
-| 2      | App reads from `new_name`; backfill any missed rows                    | Both columns in sync                         |
-| 3      | `ALTER TABLE t DROP COLUMN old_name;`                                  | Done                                         |
+| 2      | App reads from `new_name`; backfill any missed rows                           | Both columns in sync                              |
+| 3      | `ALTER TABLE t DROP COLUMN old_name;`                                         | Done                                              |
 
 Use Prisma's `@map("old_name")` to rename in the schema without an actual DDL rename, then drop the alias later.
 
@@ -105,13 +105,13 @@ When you hand-edit, remember to comment the **intent** in the SQL. Future-you wi
 
 ## What to commit
 
-| File / change                                          | Commit? |
-| ------------------------------------------------------ | ------- |
-| `apps/api/prisma/schema.prisma`                        | ✅       |
-| `apps/api/prisma/migrations/<timestamp>_<name>/migration.sql` | ✅       |
-| `apps/api/prisma/migrations/migration_lock.toml`       | ✅       |
-| Anything under `apps/api/prisma/migrations/.dev/`      | ❌       |
-| Generated Prisma client (`node_modules/.prisma`)       | ❌ (ignored) |
+| File / change                                                 | Commit?      |
+| ------------------------------------------------------------- | ------------ |
+| `apps/api/prisma/schema.prisma`                               | ✅           |
+| `apps/api/prisma/migrations/<timestamp>_<name>/migration.sql` | ✅           |
+| `apps/api/prisma/migrations/migration_lock.toml`              | ✅           |
+| Anything under `apps/api/prisma/migrations/.dev/`             | ❌           |
+| Generated Prisma client (`node_modules/.prisma`)              | ❌ (ignored) |
 
 ## Never do
 

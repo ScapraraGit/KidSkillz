@@ -98,13 +98,7 @@ export function NotificationBell() {
               {items.map((n) => {
                 const unreadItem = !n.readAt;
                 return (
-                  <li
-                    key={n.id}
-                    className={
-                      "text-sm " +
-                      (unreadItem ? "bg-brand-50/40" : "")
-                    }
-                  >
+                  <li key={n.id} className={"text-sm " + (unreadItem ? "bg-brand-50/40" : "")}>
                     {unreadItem ? (
                       <button
                         type="button"

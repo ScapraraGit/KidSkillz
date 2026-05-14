@@ -235,10 +235,7 @@ export async function approveCompletion(
           childId: r.childId,
           amount: r.amount,
           kind: "TASK",
-          reason:
-            c.task.assignmentMode === "TEAM"
-              ? `Team task: ${c.task.title}`
-              : `Task: ${c.task.title}`,
+          reason: c.task.assignmentMode === "TEAM" ? `Team task: ${c.task.title}` : `Task: ${c.task.title}`,
           sourceType: "TASK_COMPLETION",
           // Per-recipient sourceId so the entry is uniquely identifiable in the audit
           // log and a partial retry can be detected without double-posting.

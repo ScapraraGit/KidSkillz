@@ -8,11 +8,7 @@ export const features = {
 
 export type FeatureFlags = typeof features;
 
-const PHOTO_PROOF_VALUES = new Set<ProofRequirement>([
-  "PHOTO_OPTIONAL",
-  "PHOTO_REQUIRED",
-  "PHOTO_AND_NOTES",
-]);
+const PHOTO_PROOF_VALUES = new Set<ProofRequirement>(["PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"]);
 
 export function isPhotoProof(value: string): boolean {
   return PHOTO_PROOF_VALUES.has(value as ProofRequirement);

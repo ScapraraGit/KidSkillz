@@ -366,9 +366,7 @@ export function ChildDashboard() {
                       <Badge color="amber">🙋 Up for Grabs</Badge>
                     )}
                     {occ.task.assignmentMode === "TEAM" && (
-                      <Badge color="brand">
-                        👥 Team ({occ.teamJoinerIds?.length ?? 0} joined)
-                      </Badge>
+                      <Badge color="brand">👥 Team ({occ.teamJoinerIds?.length ?? 0} joined)</Badge>
                     )}
                     {occ.task.dueByTime && (
                       <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
@@ -566,10 +564,7 @@ function CompleteModal({
           <Button
             onClick={() => submit.mutate()}
             disabled={
-              submit.isPending ||
-              (notesNeeded && !notes.trim()) ||
-              (photoNeeded && !photo) ||
-              ackRequired
+              submit.isPending || (notesNeeded && !notes.trim()) || (photoNeeded && !photo) || ackRequired
             }
           >
             {submit.isPending ? "Submitting…" : "I'm done!"}
@@ -606,8 +601,8 @@ function CompleteModal({
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
             <div className="font-semibold">Before you send this photo</div>
             <p>
-              Only show your chore — no selfies, no faces, no people in swimsuits, pajamas, or bathrooms.
-              A grown-up at home will see this photo.
+              Only show your chore — no selfies, no faces, no people in swimsuits, pajamas, or bathrooms. A
+              grown-up at home will see this photo.
             </p>
             <label className="flex items-start gap-2">
               <input
@@ -732,7 +727,8 @@ function MissedOpportunityOverlay({
 }) {
   const moQ = useQuery({
     queryKey: ["missed-opportunities", "recent"],
-    queryFn: () => api<{ missedOpportunities: MissedOpportunityDTO[] }>("/missed-opportunities/recent?days=2"),
+    queryFn: () =>
+      api<{ missedOpportunities: MissedOpportunityDTO[] }>("/missed-opportunities/recent?days=2"),
     refetchInterval: 60_000,
     enabled: !!childId,
   });

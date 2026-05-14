@@ -123,28 +123,28 @@ Every domain table carries `familyId`. Every authenticated request resolves to a
 
 All business endpoints are versioned under `/v1`. `/health` is the only unversioned route (used by load-balancer probes; pings the DB).
 
-| Method         | Path (under `/v1`)                                     | Notes                                                                           |
-| -------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| POST           | `/auth/parent/login`                                  | email + password                                                                |
-| POST           | `/auth/child/login`                                   | `{childId, pin}` (individual) or `{childId, familyPassword}` (shared device)    |
-| GET            | `/auth/families/lookup?name=`                         | lightweight family lookup for shared-device profile picker                      |
-| GET            | `/auth/me`                                            | session check                                                                   |
-| GET/PATCH      | `/family`, `/family/settings`                         | parent settings                                                                 |
-| GET/POST/PATCH | `/children`, `/children/:id`                          | parents create/edit; pause flags + streak grace + savings goals here            |
-| GET            | `/children/:id/balance`, `/children/:id/stats`        | derived from ledger                                                             |
-| CRUD           | `/tasks` · GET `/tasks/today`                         | today resolves recurring + pool + team on the fly                               |
-| POST           | `/tasks/:id/{join,leave,parent-claim}`                | team-mode + parent Missed Opportunity                                           |
-| CRUD           | `/task-categories`                                    | parent-managed icons + names                                                    |
-| GET/POST       | `/completions`, `/completions/:id/{approve,reject}`   | child submits, parent reviews                                                   |
-| GET/POST       | `/initiative`, `/initiative/:id/{approve,reject}`     | bonus on PLANNED                                                                |
-| CRUD           | `/rewards`                                            |                                                                                 |
-| GET/POST       | `/redemptions`, `/redemptions/:id/{approve,reject}`   |                                                                                 |
-| POST           | `/adjustments`                                        | parent-only, signed amount                                                      |
-| GET            | `/ledger?childId=&limit=`                             | ledger view                                                                     |
-| GET            | `/audit?limit=&kind=&before=`                         | parent-only audit trail (settings changes, member edits, adjustments, deletes)  |
-| GET            | `/dashboard/parent` · `/dashboard/child`              | aggregates everything for landing pages                                         |
-| GET            | `/missed-opportunities/recent?days=`                  | kid dashboard FOMO overlay feed                                                 |
-| POST/GET       | `/uploads/proof` (multipart) · `/uploads/:key`        | proof storage                                                                   |
+| Method         | Path (under `/v1`)                                  | Notes                                                                          |
+| -------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| POST           | `/auth/parent/login`                                | email + password                                                               |
+| POST           | `/auth/child/login`                                 | `{childId, pin}` (individual) or `{childId, familyPassword}` (shared device)   |
+| GET            | `/auth/families/lookup?name=`                       | lightweight family lookup for shared-device profile picker                     |
+| GET            | `/auth/me`                                          | session check                                                                  |
+| GET/PATCH      | `/family`, `/family/settings`                       | parent settings                                                                |
+| GET/POST/PATCH | `/children`, `/children/:id`                        | parents create/edit; pause flags + streak grace + savings goals here           |
+| GET            | `/children/:id/balance`, `/children/:id/stats`      | derived from ledger                                                            |
+| CRUD           | `/tasks` · GET `/tasks/today`                       | today resolves recurring + pool + team on the fly                              |
+| POST           | `/tasks/:id/{join,leave,parent-claim}`              | team-mode + parent Missed Opportunity                                          |
+| CRUD           | `/task-categories`                                  | parent-managed icons + names                                                   |
+| GET/POST       | `/completions`, `/completions/:id/{approve,reject}` | child submits, parent reviews                                                  |
+| GET/POST       | `/initiative`, `/initiative/:id/{approve,reject}`   | bonus on PLANNED                                                               |
+| CRUD           | `/rewards`                                          |                                                                                |
+| GET/POST       | `/redemptions`, `/redemptions/:id/{approve,reject}` |                                                                                |
+| POST           | `/adjustments`                                      | parent-only, signed amount                                                     |
+| GET            | `/ledger?childId=&limit=`                           | ledger view                                                                    |
+| GET            | `/audit?limit=&kind=&before=`                       | parent-only audit trail (settings changes, member edits, adjustments, deletes) |
+| GET            | `/dashboard/parent` · `/dashboard/child`            | aggregates everything for landing pages                                        |
+| GET            | `/missed-opportunities/recent?days=`                | kid dashboard FOMO overlay feed                                                |
+| POST/GET       | `/uploads/proof` (multipart) · `/uploads/:key`      | proof storage                                                                  |
 
 All endpoints return `{ error, message }` on failure and 401 on missing/expired tokens. Request logs are emitted as line-delimited JSON via `pino-http` (pretty-printed in dev). Auth surface is rate-limited at 30 req / 15 min per IP; everything else at 300 req / min.
 

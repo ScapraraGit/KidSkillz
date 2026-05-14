@@ -178,11 +178,7 @@ export const CURRENT_TERMS_VERSION = 2;
 export const CURRENT_PRIVACY_VERSION = 2;
 
 /** Server-recorded legal-acceptance event kinds. Mirrors api LegalAcceptanceKind enum. */
-export type LegalAcceptanceKind =
-  | "TERMS"
-  | "PRIVACY"
-  | "CHILD_PROFILE_CONSENT"
-  | "UPLOAD_ACK";
+export type LegalAcceptanceKind = "TERMS" | "PRIVACY" | "CHILD_PROFILE_CONSENT" | "UPLOAD_ACK";
 
 export interface FeatureFlagsDTO {
   /** Whether photo proof on tasks is currently available end-to-end. When false, web hides PHOTO_* options and API rejects them. */

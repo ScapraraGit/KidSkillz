@@ -324,23 +324,23 @@ export function ParentSettings() {
       </Card>
 
       {features.photoProof && (
-      <Card className="space-y-4">
-        <h3 className="font-semibold">Photo proof retention</h3>
-        <p className="text-sm text-slate-500">
-          Photos kids submit as proof are automatically deleted after this many days. Set to 0 to keep them
-          forever.
-        </p>
-        <Field label="Retention (days)" hint="Default 90. Lower = better privacy. 0 = no auto-delete.">
-          <input
-            className={inputCls}
-            type="number"
-            min={0}
-            max={3650}
-            value={s.photoRetentionDays ?? 90}
-            onChange={(e) => setS({ ...s, photoRetentionDays: Number(e.target.value) })}
-          />
-        </Field>
-      </Card>
+        <Card className="space-y-4">
+          <h3 className="font-semibold">Photo proof retention</h3>
+          <p className="text-sm text-slate-500">
+            Photos kids submit as proof are automatically deleted after this many days. Set to 0 to keep them
+            forever.
+          </p>
+          <Field label="Retention (days)" hint="Default 90. Lower = better privacy. 0 = no auto-delete.">
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              max={3650}
+              value={s.photoRetentionDays ?? 90}
+              onChange={(e) => setS({ ...s, photoRetentionDays: Number(e.target.value) })}
+            />
+          </Field>
+        </Card>
       )}
 
       <Card className="space-y-4">
@@ -419,8 +419,8 @@ function TaskCategoriesCard() {
     <Card className="space-y-4">
       <h3 className="font-semibold">Task categories</h3>
       <p className="text-sm text-slate-500">
-        Categories group tasks on the kid dashboard. Defaults are seeded for new families. Rename, swap
-        icons, or delete unused ones.
+        Categories group tasks on the kid dashboard. Defaults are seeded for new families. Rename, swap icons,
+        or delete unused ones.
       </p>
       <ul className="divide-y divide-slate-100">
         {(q.data?.categories ?? []).map((c) => (
@@ -428,9 +428,7 @@ function TaskCategoriesCard() {
             <input
               className={`${inputCls} w-16 text-center`}
               value={c.icon}
-              onChange={(e) =>
-                update.mutate({ id: c.id, patch: { icon: e.target.value.slice(0, 4) } })
-              }
+              onChange={(e) => update.mutate({ id: c.id, patch: { icon: e.target.value.slice(0, 4) } })}
             />
             <input
               className={`${inputCls} flex-1`}

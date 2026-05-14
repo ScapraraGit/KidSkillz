@@ -1,9 +1,11 @@
 ﻿# Plan 2 — Email Wiring (Resend)
 
 ## Goal
+
 Replace console.log stubs in `apps/api/src/lib/email.ts` with real provider. Cloudflare alternative noted.
 
 ## Recommendation: Resend
+
 - Simple REST + official SDK (`resend` npm).
 - React Email templates (TS-native, matches stack).
 - Cheap, generous free tier for beta.
@@ -30,6 +32,7 @@ APP_URL                       # already exists; used in links
 ## Templates (apps/api/src/email/templates/ — new)
 
 Use `@react-email/components` + `@react-email/render` → HTML string at send time. One file per template:
+
 - `InvitationEmail.tsx` — CO_PARENT / CAREGIVER invite + accept link.
 - `VerificationEmail.tsx` — verify link.
 - `PasswordResetEmail.tsx` — reset link.
@@ -54,6 +57,7 @@ Lets us swap Postmark/SES later without touching call sites.
 ## Rewrite apps/api/src/lib/email.ts
 
 Keep existing exported signatures (`sendInvitationEmail`, `sendVerificationEmail`, `sendPasswordResetEmail`, `sendNotificationEmail`). Inside each:
+
 1. Render React Email template.
 2. Call `emailProvider.send(...)`.
 3. On error: log + swallow for `notification` (fire-and-forget); rethrow for verification/reset/invitation since user is actively waiting.
@@ -79,6 +83,7 @@ Write a row per attempt. Useful for "did invite send" support questions. Add aud
 ## Rate limiting
 
 Per-user resend cooldown already implied in auth-tokens.ts (verification + reset). Verify:
+
 - Verification resend ≥ 60s gap.
 - Password reset request ≥ 60s gap.
 - Invitation: cap N/day per family.
@@ -88,6 +93,7 @@ Add in services if missing — don't trust client.
 ## Notification fan-out (apps/api/src/services/notifications.ts:38)
 
 `deliverEmailMirror` already exists fire-and-forget. Confirm:
+
 - Respects `family.settings.emailNotifications`.
 - Respects per-user `emailOptOut` (add field if missing).
 - Skips children without verified email.

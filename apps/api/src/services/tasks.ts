@@ -123,8 +123,7 @@ export async function duplicateAcrossKids(familyId: string, taskId: string) {
 export async function updateTask(familyId: string, taskId: string, input: Partial<CreateTaskInput>) {
   const current = await getTask(familyId, taskId);
   const nextMode = input.assignmentMode ?? current.assignmentMode;
-  const nextAssignee =
-    input.assignedToId !== undefined ? input.assignedToId : current.assignedToId;
+  const nextAssignee = input.assignedToId !== undefined ? input.assignedToId : current.assignedToId;
   if (nextMode === "ASSIGNED" && !nextAssignee) {
     throw HttpError.badRequest("Assigned tasks require an assignee");
   }
@@ -186,11 +185,7 @@ export async function listTodayForChild(
     where: {
       familyId,
       isActive: true,
-      OR: [
-        { assignedToId: childId },
-        { assignmentMode: "UP_FOR_GRABS" },
-        { assignmentMode: "TEAM" },
-      ],
+      OR: [{ assignedToId: childId }, { assignmentMode: "UP_FOR_GRABS" }, { assignmentMode: "TEAM" }],
     },
     orderBy: { createdAt: "asc" },
   });

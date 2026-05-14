@@ -60,7 +60,11 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const nav = useNavigate();
   const loc = useLocation();
   const isCaregiver = user?.role === "CAREGIVER";
-  const links = role === "CHILD" ? childLinks : isCaregiver ? caregiverLinks : parentLinks;
+  const baseLinks = role === "CHILD" ? childLinks : isCaregiver ? caregiverLinks : parentLinks;
+  const links =
+    role === "PARENT" && !isCaregiver && user?.isAdmin
+      ? [...baseLinks, { to: "/parent/admin", label: "Admin", tip: "Customer support portal — manage any family" }]
+      : baseLinks;
 
   const me = useQuery({
     queryKey: ["me"],

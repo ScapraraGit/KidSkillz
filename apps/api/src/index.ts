@@ -29,6 +29,7 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { taskCategoriesRouter } from "./routes/task-categories.js";
 import { missedOpportunitiesRouter } from "./routes/missed-opportunities.js";
 import { auditRouter } from "./routes/audit.js";
+import { adminRouter } from "./routes/admin.js";
 
 const app = express();
 
@@ -124,6 +125,7 @@ v1.use("/notifications", notificationsRouter);
 v1.use("/task-categories", taskCategoriesRouter);
 v1.use("/missed-opportunities", missedOpportunitiesRouter);
 v1.use("/audit", auditRouter);
+v1.use("/admin", adminRouter);
 v1.use("/uploads", uploadsRouter);
 app.use("/v1", v1);
 

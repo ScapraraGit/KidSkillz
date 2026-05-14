@@ -1,4 +1,5 @@
-FROM node:20-alpine
+# --- build stage ---------------------------------------------------------
+FROM node:20-alpine AS build
 WORKDIR /app
 
 ARG VITE_API_URL=http://localhost:4000
@@ -15,5 +16,15 @@ COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
 WORKDIR /app/apps/web
-EXPOSE 5173
-CMD ["pnpm", "dev"]
+RUN pnpm build
+
+# --- runtime stage -------------------------------------------------------
+# `serve` is tiny (~5MB) and handles SPA fallback so React Router routes
+# don't 404 on direct hit. Use Railway's $PORT at runtime.
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN npm install -g serve@14
+COPY --from=build /app/apps/web/dist ./dist
+ENV PORT=8080
+EXPOSE 8080
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-8080}"]

@@ -90,7 +90,7 @@ authRouter.post("/parent/register", async (req, res) => {
   }).catch((e) => console.error("[legal:accept privacy]", e));
   // Fire-and-forget verification email; failures don't block registration.
   await issueVerificationEmail(user.id).catch((e) => console.error("[verify:send]", e));
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
+  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role, adm: user.isAdmin });
   res.json({ token, user: serializeUser(user) });
 });
 
@@ -107,7 +107,7 @@ authRouter.post("/parent/login", async (req, res) => {
   if (!user.isActive) throw HttpError.forbidden("Account is inactive");
   const ok = await comparePassword(password, user.passwordHash);
   if (!ok) throw HttpError.unauthorized("Invalid credentials");
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
+  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role, adm: user.isAdmin });
   res.json({ token, user: serializeUser(user) });
 });
 
@@ -325,5 +325,6 @@ export function serializeUser(u: import("@prisma/client").User) {
     emailVerifiedAt: u.emailVerifiedAt?.toISOString() ?? null,
     acceptedTermsVersion: u.acceptedTermsVersion ?? null,
     acceptedTermsAt: u.acceptedTermsAt?.toISOString() ?? null,
+    isAdmin: u.isAdmin,
   };
 }

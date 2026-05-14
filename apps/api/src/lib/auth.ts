@@ -7,6 +7,7 @@ export interface JWTPayload {
   sub: string; // user id
   fid: string; // family id
   role: Role;
+  adm?: boolean; // admin flag — gates /admin endpoints
 }
 
 export function signToken(payload: JWTPayload): string {

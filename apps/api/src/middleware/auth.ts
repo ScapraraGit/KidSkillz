@@ -29,6 +29,19 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (!req.auth) return next(HttpError.unauthorized());
+  if (!req.auth.adm) return next(HttpError.forbidden("Admin only"));
+  // Belt-and-suspenders: confirm flag still set in DB (token could outlive a revoke).
+  prisma.user
+    .findUnique({ where: { id: req.auth.sub }, select: { isAdmin: true, isActive: true } })
+    .then((u) => {
+      if (!u || !u.isAdmin || !u.isActive) return next(HttpError.forbidden("Admin only"));
+      next();
+    })
+    .catch(next);
+}
+
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) return next(HttpError.unauthorized());

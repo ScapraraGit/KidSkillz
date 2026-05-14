@@ -9,6 +9,7 @@
     "start": "tsx src/index.ts",
     "prisma": "dotenv -e ../../.env -- prisma",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "grant-admin": "dotenv -e ../../.env -- tsx prisma/grant-admin.ts",
     "backfill:challenges": "dotenv -e ../../.env -- tsx prisma/backfill-challenges.ts",
     "jobs:no-misses": "dotenv -e ../../.env -- tsx prisma/run-no-misses.ts",
     "jobs:photo-purge": "dotenv -e ../../.env -- tsx prisma/run-photo-purge.ts",

@@ -166,6 +166,7 @@ export interface AuthUserDTO {
   emailVerifiedAt?: string | null;
   acceptedTermsVersion?: number | null;
   acceptedTermsAt?: string | null;
+  isAdmin?: boolean;
 }
 
 /**

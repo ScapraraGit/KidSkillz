@@ -1,4 +1,4 @@
-﻿import { initSentry, Sentry } from "./lib/sentry.js";
+import { initSentry, Sentry } from "./lib/sentry.js";
 initSentry();
 
 import express from "express";

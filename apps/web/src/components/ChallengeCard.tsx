@@ -1,4 +1,4 @@
-﻿import { Card, ProgressBar, Badge } from "./ui";
+import { Card, ProgressBar, Badge } from "./ui";
 import { Tooltip } from "./Tooltip";
 import type { ChallengeDTO, ChallengeProgressDTO } from "@chorechampz/shared";
 

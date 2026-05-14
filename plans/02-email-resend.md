@@ -1,4 +1,4 @@
-﻿# Plan 2 — Email Wiring (Resend)
+# Plan 2 — Email Wiring (Resend)
 
 ## Goal
 

@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { Tooltip } from "./Tooltip";
 import type { ChildDTO, ChildViewMode } from "@chorechampz/shared";

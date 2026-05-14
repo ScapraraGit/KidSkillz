@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
 import type { LedgerEntryDTO } from "@chorechampz/shared";

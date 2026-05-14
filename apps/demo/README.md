@@ -1,4 +1,4 @@
-﻿# @chorechampz/demo
+# @chorechampz/demo
 
 Generates `apps/web/public/demo.gif` for the landing-page hero.
 

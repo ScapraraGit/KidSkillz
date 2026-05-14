@@ -1,4 +1,4 @@
-﻿---
+---
 name: chorechampz-web-feature
 description: Scaffolding rules for new ChoreChampz web features (pages, buttons, modals, form fields). Mandates tooltips on every primary action and non-obvious icon. Use when adding any new page, button, or interactive control under apps/web/src.
 ---

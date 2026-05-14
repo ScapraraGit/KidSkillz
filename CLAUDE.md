@@ -1,4 +1,4 @@
-﻿# ChoreChampz — Claude Context
+# ChoreChampz — Claude Context
 
 Monorepo. Kids/teens earn credit for chores, parents approve, reward catalog. Multi-family from day one.
 

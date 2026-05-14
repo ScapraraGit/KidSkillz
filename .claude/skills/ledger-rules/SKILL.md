@@ -1,4 +1,4 @@
-﻿---
+---
 name: ledger-rules
 description: Authoritative rules for posting, reading, and changing credit balances in ChoreChampz. Use whenever editing code that touches LedgerEntry, balances, completions approval, redemption approval, adjustments, or initiative bonuses.
 ---

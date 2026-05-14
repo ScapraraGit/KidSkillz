@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Card, PageHeader } from "../components/ui";
 import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from "@chorechampz/shared";
 

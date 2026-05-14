@@ -1,4 +1,4 @@
-﻿import { prisma } from "../db.js";
+import { prisma } from "../db.js";
 import { Prisma } from "@prisma/client";
 import type { Recurrence, TodayTaskOccurrenceDTO } from "@chorechampz/shared";
 import { HttpError } from "../errors.js";

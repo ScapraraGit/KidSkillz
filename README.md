@@ -1,4 +1,4 @@
-﻿# ChoreChampz
+# ChoreChampz
 
 Kids and teens earn credits for chores, tasks, good behavior, planning ahead, and going above and beyond. Parents approve, configure rules, and run a reward catalog. Multi-family by design, even though this POC runs locally on Docker Compose.
 

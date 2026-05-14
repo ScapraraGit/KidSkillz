@@ -1,4 +1,4 @@
-﻿import { fromZonedTime } from "date-fns-tz";
+import { fromZonedTime } from "date-fns-tz";
 import type { FamilySettings, LateTier, SuggestedAwardDTO } from "@chorechampz/shared";
 
 export interface AwardInputs {

@@ -1,4 +1,4 @@
-﻿# Migration discipline
+# Migration discipline
 
 Prisma's migration model is **forward-only**: it does not generate down-scripts, and `prisma migrate reset` drops the schema. In production, recovery from a bad migration is a new forward migration, not a rollback.
 

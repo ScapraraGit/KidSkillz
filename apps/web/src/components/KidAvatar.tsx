@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import { createAvatar } from "@dicebear/core";
 import { avataaars } from "@dicebear/collection";
 import type { AvatarConfig } from "@chorechampz/shared";

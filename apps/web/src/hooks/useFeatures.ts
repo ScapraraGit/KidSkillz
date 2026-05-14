@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { FeatureFlagsDTO, MeResponseDTO } from "@chorechampz/shared";
 import { api } from "../lib/api";
 

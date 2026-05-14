@@ -1,4 +1,4 @@
-﻿---
+---
 name: chorechampz-endpoint
 description: Scaffolds a new ChoreChampz API endpoint with the conventional layering — Zod validation in the route, business logic in a service, tenant scoping, serializer, and a unit test stub. Use when adding any new REST endpoint to apps/api.
 ---

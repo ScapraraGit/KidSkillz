@@ -1,4 +1,4 @@
-﻿import { prisma } from "../db.js";
+import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import type { TaskCategoryDTO } from "@chorechampz/shared";
 import type { TaskCategory } from "@prisma/client";

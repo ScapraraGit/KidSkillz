@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AvatarConfig, AuthUserDTO } from "@chorechampz/shared";
 import { api } from "../lib/api";

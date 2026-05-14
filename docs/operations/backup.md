@@ -1,4 +1,4 @@
-﻿# Backup + restore
+# Backup + restore
 
 ChoreChampz stores authoritative state in Postgres (Neon in production). Restore-readiness rests on three pieces: Neon Point-in-Time Recovery, schema migrations replayed via `prisma migrate deploy`, and proof photos backed up from the storage volume.
 

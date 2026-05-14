@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { formatInTimeZone } from "date-fns-tz";
 import { computeDeadline, computeSuggestedAward } from "../awards.js";
 import type { FamilySettings } from "@chorechampz/shared";

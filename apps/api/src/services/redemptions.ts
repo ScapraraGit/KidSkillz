@@ -1,4 +1,4 @@
-﻿import { prisma } from "../db.js";
+import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { ensureChildCanRedeem, ensureChildInFamily } from "./children.js";
 import { getReward } from "./rewards.js";

@@ -1,4 +1,4 @@
-﻿import { prisma } from "../db.js";
+import { prisma } from "../db.js";
 import { addDays, format, parseISO } from "date-fns";
 import { todayInTz } from "../lib/time.js";
 import { getFamilySettings } from "./family.js";

@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { Avatar, Card, CreditChip, EmptyState, PageHeader, inputCls } from "../../components/ui";

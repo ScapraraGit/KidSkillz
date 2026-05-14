@@ -1,4 +1,4 @@
-﻿import { prisma } from "../db.js";
+import { prisma } from "../db.js";
 import { Prisma } from "@prisma/client";
 import { hashPassword } from "../lib/auth.js";
 import { HttpError } from "../errors.js";

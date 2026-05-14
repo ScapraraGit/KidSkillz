@@ -1,4 +1,4 @@
-﻿---
+---
 name: chorechampz-test
 description: How to write Vitest unit tests for ChoreChampz services, lib helpers, and React components. Use when adding or extending tests in apps/api or apps/web.
 ---

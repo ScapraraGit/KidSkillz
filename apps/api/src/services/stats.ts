@@ -1,4 +1,4 @@
-﻿import { parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "../db.js";
 import { startOfWeekInTz, todayInTz } from "../lib/time.js";

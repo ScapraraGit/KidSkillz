@@ -1,4 +1,4 @@
-﻿# Contributing to ChoreChampz
+# Contributing to ChoreChampz
 
 This is a working POC + product. The bar for contributions is correctness, clarity, and respect for the conventions already in place. Read this top to bottom before your first PR.
 

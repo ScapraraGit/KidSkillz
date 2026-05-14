@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Avatar, Badge, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";

@@ -1,4 +1,4 @@
-﻿name: Nightly Jobs
+name: Nightly Jobs
 
 # Runs background maintenance jobs that don't fit a long-lived process:
 #   - penalty-sweep: posts negative-credit entries for yesterday's missed RECURRING

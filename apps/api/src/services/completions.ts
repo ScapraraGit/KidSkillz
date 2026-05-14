@@ -14,6 +14,7 @@ import type { ProofRequirement } from "@prisma/client";
 import type { SuggestedAwardDTO } from "@chorechamps/shared";
 
 import { computeTeamSplit } from "../lib/team-split.js";
+import { effectiveProofRequirement, features } from "../lib/features.js";
 
 function proofMet(req: ProofRequirement, hasNotes: boolean, hasPhoto: boolean) {
   switch (req) {
@@ -49,12 +50,15 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
   const task = await prisma.task.findFirst({ where: { id: input.taskId, familyId, isActive: true } });
   if (!task) throw HttpError.notFound("Task not found");
 
-  // Resolve effective proof requirement: child override > task setting
+  // Resolve effective proof requirement: child override > task setting. Downgrade
+  // PHOTO_* values when the feature flag is off so legacy data doesn't brick kids.
   const profile = await prisma.childProfile.findUnique({ where: { userId: child.id } });
-  const required = profile?.proofRequirementOverride ?? task.proofRequirement;
+  const required = effectiveProofRequirement(profile?.proofRequirementOverride ?? task.proofRequirement);
 
   const hasNotes = !!input.notes && input.notes.trim().length > 0;
-  const hasPhoto = !!input.photoKey;
+  // Ignore any client-supplied photoKey when photo proof is disabled. Belt-and-
+  // suspenders next to the uploads route returning 503.
+  const hasPhoto = features.photoProof && !!input.photoKey;
 
   if (!proofMet(required, hasNotes, hasPhoto)) {
     throw HttpError.unprocessable(`Proof requirement not satisfied: ${required}`, "PROOF_REQUIRED");
@@ -121,7 +125,7 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
       taskId: task.id,
       childId: child.id,
       notes: input.notes ?? null,
-      photoKey: input.photoKey ?? null,
+      photoKey: features.photoProof ? (input.photoKey ?? null) : null,
       occurrenceDate,
     },
     include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },

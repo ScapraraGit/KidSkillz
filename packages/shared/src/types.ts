@@ -184,10 +184,16 @@ export type LegalAcceptanceKind =
   | "CHILD_PROFILE_CONSENT"
   | "UPLOAD_ACK";
 
+export interface FeatureFlagsDTO {
+  /** Whether photo proof on tasks is currently available end-to-end. When false, web hides PHOTO_* options and API rejects them. */
+  photoProof: boolean;
+}
+
 export interface MeResponseDTO {
   user: AuthUserDTO;
   settings: FamilySettings;
   needsOnboarding: boolean;
+  features: FeatureFlagsDTO;
 }
 
 export interface ChildDTO {

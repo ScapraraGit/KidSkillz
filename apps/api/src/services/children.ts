@@ -5,6 +5,7 @@ import { HttpError } from "../errors.js";
 import { getBalance } from "./ledger.js";
 import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
 import { ChildViewMode } from "@chorechamps/shared";
+import { effectiveProofRequirement } from "../lib/features.js";
 
 async function loadSavingsGoals(childId: string): Promise<string[]> {
   const rows = await prisma.childSavingsGoal.findMany({
@@ -25,7 +26,9 @@ async function toChildDTO(k: any): Promise<ChildDTO> {
     avatarConfig: (k.avatarConfig as AvatarConfig | null) ?? null,
     redemptionPaused: k.childProfile?.redemptionPaused ?? false,
     earningPaused: k.childProfile?.earningPaused ?? false,
-    proofRequirementOverride: k.childProfile?.proofRequirementOverride ?? null,
+    proofRequirementOverride: k.childProfile?.proofRequirementOverride
+      ? effectiveProofRequirement(k.childProfile.proofRequirementOverride)
+      : null,
     soundEnabled: k.childProfile?.soundEnabled ?? false,
     viewMode: (k.childProfile?.viewMode ?? ChildViewMode.YOUNGER) as ChildDTO["viewMode"],
     savingsGoalRewardId: goals[0] ?? null,

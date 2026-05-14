@@ -6,6 +6,7 @@ import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "..
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import type { ChildDTO, TaskCategoryDTO, TaskDTO } from "@chorechamps/shared";
+import { useFeatures } from "../../hooks/useFeatures";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -252,6 +253,7 @@ export function TaskFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const features = useFeatures();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [creditValue, setCreditValue] = useState(initial?.creditValue ?? 5);
@@ -579,9 +581,13 @@ export function TaskFormModal({
             <option value="NONE">None</option>
             <option value="NOTES_OPTIONAL">Notes optional</option>
             <option value="NOTES_REQUIRED">Notes required</option>
-            <option value="PHOTO_OPTIONAL">Photo optional</option>
-            <option value="PHOTO_REQUIRED">Photo required</option>
-            <option value="PHOTO_AND_NOTES">Photo and notes</option>
+            {features.photoProof && (
+              <>
+                <option value="PHOTO_OPTIONAL">Photo optional</option>
+                <option value="PHOTO_REQUIRED">Photo required</option>
+                <option value="PHOTO_AND_NOTES">Photo and notes</option>
+              </>
+            )}
           </select>
         </Field>
         <label className="flex items-center gap-2 text-sm">

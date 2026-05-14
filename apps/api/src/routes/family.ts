@@ -6,6 +6,7 @@ import { deleteFamily, exportFamily } from "../services/data-export.js";
 import { HttpError } from "../errors.js";
 import { prisma } from "../db.js";
 import { recordAudit } from "../services/audit.js";
+import { features, proofRequirementSchema } from "../lib/features.js";
 
 export const familyRouter = Router();
 
@@ -36,9 +37,7 @@ familyRouter.get("/members", requireRole("PARENT"), async (req, res) => {
 
 const settingsSchema = z.object({
   childAuthMode: z.enum(["INDIVIDUAL", "SHARED_DEVICE"]).optional(),
-  defaultProofRequirement: z
-    .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
-    .optional(),
+  defaultProofRequirement: proofRequirementSchema.optional(),
   allowNegativeBalance: z.boolean().optional(),
   initiativeBonus: z
     .object({

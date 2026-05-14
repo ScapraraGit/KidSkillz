@@ -7,10 +7,12 @@ import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechamps/shared";
+import { useFeatures } from "../../hooks/useFeatures";
 
 export function ParentSettings() {
   const qc = useQueryClient();
   const setStoreSettings = useAuth((s) => s.setSettings);
+  const features = useFeatures();
   const familyQ = useQuery({
     queryKey: ["family"],
     queryFn: () => api<{ id: string; name: string; settings: FamilySettings }>("/family"),
@@ -74,9 +76,13 @@ export function ParentSettings() {
             <option value="NONE">None</option>
             <option value="NOTES_OPTIONAL">Notes optional</option>
             <option value="NOTES_REQUIRED">Notes required</option>
-            <option value="PHOTO_OPTIONAL">Photo optional</option>
-            <option value="PHOTO_REQUIRED">Photo required</option>
-            <option value="PHOTO_AND_NOTES">Photo and notes</option>
+            {features.photoProof && (
+              <>
+                <option value="PHOTO_OPTIONAL">Photo optional</option>
+                <option value="PHOTO_REQUIRED">Photo required</option>
+                <option value="PHOTO_AND_NOTES">Photo and notes</option>
+              </>
+            )}
           </select>
         </Field>
         <label className="flex items-center gap-2 text-sm">
@@ -317,6 +323,7 @@ export function ParentSettings() {
         </div>
       </Card>
 
+      {features.photoProof && (
       <Card className="space-y-4">
         <h3 className="font-semibold">Photo proof retention</h3>
         <p className="text-sm text-slate-500">
@@ -334,6 +341,7 @@ export function ParentSettings() {
           />
         </Field>
       </Card>
+      )}
 
       <Card className="space-y-4">
         <h3 className="font-semibold">Screen time defaults</h3>

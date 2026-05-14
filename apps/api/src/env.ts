@@ -21,4 +21,9 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
   APP_URL: process.env.APP_URL ?? "http://localhost:5173",
   SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+  // Photo proof is hidden behind a feature flag until S3 storage + automatic
+  // retention/expiry sweeps are wired up. Until then the only proof options
+  // surfaced anywhere are NONE / NOTES_OPTIONAL / NOTES_REQUIRED. Flip to "true"
+  // when S3 + the photo-retention cron are both deployed.
+  PHOTO_PROOF_ENABLED: (process.env.PHOTO_PROOF_ENABLED ?? "false").toLowerCase() === "true",
 };

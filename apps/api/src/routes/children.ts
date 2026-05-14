@@ -12,6 +12,7 @@ import {
 } from "../services/legal-acceptance.js";
 import { CURRENT_TERMS_VERSION } from "@chorechamps/shared";
 import { recordAudit } from "../services/audit.js";
+import { proofRequirementSchema } from "../lib/features.js";
 
 const stringArray = z.array(z.string().max(40)).max(40);
 
@@ -103,10 +104,7 @@ const updateSchema = z.object({
   avatarConfig: avatarConfigSchema.nullable().optional(),
   redemptionPaused: z.boolean().optional(),
   earningPaused: z.boolean().optional(),
-  proofRequirementOverride: z
-    .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
-    .nullable()
-    .optional(),
+  proofRequirementOverride: proofRequirementSchema.nullable().optional(),
   soundEnabled: z.boolean().optional(),
   viewMode: z.enum(["YOUNGER", "OLDER"]).optional(),
   savingsGoalRewardId: z.string().uuid().nullable().optional(),

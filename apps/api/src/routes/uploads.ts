@@ -5,8 +5,20 @@ import { requireAuth } from "../middleware/auth.js";
 import { storage } from "../lib/storage.js";
 import { env } from "../env.js";
 import { HttpError } from "../errors.js";
+import { features } from "../lib/features.js";
 
 export const uploadsRouter = Router();
+
+// Hard gate the entire uploads surface until photo-proof is generally available
+// (S3 storage + retention sweeps wired up). Returns 503 so clients can detect
+// "disabled" distinctly from "broken". GET stays gated too — old keys in the
+// database become inaccessible by design until the feature is back on.
+uploadsRouter.use((_req, _res, next) => {
+  if (!features.photoProof) {
+    throw HttpError.serviceUnavailable("Photo proof is currently disabled", "PHOTO_PROOF_DISABLED");
+  }
+  next();
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),

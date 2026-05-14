@@ -4,6 +4,7 @@ import type { Recurrence, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
 import { HttpError } from "../errors.js";
 import { getFamilySettings } from "./family.js";
 import { dowSunFirst, todayInTz } from "../lib/time.js";
+import { effectiveProofRequirement } from "../lib/features.js";
 
 export interface CreateTaskInput {
   title: string;
@@ -322,7 +323,7 @@ export function serializeTask(t: import("@prisma/client").Task) {
     dueAt: t.dueAt?.toISOString() ?? null,
     dueByTime: t.dueByTime ?? null,
     defaultDurationMinutes: t.defaultDurationMinutes ?? null,
-    proofRequirement: t.proofRequirement,
+    proofRequirement: effectiveProofRequirement(t.proofRequirement),
     isActive: t.isActive,
     assignmentMode: t.assignmentMode,
     teamSplit: t.teamSplit,

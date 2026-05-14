@@ -15,4 +15,6 @@ export const HttpError = {
   notFound: (msg = "Not found") => new AppError(404, "NOT_FOUND", msg),
   conflict: (msg: string, code = "CONFLICT") => new AppError(409, code, msg),
   unprocessable: (msg: string, code = "UNPROCESSABLE") => new AppError(422, code, msg),
+  serviceUnavailable: (msg = "Service unavailable", code = "SERVICE_UNAVAILABLE") =>
+    new AppError(503, code, msg),
 };

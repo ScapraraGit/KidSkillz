@@ -6,6 +6,7 @@ import { comparePassword, hashPassword, signToken } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
+import { features } from "../lib/features.js";
 import { seedDefaultChallenges } from "../services/challenges.js";
 import { seedDefaultCategories } from "../services/task-categories.js";
 import {
@@ -177,6 +178,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     user: serializeUser(user),
     settings,
     needsOnboarding: user.onboardedAt == null,
+    features: { photoProof: features.photoProof },
   });
 });
 

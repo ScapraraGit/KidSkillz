@@ -15,6 +15,7 @@ import {
 } from "../services/tasks.js";
 import { claimMissedOpportunity } from "../services/missed-opportunities.js";
 import { recordAudit } from "../services/audit.js";
+import { proofRequirementSchema } from "../lib/features.js";
 
 export const tasksRouter = Router();
 
@@ -40,9 +41,7 @@ const createTaskSchema = z.object({
     .nullable()
     .optional(),
   defaultDurationMinutes: z.number().int().min(1).max(240).nullable().optional(),
-  proofRequirement: z
-    .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
-    .optional(),
+  proofRequirement: proofRequirementSchema.optional(),
   isActive: z.boolean().optional(),
   assignmentMode: z.enum(["ASSIGNED", "UP_FOR_GRABS", "TEAM"]).optional(),
   teamSplit: z.enum(["EVEN", "FULL"]).optional(),

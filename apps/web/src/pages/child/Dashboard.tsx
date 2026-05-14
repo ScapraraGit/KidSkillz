@@ -18,6 +18,7 @@ import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
+import { useFeatures } from "../../hooks/useFeatures";
 import { celebrate as fireCelebrate } from "../../lib/celebrate";
 import { LevelCard, LevelRing } from "../../components/LevelCard";
 import { PetHero } from "../../components/PetHero";
@@ -468,9 +469,13 @@ function CompleteModal({
   });
   const [uploadAck, setUploadAck] = useState(false);
 
+  const features = useFeatures();
   const proof = occurrence.task.proofRequirement;
-  const photoNeeded = proof === "PHOTO_REQUIRED" || proof === "PHOTO_AND_NOTES";
-  const photoAllowed = photoNeeded || proof === "PHOTO_OPTIONAL";
+  // Photo proof is feature-flagged. Server downgrades stored PHOTO_* values at
+  // serialization time, but gate here too so a stale cache can't surface the
+  // upload field after the flag flips off.
+  const photoNeeded = features.photoProof && (proof === "PHOTO_REQUIRED" || proof === "PHOTO_AND_NOTES");
+  const photoAllowed = features.photoProof && (photoNeeded || proof === "PHOTO_OPTIONAL");
   const notesNeeded = proof === "NOTES_REQUIRED" || proof === "PHOTO_AND_NOTES";
   const ackRequired = !!photo && !hasPriorAck && !uploadAck;
 

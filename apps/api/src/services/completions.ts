@@ -13,6 +13,8 @@ import { computeSuggestedAward } from "./awards.js";
 import type { ProofRequirement } from "@prisma/client";
 import type { SuggestedAwardDTO } from "@chorechamps/shared";
 
+import { computeTeamSplit } from "../lib/team-split.js";
+
 function proofMet(req: ProofRequirement, hasNotes: boolean, hasPhoto: boolean) {
   switch (req) {
     case "NONE":
@@ -74,6 +76,12 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
   });
   if (existing) throw HttpError.conflict("Already submitted for this occurrence");
 
+  // Block submission if a parent already self-claimed this occurrence (Missed Opportunity).
+  const missed = await prisma.missedOpportunity.findFirst({
+    where: { taskId: task.id, occurrenceDate },
+  });
+  if (missed) throw HttpError.conflict("A grown-up already claimed this one!");
+
   if (task.assignmentMode === "UP_FOR_GRABS") {
     // Pool tasks: first kid to submit claims it. Block if anyone else has a live claim.
     const claimed = await prisma.taskCompletion.findFirst({
@@ -85,6 +93,25 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
       },
     });
     if (claimed) throw HttpError.conflict("Another kid already grabbed this one");
+  } else if (task.assignmentMode === "TEAM") {
+    // Team: only one submission per occurrence (whoever submits represents the team).
+    // Auto-join submitter so they appear on the roster at approval time.
+    const otherSubmission = await prisma.taskCompletion.findFirst({
+      where: {
+        taskId: task.id,
+        occurrenceDate,
+        status: { in: ["PENDING", "APPROVED"] },
+      },
+    });
+    if (otherSubmission) throw HttpError.conflict("Team already submitted for this occurrence");
+    const existingJoin = await prisma.taskJoin.findFirst({
+      where: { taskId: task.id, childId: child.id, occurrenceDate },
+    });
+    if (!existingJoin) {
+      await prisma.taskJoin.create({
+        data: { familyId, taskId: task.id, childId: child.id, occurrenceDate },
+      });
+    }
   } else if (task.assignedToId !== child.id) {
     throw HttpError.forbidden("This task is assigned to a different kid");
   }
@@ -131,11 +158,14 @@ export async function approveCompletion(
   if (!c) throw HttpError.notFound("Completion not found");
   if (c.status !== "PENDING") throw HttpError.conflict("Completion already reviewed");
 
+  // Hoist settings fetch out of the transaction so credit math + early-bird detection
+  // see a consistent snapshot, and to keep the JSON read off the tx connection.
+  const settings = await getFamilySettings(familyId);
+
   let credits: number;
   if (creditOverride !== undefined) {
     credits = creditOverride;
   } else {
-    const settings = await getFamilySettings(familyId);
     credits = computeSuggestedAward({
       task: {
         kind: c.task.kind,
@@ -150,10 +180,14 @@ export async function approveCompletion(
   }
   if (credits < 0) throw HttpError.badRequest("Credit value cannot be negative");
 
+  const submittedHour = Number(formatInTimeZone(c.submittedAt, settings.timezone, "H"));
+
   const updated = await prisma.$transaction(async (tx) => {
     const trimmedNote = parentNote?.trim() || null;
-    const upd = await tx.taskCompletion.update({
-      where: { id: completionId },
+    // Atomic guard against double-approval: updateMany with a PENDING filter; if zero
+    // rows changed someone else already approved or rejected this completion.
+    const guard = await tx.taskCompletion.updateMany({
+      where: { id: completionId, status: "PENDING" },
       data: {
         status: "APPROVED",
         reviewedAt: new Date(),
@@ -161,27 +195,58 @@ export async function approveCompletion(
         creditAwarded: credits,
         parentNote: trimmedNote,
       },
+    });
+    if (guard.count === 0) {
+      throw HttpError.conflict("Completion already reviewed");
+    }
+    const upd = await tx.taskCompletion.findUniqueOrThrow({
+      where: { id: completionId },
       include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },
     });
     if (credits > 0) {
-      await postLedger({
-        tx,
-        familyId,
-        childId: c.childId,
-        amount: credits,
-        kind: "TASK",
-        reason: `Task: ${c.task.title}`,
-        sourceType: "TASK_COMPLETION",
-        sourceId: completionId,
-        createdById: parentUserId,
-      });
-      const settings = await getFamilySettings(familyId);
-      const submittedHour = Number(formatInTimeZone(c.submittedAt, settings.timezone, "H"));
-      await evaluateChallenges(
-        { tx, familyId, childId: c.childId, parentUserId },
-        { type: "TASK_APPROVED", credits, earlyBird: submittedHour < 12 },
-      );
-      await evaluateLevelUp({ tx, familyId, childId: c.childId, createdById: parentUserId });
+      // Determine credit recipients. Default: just the submitting child. For TEAM tasks,
+      // the credit either splits across joiners (EVEN) or each joiner receives the full
+      // amount (FULL). Only joiners present at submission time qualify, so late joiners
+      // can't game the split after the parent opens approval.
+      let recipients: { childId: string; amount: number }[];
+      if (c.task.assignmentMode === "TEAM") {
+        const joins = await tx.taskJoin.findMany({
+          where: {
+            taskId: c.taskId,
+            occurrenceDate: c.occurrenceDate,
+            createdAt: { lte: c.submittedAt },
+          },
+          select: { childId: true },
+        });
+        const ids = Array.from(new Set([c.childId, ...joins.map((j) => j.childId)]));
+        recipients = computeTeamSplit(credits, ids, c.task.teamSplit);
+      } else {
+        recipients = [{ childId: c.childId, amount: credits }];
+      }
+
+      for (const r of recipients) {
+        await postLedger({
+          tx,
+          familyId,
+          childId: r.childId,
+          amount: r.amount,
+          kind: "TASK",
+          reason:
+            c.task.assignmentMode === "TEAM"
+              ? `Team task: ${c.task.title}`
+              : `Task: ${c.task.title}`,
+          sourceType: "TASK_COMPLETION",
+          // Per-recipient sourceId so the entry is uniquely identifiable in the audit
+          // log and a partial retry can be detected without double-posting.
+          sourceId: `${completionId}:${r.childId}`,
+          createdById: parentUserId,
+        });
+        await evaluateChallenges(
+          { tx, familyId, childId: r.childId, parentUserId },
+          { type: "TASK_APPROVED", credits: r.amount, earlyBird: submittedHour < 12 },
+        );
+        await evaluateLevelUp({ tx, familyId, childId: r.childId, createdById: parentUserId });
+      }
     }
     return upd;
   });

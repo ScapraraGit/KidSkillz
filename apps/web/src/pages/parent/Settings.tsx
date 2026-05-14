@@ -6,7 +6,7 @@ import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
-import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechamps/shared";
+import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechamps/shared";
 
 export function ParentSettings() {
   const qc = useQueryClient();
@@ -87,6 +87,38 @@ export function ParentSettings() {
           />
           Allow negative balances (advanced)
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={s.siblingPrivacy ?? false}
+            onChange={(e) => setS({ ...s, siblingPrivacy: e.target.checked })}
+          />
+          Sibling-private mode (hide other kids' balances/levels from each child)
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={s.penaltiesEnabled ?? false}
+            onChange={(e) => setS({ ...s, penaltiesEnabled: e.target.checked })}
+          />
+          Enable missed-task penalties (negative credits posted nightly per task config)
+        </label>
+        <Field
+          label="Missed Opportunity overlay"
+          hint="What kid sees when a grown-up self-claims a task before them."
+        >
+          <select
+            className={inputCls}
+            value={s.missedOpportunityMode ?? "GENTLE"}
+            onChange={(e) =>
+              setS({ ...s, missedOpportunityMode: e.target.value as "OFF" | "GENTLE" | "SAVAGE" })
+            }
+          >
+            <option value="OFF">Off — no overlay shown</option>
+            <option value="GENTLE">Gentle — friendly nudge</option>
+            <option value="SAVAGE">Savage — playful roast</option>
+          </select>
+        </Field>
       </Card>
 
       <Card className="space-y-4">
@@ -340,8 +372,91 @@ export function ParentSettings() {
         </Tooltip>
       </div>
 
+      <TaskCategoriesCard />
+
       <DataAndDeletionCard familyName={familyQ.data?.name ?? ""} />
     </div>
+  );
+}
+
+function TaskCategoriesCard() {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["task-categories"],
+    queryFn: () => api<{ categories: TaskCategoryDTO[] }>("/task-categories"),
+  });
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("⭐");
+
+  const create = useMutation({
+    mutationFn: () =>
+      api("/task-categories", { body: { name: name.trim(), icon: icon.trim(), position: 99 } }),
+    onSuccess: () => {
+      setName("");
+      setIcon("⭐");
+      qc.invalidateQueries({ queryKey: ["task-categories"] });
+    },
+  });
+  const update = useMutation({
+    mutationFn: (v: { id: string; patch: Partial<TaskCategoryDTO> }) =>
+      api(`/task-categories/${v.id}`, { method: "PATCH", body: v.patch }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["task-categories"] }),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => api(`/task-categories/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["task-categories"] }),
+  });
+
+  return (
+    <Card className="space-y-4">
+      <h3 className="font-semibold">Task categories</h3>
+      <p className="text-sm text-slate-500">
+        Categories group tasks on the kid dashboard. Defaults are seeded for new families. Rename, swap
+        icons, or delete unused ones.
+      </p>
+      <ul className="divide-y divide-slate-100">
+        {(q.data?.categories ?? []).map((c) => (
+          <li key={c.id} className="flex items-center gap-2 py-2">
+            <input
+              className={`${inputCls} w-16 text-center`}
+              value={c.icon}
+              onChange={(e) =>
+                update.mutate({ id: c.id, patch: { icon: e.target.value.slice(0, 4) } })
+              }
+            />
+            <input
+              className={`${inputCls} flex-1`}
+              value={c.name}
+              onChange={(e) => update.mutate({ id: c.id, patch: { name: e.target.value } })}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => confirm(`Delete category "${c.name}"?`) && del.mutate(c.id)}
+            >
+              Delete
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-2 pt-2 border-t border-slate-100">
+        <input
+          className={`${inputCls} w-16 text-center`}
+          value={icon}
+          onChange={(e) => setIcon(e.target.value.slice(0, 4))}
+          placeholder="🌟"
+        />
+        <input
+          className={`${inputCls} flex-1`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="New category name"
+        />
+        <Button onClick={() => create.mutate()} disabled={!name.trim() || create.isPending}>
+          Add
+        </Button>
+      </div>
+    </Card>
   );
 }
 

@@ -18,7 +18,13 @@ import { ChildDashboard } from "./pages/child/Dashboard";
 import { ChildRewards } from "./pages/child/Rewards";
 import { ChildInitiative } from "./pages/child/Initiative";
 import { ChildActivity } from "./pages/child/Activity";
-import { TermsOfService, PrivacyPolicy } from "./pages/Legal";
+import {
+  TermsOfService,
+  PrivacyPolicy,
+  AcceptableUsePolicy,
+  ChildSafetyPolicy,
+  DmcaPolicy,
+} from "./pages/Legal";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
@@ -36,6 +42,9 @@ export default function App() {
         <Route path="/caregiver/pin" element={<CaregiverPin />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/acceptable-use" element={<AcceptableUsePolicy />} />
+        <Route path="/child-safety" element={<ChildSafetyPolicy />} />
+        <Route path="/dmca" element={<DmcaPolicy />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -50,6 +59,9 @@ export default function App() {
         <Route path="/login" element={<Navigate to="/parent" replace />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/acceptable-use" element={<AcceptableUsePolicy />} />
+        <Route path="/child-safety" element={<ChildSafetyPolicy />} />
+        <Route path="/dmca" element={<DmcaPolicy />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route element={<AppLayout role="PARENT" />}>
           <Route path="/parent" element={<ParentDashboard />} />
@@ -72,6 +84,9 @@ export default function App() {
       <Route path="/login" element={<Navigate to="/me" replace />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/acceptable-use" element={<AcceptableUsePolicy />} />
+      <Route path="/child-safety" element={<ChildSafetyPolicy />} />
+      <Route path="/dmca" element={<DmcaPolicy />} />
       <Route element={<AppLayout role="CHILD" />}>
         <Route path="/me" element={<ChildDashboard />} />
         <Route path="/me/rewards" element={<ChildRewards />} />

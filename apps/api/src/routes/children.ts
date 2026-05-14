@@ -5,6 +5,13 @@ import { createChild, getChild, listChildren, updateChild } from "../services/ch
 import { childStats } from "../services/stats.js";
 import { getChildLevel } from "../services/levels.js";
 import { HttpError } from "../errors.js";
+import {
+  clientIpFrom,
+  recordLegalAcceptance,
+  userAgentFrom,
+} from "../services/legal-acceptance.js";
+import { CURRENT_TERMS_VERSION } from "@chorechamps/shared";
+import { recordAudit } from "../services/audit.js";
 
 const stringArray = z.array(z.string().max(40)).max(40);
 
@@ -52,11 +59,36 @@ const createSchema = z.object({
     .nullish(),
   avatarColor: z.string().optional(),
   avatarConfig: avatarConfigSchema.nullable().optional(),
+  consentAcknowledged: z.literal(true, {
+    errorMap: () => ({
+      message:
+        "Guardian consent acknowledgement is required to create a child profile.",
+    }),
+  }),
 });
 
 childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
   const input = createSchema.parse(req.body);
-  const child = await createChild(req.auth!.fid, input);
+  const { consentAcknowledged: _ignored, ...childInput } = input;
+  const child = await createChild(req.auth!.fid, childInput);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "CHILD_CREATED",
+    targetType: "User",
+    targetId: child.id,
+    payload: { name: child.name },
+  });
+  await recordLegalAcceptance({
+    userId: req.auth!.sub,
+    familyId: req.auth!.fid,
+    kind: "CHILD_PROFILE_CONSENT",
+    version: CURRENT_TERMS_VERSION,
+    subjectChildId: child.id,
+    ipAddress: clientIpFrom(req),
+    userAgent: userAgentFrom(req),
+    context: "child-profile-create",
+  }).catch((e) => console.error("[legal:accept child-profile]", e));
   res.status(201).json({ child });
 });
 
@@ -78,12 +110,16 @@ const updateSchema = z.object({
   soundEnabled: z.boolean().optional(),
   viewMode: z.enum(["YOUNGER", "OLDER"]).optional(),
   savingsGoalRewardId: z.string().uuid().nullable().optional(),
+  savingsGoalRewardIds: z.array(z.string().uuid()).max(3).optional(),
+  streakGraceCount: z.number().int().min(0).max(30).optional(),
+  penaltiesExempt: z.boolean().optional(),
 });
 
 const preferencesSchema = z.object({
   soundEnabled: z.boolean().optional(),
   viewMode: z.enum(["YOUNGER", "OLDER"]).optional(),
   savingsGoalRewardId: z.string().uuid().nullable().optional(),
+  savingsGoalRewardIds: z.array(z.string().uuid()).max(3).optional(),
 });
 
 childrenRouter.patch("/preferences", requireRole("CHILD"), async (req, res) => {
@@ -95,6 +131,14 @@ childrenRouter.patch("/preferences", requireRole("CHILD"), async (req, res) => {
 childrenRouter.patch("/:id", requireRole("PARENT"), async (req, res) => {
   const input = updateSchema.parse(req.body);
   const child = await updateChild(req.auth!.fid, req.params.id, input);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "CHILD_UPDATED",
+    targetType: "User",
+    targetId: child.id,
+    payload: { keys: Object.keys(input) },
+  });
   res.json({ child });
 });
 

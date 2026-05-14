@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
@@ -14,7 +14,9 @@ import type {
   ChallengeProgressDTO,
   ChildDTO,
   LevelDTO,
+  TaskDTO,
 } from "@chorechamps/shared";
+import { TaskFormModal } from "./Tasks";
 
 interface ChallengeRow {
   challenge: ChallengeDTO;
@@ -23,7 +25,6 @@ interface ChallengeRow {
 
 export function ParentChildren() {
   const qc = useQueryClient();
-  const nav = useNavigate();
   const childrenQ = useQuery({
     queryKey: ["children"],
     queryFn: () => api<{ children: ChildDTO[] }>("/children"),
@@ -31,6 +32,11 @@ export function ParentChildren() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ChildDTO | null>(null);
   const [adjusting, setAdjusting] = useState<ChildDTO | null>(null);
+  // Inline task modals stay on the Kids page instead of navigating to /parent/tasks.
+  // newTaskFor — kid whose Add Task button was tapped (TaskFormModal in create mode).
+  // viewTasksFor — kid whose View Tasks button was tapped (KidTasksModal listing).
+  const [newTaskFor, setNewTaskFor] = useState<ChildDTO | null>(null);
+  const [viewTasksFor, setViewTasksFor] = useState<ChildDTO | null>(null);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["children"] });
@@ -71,8 +77,13 @@ export function ParentChildren() {
             <KidGamificationStrip child={c} />
             <div className="flex flex-wrap gap-2">
               <Tooltip label={`Create a new task assigned to ${c.name}`}>
-                <Button size="sm" onClick={() => nav(`/parent/tasks?childId=${c.id}&new=1`)}>
+                <Button size="sm" onClick={() => setNewTaskFor(c)}>
                   Add task
+                </Button>
+              </Tooltip>
+              <Tooltip label={`See every task assigned to ${c.name}`}>
+                <Button variant="secondary" size="sm" onClick={() => setViewTasksFor(c)}>
+                  View tasks
                 </Button>
               </Tooltip>
               <Tooltip label="Edit name, PIN, avatar, pause flags">
@@ -119,7 +130,124 @@ export function ParentChildren() {
           }}
         />
       )}
+      {newTaskFor && (
+        <TaskFormModal
+          initial={null}
+          defaultAssignedToId={newTaskFor.id}
+          kids={childrenQ.data?.children ?? []}
+          onClose={() => setNewTaskFor(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["tasks"] });
+            setNewTaskFor(null);
+          }}
+        />
+      )}
+      {viewTasksFor && (
+        <KidTasksModal
+          child={viewTasksFor}
+          kids={childrenQ.data?.children ?? []}
+          onClose={() => setViewTasksFor(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function KidTasksModal({
+  child,
+  kids,
+  onClose,
+}: {
+  child: ChildDTO;
+  kids: ChildDTO[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const tasksQ = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => api<{ tasks: TaskDTO[] }>("/tasks"),
+  });
+  const [editing, setEditing] = useState<TaskDTO | null>(null);
+  const del = useMutation({
+    mutationFn: (id: string) => api(`/tasks/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  // Show kid's directly-assigned tasks plus pool tasks the kid could grab/join.
+  const tasks = (tasksQ.data?.tasks ?? []).filter(
+    (t) =>
+      t.assignedToId === child.id ||
+      t.assignmentMode === "UP_FOR_GRABS" ||
+      t.assignmentMode === "TEAM",
+  );
+
+  return (
+    <>
+      <Modal open onClose={onClose} title={`Tasks for ${child.name}`}>
+        {tasksQ.isLoading ? (
+          <div className="text-sm text-slate-500">Loading…</div>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            title="No tasks yet"
+            hint={`Use "Add task" on ${child.name}'s card to create the first one.`}
+          />
+        ) : (
+          <ul className="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
+            {tasks.map((t) => (
+              <li key={t.id} className="py-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{t.title}</div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {t.assignmentMode === "UP_FOR_GRABS" && (
+                      <Badge color="amber">🙋 Up for Grabs</Badge>
+                    )}
+                    {t.assignmentMode === "TEAM" && <Badge color="brand">👥 Team</Badge>}
+                    {t.kind === "ONE_TIME" ? (
+                      <Badge>One-time</Badge>
+                    ) : (
+                      <Badge color="brand">{t.recurrence?.frequency ?? "RECURRING"}</Badge>
+                    )}
+                    {!t.isActive && <Badge color="rose">Inactive</Badge>}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold whitespace-nowrap">{t.creditValue} 🪙</div>
+                </div>
+                <div className="flex gap-1">
+                  <Tooltip label="Edit this task">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+                      Edit
+                    </Button>
+                  </Tooltip>
+                  <Tooltip label="Delete this task (ledger history preserved)">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        confirm(`Delete "${t.title}"?`) && del.mutate(t.id)
+                      }
+                    >
+                      Delete
+                    </Button>
+                  </Tooltip>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+      {editing && (
+        <TaskFormModal
+          initial={editing}
+          kids={kids}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["tasks"] });
+            setEditing(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -177,9 +305,12 @@ function CreateChildModal({
   const [pin, setPin] = useState("");
   const [avatarColor, setAvatarColor] = useState("#22c55e");
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | null>(null);
+  const [consentAcknowledged, setConsentAcknowledged] = useState(false);
   const save = useMutation({
     mutationFn: () =>
-      api<{ child: ChildDTO }>("/children", { body: { name, pin: pin || null, avatarColor, avatarConfig } }),
+      api<{ child: ChildDTO }>("/children", {
+        body: { name, pin: pin || null, avatarColor, avatarConfig, consentAcknowledged },
+      }),
     onSuccess: (r) => {
       onCreated(r.child);
       nav(`/parent/tasks?childId=${r.child.id}`);
@@ -195,7 +326,10 @@ function CreateChildModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !name}>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !name || !consentAcknowledged}
+          >
             Save
           </Button>
         </>
@@ -234,6 +368,30 @@ function CreateChildModal({
             )}
           </div>
         </Field>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
+          <div className="font-semibold">Guardian consent</div>
+          <p>
+            Please use a nickname or first name only. Do <strong>not</strong> enter the child's full legal
+            name, school, address, or any government identifier.
+          </p>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={consentAcknowledged}
+              onChange={(e) => setConsentAcknowledged(e.target.checked)}
+              title="Confirm guardian consent for this child profile"
+              className="mt-0.5"
+            />
+            <span>
+              I am the parent or legal guardian of this child and provide consent under the{" "}
+              <Link to="/privacy" target="_blank" className="underline">
+                Privacy Policy
+              </Link>{" "}
+              to create this profile. I am responsible for supervising this child's use of ChoreChamps and
+              for reviewing all content uploaded under this profile.
+            </span>
+          </label>
+        </div>
       </div>
     </Modal>
   );
@@ -254,6 +412,30 @@ function EditChildModal({
   const [redemptionPaused, setRedemptionPaused] = useState(child.redemptionPaused);
   const [earningPaused, setEarningPaused] = useState(child.earningPaused);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [streakGraceCount, setStreakGraceCount] = useState<string>(String(child.streakGraceCount ?? 0));
+  const [penaltiesExempt, setPenaltiesExempt] = useState(child.penaltiesExempt ?? false);
+  const [savingsGoalRewardIds, setSavingsGoalRewardIds] = useState<string[]>(
+    child.savingsGoalRewardIds ?? [],
+  );
+
+  const rewardsQ = useQuery({
+    queryKey: ["rewards"],
+    queryFn: () => api<{ rewards: { id: string; name: string }[] }>("/rewards"),
+  });
+
+  function setGoalAt(idx: number, rewardId: string) {
+    setSavingsGoalRewardIds((arr) => {
+      const next = [...arr];
+      while (next.length <= idx) next.push("");
+      next[idx] = rewardId;
+      // Strip blanks at end, dedupe.
+      const cleaned: string[] = [];
+      for (const id of next) {
+        if (id && !cleaned.includes(id)) cleaned.push(id);
+      }
+      return cleaned.slice(0, 3);
+    });
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -265,6 +447,9 @@ function EditChildModal({
           avatarColor,
           redemptionPaused,
           earningPaused,
+          streakGraceCount: Math.max(0, Number(streakGraceCount) || 0),
+          penaltiesExempt,
+          savingsGoalRewardIds,
         },
       }),
     onSuccess: onSaved,
@@ -332,7 +517,50 @@ function EditChildModal({
               />
               Pause earning (kid cannot submit completions)
             </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={penaltiesExempt}
+                onChange={(e) => setPenaltiesExempt(e.target.checked)}
+              />
+              Exempt from missed-task penalties
+            </label>
           </div>
+          <Field
+            label="Streak grace tokens"
+            hint="Free passes that absorb one missed day each without breaking the streak. Consumed automatically."
+          >
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              max={30}
+              value={streakGraceCount}
+              onChange={(e) => setStreakGraceCount(e.target.value)}
+            />
+          </Field>
+          <Field
+            label="Savings goals (up to 3)"
+            hint="Pin reward(s) the kid is saving toward. Shown on their dashboard with progress."
+          >
+            <div className="space-y-2">
+              {[0, 1, 2].map((idx) => (
+                <select
+                  key={idx}
+                  className={inputCls}
+                  value={savingsGoalRewardIds[idx] ?? ""}
+                  onChange={(e) => setGoalAt(idx, e.target.value)}
+                >
+                  <option value="">— Slot {idx + 1}: none —</option>
+                  {rewardsQ.data?.rewards.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              ))}
+            </div>
+          </Field>
         </div>
       </Modal>
       {studioOpen && (

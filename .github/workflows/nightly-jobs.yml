@@ -1,0 +1,66 @@
+name: Nightly Jobs
+
+# Runs background maintenance jobs that don't fit a long-lived process:
+#   - penalty-sweep: posts negative-credit entries for yesterday's missed RECURRING
+#     tasks (idempotent; only runs against families with penaltiesEnabled).
+#   - photo-purge: deletes proof photos beyond each family's retention window.
+#
+# Schedule: 09:10 UTC (~02:10 America/Phoenix). Adjust if your busiest TZ shifts.
+# Manual: trigger via "Run workflow" in the Actions tab.
+
+on:
+  schedule:
+    - cron: "10 9 * * *"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - penalty-sweep
+          - photo-purge
+
+concurrency:
+  group: nightly-jobs
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    name: Run nightly maintenance jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @chorechamps/api exec prisma generate
+
+      - name: Penalty sweep
+        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'penalty-sweep' }}
+        run: pnpm --filter @chorechamps/api jobs:penalty-sweep:ci
+
+      - name: Photo purge
+        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'photo-purge' }}
+        run: pnpm --filter @chorechamps/api jobs:photo-purge:ci

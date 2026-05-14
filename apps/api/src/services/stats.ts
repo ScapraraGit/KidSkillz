@@ -1,7 +1,8 @@
-import { addDays, format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "../db.js";
 import { startOfWeekInTz, todayInTz } from "../lib/time.js";
+import { computeStreakWithGrace } from "../lib/streak.js";
 import type { ChildStatsDTO } from "@chorechamps/shared";
 import { getBalance } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
@@ -62,16 +63,16 @@ export async function childStats(familyId: string, childId: string): Promise<Chi
     if (vacEnd && d > vacEnd) return false;
     return true;
   }
-  let streak = 0;
-  for (let i = 0; i < 60; i++) {
-    const d = format(addDays(todayCal, -i), "yyyy-MM-dd");
-    if (days.has(d)) streak++;
-    else if (i === 0)
-      continue; // grace for today not done yet
-    else if (isVacationDay(d))
-      continue; // vacation freezes streak
-    else break;
-  }
+  const profile = await prisma.childProfile.findUnique({
+    where: { userId: childId },
+    select: { streakGraceCount: true },
+  });
+  const streak = computeStreakWithGrace({
+    taskDays: days,
+    todayCal,
+    isVacationDay,
+    graceCount: profile?.streakGraceCount ?? 0,
+  });
 
   const aboveAndBeyond = await prisma.initiativeRequest.count({
     where: { childId, status: "APPROVED" },

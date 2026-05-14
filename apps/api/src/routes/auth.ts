@@ -7,6 +7,7 @@ import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
 import { seedDefaultChallenges } from "../services/challenges.js";
+import { seedDefaultCategories } from "../services/task-categories.js";
 import {
   consumePasswordReset,
   consumeVerificationToken,
@@ -14,7 +15,17 @@ import {
   issueVerificationEmail,
 } from "../services/auth-tokens.js";
 import { avatarConfigSchema } from "./children.js";
-import { CURRENT_TERMS_VERSION, DEFAULT_FAMILY_SETTINGS, type AvatarConfig } from "@chorechamps/shared";
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+  DEFAULT_FAMILY_SETTINGS,
+  type AvatarConfig,
+} from "@chorechamps/shared";
+import {
+  clientIpFrom,
+  recordLegalAcceptance,
+  userAgentFrom,
+} from "../services/legal-acceptance.js";
 
 export const authRouter = Router();
 
@@ -43,6 +54,7 @@ authRouter.post("/parent/register", async (req, res) => {
     },
   });
   await seedDefaultChallenges(family.id);
+  await seedDefaultCategories(family.id);
   const user = await prisma.user.create({
     data: {
       familyId: family.id,
@@ -55,6 +67,26 @@ authRouter.post("/parent/register", async (req, res) => {
       acceptedTermsAt: new Date(),
     },
   });
+  const ip = clientIpFrom(req);
+  const ua = userAgentFrom(req);
+  await recordLegalAcceptance({
+    userId: user.id,
+    familyId: family.id,
+    kind: "TERMS",
+    version: acceptedTermsVersion,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "signup",
+  }).catch((e) => console.error("[legal:accept terms]", e));
+  await recordLegalAcceptance({
+    userId: user.id,
+    familyId: family.id,
+    kind: "PRIVACY",
+    version: CURRENT_PRIVACY_VERSION,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "signup",
+  }).catch((e) => console.error("[legal:accept privacy]", e));
   // Fire-and-forget verification email; failures don't block registration.
   await issueVerificationEmail(user.id).catch((e) => console.error("[verify:send]", e));
   const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
@@ -229,7 +261,52 @@ authRouter.post("/accept-terms", requireAuth, async (req, res) => {
     where: { id: req.auth!.sub },
     data: { acceptedTermsVersion: version, acceptedTermsAt: new Date() },
   });
+  const ip = clientIpFrom(req);
+  const ua = userAgentFrom(req);
+  await recordLegalAcceptance({
+    userId: user.id,
+    familyId: user.familyId,
+    kind: "TERMS",
+    version,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "re-accept",
+  }).catch((e) => console.error("[legal:accept terms re]", e));
+  await recordLegalAcceptance({
+    userId: user.id,
+    familyId: user.familyId,
+    kind: "PRIVACY",
+    version: CURRENT_PRIVACY_VERSION,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "re-accept",
+  }).catch((e) => console.error("[legal:accept privacy re]", e));
   res.json({ user: serializeUser(user) });
+});
+
+const legalAcceptSchema = z.object({
+  kind: z.enum(["TERMS", "PRIVACY", "CHILD_PROFILE_CONSENT", "UPLOAD_ACK"]),
+  version: z.number().int().positive(),
+  subjectChildId: z.string().uuid().nullable().optional(),
+  context: z.string().max(120).nullable().optional(),
+});
+
+authRouter.post("/legal/accept", requireAuth, async (req, res) => {
+  const input = legalAcceptSchema.parse(req.body);
+  if (req.auth!.role !== "PARENT" && req.auth!.role !== "CAREGIVER") {
+    throw HttpError.forbidden("Only parents can record legal acceptance");
+  }
+  const event = await recordLegalAcceptance({
+    userId: req.auth!.sub,
+    familyId: req.auth!.fid,
+    kind: input.kind,
+    version: input.version,
+    subjectChildId: input.subjectChildId ?? null,
+    ipAddress: clientIpFrom(req),
+    userAgent: userAgentFrom(req),
+    context: input.context ?? null,
+  });
+  res.json({ id: event.id, createdAt: event.createdAt.toISOString() });
 });
 
 export function serializeUser(u: import("@prisma/client").User) {

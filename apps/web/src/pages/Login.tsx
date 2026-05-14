@@ -138,8 +138,12 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerName, setPartnerName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedGuardian, setAcceptedGuardian] = useState(false);
+  const [acceptedNotService, setAcceptedNotService] = useState(false);
+  const [acceptedNoCash, setAcceptedNoCash] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const allAccepted = acceptedTerms && acceptedGuardian && acceptedNotService && acceptedNoCash;
 
   return (
     <form
@@ -158,8 +162,8 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           setErr("Enter partner email or uncheck the box");
           return;
         }
-        if (!acceptedTerms) {
-          setErr("Please accept the Terms of Service and Privacy Policy");
+        if (!allAccepted) {
+          setErr("Please review and confirm each acknowledgement to continue.");
           return;
         }
         setLoading(true);
@@ -273,28 +277,81 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           </div>
         )}
       </div>
-      <label className="flex items-start gap-2 text-xs text-slate-600 pt-1">
-        <input
-          type="checkbox"
-          checked={acceptedTerms}
-          onChange={(e) => setAcceptedTerms(e.target.checked)}
-          title="Accept Terms of Service and Privacy Policy"
-          className="mt-0.5"
-        />
-        <span>
-          I agree to the{" "}
-          <Link to="/terms" target="_blank" className="text-brand-600 hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link to="/privacy" target="_blank" className="text-brand-600 hover:underline">
-            Privacy Policy
-          </Link>
-          .
-        </span>
-      </label>
+      <div className="border-t border-slate-200 pt-3 space-y-2 text-xs text-slate-600">
+        <p className="font-medium text-slate-700">Before you create your family, please confirm:</p>
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            title="Accept Terms of Service and Privacy Policy"
+            className="mt-0.5"
+          />
+          <span>
+            I am 18+ and have read and agree to the{" "}
+            <Link to="/terms" target="_blank" className="text-brand-600 hover:underline">
+              Terms of Service
+            </Link>
+            ,{" "}
+            <Link to="/privacy" target="_blank" className="text-brand-600 hover:underline">
+              Privacy Policy
+            </Link>
+            ,{" "}
+            <Link to="/acceptable-use" target="_blank" className="text-brand-600 hover:underline">
+              Acceptable Use Policy
+            </Link>
+            , and{" "}
+            <Link to="/child-safety" target="_blank" className="text-brand-600 hover:underline">
+              Child Safety Policy
+            </Link>
+            .
+          </span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={acceptedGuardian}
+            onChange={(e) => setAcceptedGuardian(e.target.checked)}
+            title="Confirm guardianship and supervision responsibility"
+            className="mt-0.5"
+          />
+          <span>
+            I am the parent or legal guardian for each child I will add, and I am solely responsible for
+            supervising my children and for the safety, age-appropriateness, and legality of every task I
+            assign.
+          </span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={acceptedNotService}
+            onChange={(e) => setAcceptedNotService(e.target.checked)}
+            title="Acknowledge service is not childcare, therapy, education, medical, or financial"
+            className="mt-0.5"
+          />
+          <span>
+            I understand ChoreChamps is a household task-management tool — <strong>not</strong> childcare,
+            therapy, education, medical advice, a financial service, or an emergency service — and that
+            notification delivery is not guaranteed.
+          </span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={acceptedNoCash}
+            onChange={(e) => setAcceptedNoCash(e.target.checked)}
+            title="Acknowledge credits have no cash value and are not wages"
+            className="mt-0.5"
+          />
+          <span>
+            I understand in-app points and credits are household tracking only — they have{" "}
+            <strong>no cash value</strong>, are not money or wages, and rewards are funded and fulfilled
+            entirely by me.
+          </span>
+        </label>
+      </div>
       {err && <div className="text-sm text-rose-600">{err}</div>}
-      <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
+      <Button type="submit" className="w-full" disabled={loading || !allAccepted}>
         {loading ? "Creating family..." : "Create family"}
       </Button>
       <p className="text-xs text-center text-slate-500 pt-1">

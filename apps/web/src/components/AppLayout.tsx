@@ -11,6 +11,7 @@ import { SoundToggle } from "./SoundToggle";
 import { NotificationBell } from "./NotificationBell";
 import { EmailVerifyBanner } from "./EmailVerifyBanner";
 import { TermsGate } from "./TermsGate";
+import { LegalFooter } from "./LegalFooter";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
 import type { MeResponseDTO } from "@chorechamps/shared";
@@ -177,6 +178,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
+      <LegalFooter />
       {tourActive && (
         <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
       )}

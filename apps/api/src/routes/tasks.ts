@@ -6,11 +6,15 @@ import {
   deleteTask,
   duplicateAcrossKids,
   getTask,
+  joinTeam,
+  leaveTeam,
   listTasks,
   listTodayForChild,
   serializeTask,
   updateTask,
 } from "../services/tasks.js";
+import { claimMissedOpportunity } from "../services/missed-opportunities.js";
+import { recordAudit } from "../services/audit.js";
 
 export const tasksRouter = Router();
 
@@ -40,7 +44,10 @@ const createTaskSchema = z.object({
     .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
     .optional(),
   isActive: z.boolean().optional(),
-  assignmentMode: z.enum(["ASSIGNED", "UP_FOR_GRABS"]).optional(),
+  assignmentMode: z.enum(["ASSIGNED", "UP_FOR_GRABS", "TEAM"]).optional(),
+  teamSplit: z.enum(["EVEN", "FULL"]).optional(),
+  missedPenalty: z.number().int().min(0).max(10_000).optional(),
+  categoryId: z.string().uuid().nullable().optional(),
   assignedToId: z.string().uuid().nullable().optional(),
 });
 
@@ -72,6 +79,13 @@ tasksRouter.patch("/:id", requireRole("PARENT"), async (req, res) => {
 
 tasksRouter.delete("/:id", requireRole("PARENT"), async (req, res) => {
   await deleteTask(req.auth!.fid, req.params.id);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "TASK_DELETED",
+    targetType: "Task",
+    targetId: req.params.id,
+  });
   res.status(204).end();
 });
 
@@ -83,3 +97,38 @@ tasksRouter.post("/:id/duplicate-across-kids", requireRole("PARENT"), async (req
 tasksRouter.get("/:id", async (req, res) => {
   res.json({ task: serializeTask(await getTask(req.auth!.fid, req.params.id)) });
 });
+
+const joinSchema = z.object({ occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional() });
+
+tasksRouter.post("/:id/join", async (req, res) => {
+  if (req.auth!.role !== "CHILD") return res.status(403).json({ error: "FORBIDDEN" });
+  const { occurrenceDate } = joinSchema.parse(req.body ?? {});
+  const roster = await joinTeam(req.auth!.fid, req.params.id, req.auth!.sub, occurrenceDate ?? null);
+  res.json({ joinerIds: roster.map((r) => r.childId) });
+});
+
+tasksRouter.post("/:id/leave", async (req, res) => {
+  if (req.auth!.role !== "CHILD") return res.status(403).json({ error: "FORBIDDEN" });
+  const { occurrenceDate } = joinSchema.parse(req.body ?? {});
+  await leaveTeam(req.auth!.fid, req.params.id, req.auth!.sub, occurrenceDate ?? null);
+  res.status(204).end();
+});
+
+const parentClaimSchema = z.object({
+  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+});
+
+tasksRouter.post(
+  "/:id/parent-claim",
+  requireRole("PARENT", "CAREGIVER"),
+  async (req, res) => {
+    const { occurrenceDate } = parentClaimSchema.parse(req.body ?? {});
+    const mo = await claimMissedOpportunity(
+      req.auth!.fid,
+      req.params.id,
+      req.auth!.sub,
+      occurrenceDate ?? null,
+    );
+    res.status(201).json({ missedOpportunity: mo });
+  },
+);

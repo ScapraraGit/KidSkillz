@@ -5,7 +5,7 @@ import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
-import type { ChildDTO, TaskDTO } from "@chorechamps/shared";
+import type { ChildDTO, TaskCategoryDTO, TaskDTO } from "@chorechamps/shared";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -50,6 +50,16 @@ export function ParentTasks() {
     },
   });
 
+  const parentClaim = useMutation({
+    mutationFn: (taskId: string) =>
+      api(`/tasks/${taskId}/parent-claim`, { method: "POST", body: {} }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["missed-opportunities", "recent"] });
+    },
+    onError: (e: any) => alert(e?.message ?? "Could not claim"),
+  });
+
   function setAssignedFilter(v: AssignedFilter) {
     const next = new URLSearchParams(params);
     if (v === "all") next.delete("childId");
@@ -59,8 +69,8 @@ export function ParentTasks() {
 
   const visibleTasks = (tasksQ.data?.tasks ?? []).filter((t) => {
     if (assignedFilter === "all") return true;
-    // Pool tasks are visible to every kid, so they belong in every kid's filtered view.
-    if (t.assignmentMode === "UP_FOR_GRABS") return true;
+    // Pool and team tasks are visible to every kid, so they belong in every filtered view.
+    if (t.assignmentMode === "UP_FOR_GRABS" || t.assignmentMode === "TEAM") return true;
     return t.assignedToId === assignedFilter;
   });
 
@@ -138,6 +148,8 @@ export function ParentTasks() {
                       <td className="p-3 whitespace-nowrap font-medium">
                         {t.assignmentMode === "UP_FOR_GRABS" ? (
                           <Badge color="amber">🙋 Up for Grabs</Badge>
+                        ) : t.assignmentMode === "TEAM" ? (
+                          <Badge color="brand">👥 Team</Badge>
                         ) : (
                           (child?.name ?? <span className="text-slate-400">Unknown</span>)
                         )}
@@ -179,6 +191,19 @@ export function ParentTasks() {
                             Copy to all kids
                           </Button>
                         </Tooltip>
+                        <Tooltip label="Claim this task for yourself — kid sees a 'missed opportunity' overlay. No credit awarded.">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Claim "${t.title}" as a Missed Opportunity?`))
+                                parentClaim.mutate(t.id);
+                            }}
+                            disabled={parentClaim.isPending}
+                          >
+                            I did it
+                          </Button>
+                        </Tooltip>
                         <Tooltip label="Permanently delete this task (history preserved on ledger)">
                           <Button
                             variant="ghost"
@@ -214,7 +239,7 @@ export function ParentTasks() {
   );
 }
 
-function TaskFormModal({
+export function TaskFormModal({
   initial,
   defaultAssignedToId,
   kids,
@@ -235,9 +260,20 @@ function TaskFormModal({
   const [frequency, setFrequency] = useState(initial?.recurrence?.frequency ?? "DAILY");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(initial?.recurrence?.daysOfWeek ?? []);
   const [proofRequirement, setProofRequirement] = useState(initial?.proofRequirement ?? "NOTES_OPTIONAL");
-  const [assignmentMode, setAssignmentMode] = useState<"ASSIGNED" | "UP_FOR_GRABS">(
-    initial?.assignmentMode ?? "ASSIGNED",
+  const [assignmentMode, setAssignmentMode] = useState<"ASSIGNED" | "UP_FOR_GRABS" | "TEAM">(
+    (initial?.assignmentMode as "ASSIGNED" | "UP_FOR_GRABS" | "TEAM" | undefined) ?? "ASSIGNED",
   );
+  const [teamSplit, setTeamSplit] = useState<"EVEN" | "FULL">(
+    (initial?.teamSplit as "EVEN" | "FULL" | undefined) ?? "EVEN",
+  );
+  const [missedPenalty, setMissedPenalty] = useState<string>(
+    initial?.missedPenalty != null ? String(initial.missedPenalty) : "0",
+  );
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const categoriesQ = useQuery({
+    queryKey: ["task-categories"],
+    queryFn: () => api<{ categories: TaskCategoryDTO[] }>("/task-categories"),
+  });
   const [assignedToId, setAssignedToId] = useState(initial?.assignedToId ?? defaultAssignedToId ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [dueByTime, setDueByTime] = useState(initial?.dueByTime ?? "");
@@ -248,16 +284,20 @@ function TaskFormModal({
 
   const save = useMutation({
     mutationFn: async () => {
+      const isPool = assignmentMode === "UP_FOR_GRABS" || assignmentMode === "TEAM";
       const body: any = {
         title,
         description: description || undefined,
         creditValue: Number(creditValue),
         category: category || undefined,
+        categoryId: categoryId || null,
         kind,
         proofRequirement,
         isActive,
         assignmentMode,
-        assignedToId: assignmentMode === "UP_FOR_GRABS" ? null : assignedToId,
+        teamSplit,
+        missedPenalty: Math.max(0, Number(missedPenalty) || 0),
+        assignedToId: isPool ? null : assignedToId,
         defaultDurationMinutes: defaultDurationMinutes.trim() ? Number(defaultDurationMinutes) : null,
       };
       if (kind === "RECURRING") {
@@ -291,7 +331,9 @@ function TaskFormModal({
           <Button
             onClick={() => save.mutate()}
             disabled={
-              save.isPending || !title || (assignmentMode === "ASSIGNED" && !assignedToId)
+              save.isPending ||
+              !title ||
+              (assignmentMode === "ASSIGNED" && !assignedToId)
             }
           >
             {save.isPending ? "Saving…" : "Save"}
@@ -362,9 +404,73 @@ function TaskFormModal({
                 />
                 Up for Grabs
               </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="assignmentMode"
+                  value="TEAM"
+                  checked={assignmentMode === "TEAM"}
+                  onChange={() => setAssignmentMode("TEAM")}
+                />
+                Team (multi-kid)
+              </label>
             </div>
           </Field>
         </div>
+        {assignmentMode === "TEAM" && (
+          <Field
+            label="Team split"
+            hint="EVEN divides credit across joiners (rounded up). FULL gives each joiner the full credit value."
+          >
+            <div className="flex gap-3 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="teamSplit"
+                  value="EVEN"
+                  checked={teamSplit === "EVEN"}
+                  onChange={() => setTeamSplit("EVEN")}
+                />
+                Even split
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="teamSplit"
+                  value="FULL"
+                  checked={teamSplit === "FULL"}
+                  onChange={() => setTeamSplit("FULL")}
+                />
+                Full credit each
+              </label>
+            </div>
+          </Field>
+        )}
+        <Field
+          label="Category"
+          hint="Pick from family categories or leave blank. Manage list in Settings → Categories."
+        >
+          <select className={inputCls} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">— No category —</option>
+            {categoriesQ.data?.categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          label="Missed penalty (credits)"
+          hint="Credits deducted nightly when this RECURRING task is missed. Requires family Penalties setting to be on. 0 = no penalty."
+        >
+          <input
+            className={inputCls}
+            type="number"
+            min={0}
+            value={missedPenalty}
+            onChange={(e) => setMissedPenalty(e.target.value)}
+          />
+        </Field>
         {assignmentMode === "ASSIGNED" && (
           <Field
             label="Assigned to"

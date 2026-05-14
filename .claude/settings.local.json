@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["Bash(docker compose *)"]
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm lint *)"
+    ]
   }
 }

@@ -10,6 +10,7 @@ export interface CreateTaskInput {
   description?: string;
   creditValue: number;
   category?: string;
+  categoryId?: string | null;
   kind: "ONE_TIME" | "RECURRING";
   recurrence?: Recurrence | null;
   dueAt?: string | null;
@@ -17,7 +18,9 @@ export interface CreateTaskInput {
   defaultDurationMinutes?: number | null;
   proofRequirement?: import("@prisma/client").ProofRequirement;
   isActive?: boolean;
-  assignmentMode?: "ASSIGNED" | "UP_FOR_GRABS";
+  assignmentMode?: "ASSIGNED" | "UP_FOR_GRABS" | "TEAM";
+  teamSplit?: "EVEN" | "FULL";
+  missedPenalty?: number;
   assignedToId?: string | null;
 }
 
@@ -46,6 +49,7 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
   if (assignmentMode === "ASSIGNED" && !input.assignedToId) {
     throw HttpError.badRequest("Assigned tasks require an assignee");
   }
+  const poolMode = assignmentMode === "UP_FOR_GRABS" || assignmentMode === "TEAM";
   return prisma.task.create({
     data: {
       familyId,
@@ -53,6 +57,7 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
       description: input.description,
       creditValue: input.creditValue,
       category: input.category,
+      categoryId: input.categoryId ?? null,
       kind: input.kind,
       recurrence: input.recurrence ? (input.recurrence as object) : undefined,
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
@@ -61,7 +66,9 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
       proofRequirement: input.proofRequirement ?? "NOTES_OPTIONAL",
       isActive: input.isActive ?? true,
       assignmentMode,
-      assignedToId: assignmentMode === "UP_FOR_GRABS" ? null : input.assignedToId!,
+      teamSplit: input.teamSplit ?? "EVEN",
+      missedPenalty: input.missedPenalty ?? 0,
+      assignedToId: poolMode ? null : input.assignedToId!,
     },
   });
 }
@@ -127,6 +134,7 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
       ...(input.description !== undefined && { description: input.description }),
       ...(input.creditValue !== undefined && { creditValue: input.creditValue }),
       ...(input.category !== undefined && { category: input.category }),
+      ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
       ...(input.kind !== undefined && { kind: input.kind }),
       ...(input.recurrence !== undefined && {
         recurrence: input.recurrence === null ? Prisma.JsonNull : (input.recurrence as object),
@@ -139,7 +147,9 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
       ...(input.proofRequirement !== undefined && { proofRequirement: input.proofRequirement }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
       ...(input.assignmentMode !== undefined && { assignmentMode: input.assignmentMode }),
-      assignedToId: nextMode === "UP_FOR_GRABS" ? null : nextAssignee!,
+      ...(input.teamSplit !== undefined && { teamSplit: input.teamSplit }),
+      ...(input.missedPenalty !== undefined && { missedPenalty: Math.max(0, input.missedPenalty) }),
+      assignedToId: nextMode === "UP_FOR_GRABS" || nextMode === "TEAM" ? null : nextAssignee!,
     },
   });
 }
@@ -175,12 +185,32 @@ export async function listTodayForChild(
     where: {
       familyId,
       isActive: true,
-      OR: [{ assignedToId: childId }, { assignmentMode: "UP_FOR_GRABS" }],
+      OR: [
+        { assignedToId: childId },
+        { assignmentMode: "UP_FOR_GRABS" },
+        { assignmentMode: "TEAM" },
+      ],
     },
     orderBy: { createdAt: "asc" },
   });
 
   const taskIds = tasks.map((t) => t.id);
+  const teamJoins =
+    taskIds.length > 0
+      ? await prisma.taskJoin.findMany({
+          where: {
+            taskId: { in: taskIds },
+            OR: [{ occurrenceDate: today }, { occurrenceDate: null }],
+          },
+        })
+      : [];
+  const teamByOcc = new Map<string, typeof teamJoins>();
+  for (const j of teamJoins) {
+    const k = `${j.taskId}|${j.occurrenceDate ?? "ONE"}`;
+    const arr = teamByOcc.get(k) ?? [];
+    arr.push(j);
+    teamByOcc.set(k, arr);
+  }
 
   // For UP_FOR_GRABS tasks we need to see ANY child's claim for the occurrence,
   // not just this child's, so we can hide already-claimed pool tasks.
@@ -218,6 +248,22 @@ export async function listTodayForChild(
       const rec = t.recurrence as unknown as Recurrence;
       if (!recurrenceMatchesDate(rec, today, dow)) continue;
     } else if (t.kind !== "ONE_TIME") {
+      continue;
+    }
+
+    if (t.assignmentMode === "TEAM") {
+      // Team tasks are visible to every kid until submitted-and-approved-or-pending.
+      // After submission, every joiner sees the pending/approved row.
+      const submission = claimedByOcc.get(occKey);
+      const roster = teamByOcc.get(occKey) ?? [];
+      out.push({
+        task: serializeTask(t),
+        occurrenceDate: today,
+        completionId: submission?.id ?? null,
+        completionStatus: submission?.status ?? null,
+        joined: roster.some((j) => j.childId === childId),
+        teamJoinerIds: roster.map((j) => j.childId),
+      });
       continue;
     }
 
@@ -270,6 +316,7 @@ export function serializeTask(t: import("@prisma/client").Task) {
     description: t.description,
     creditValue: t.creditValue,
     category: t.category,
+    categoryId: t.categoryId ?? null,
     kind: t.kind,
     recurrence: (t.recurrence as Recurrence | null) ?? null,
     dueAt: t.dueAt?.toISOString() ?? null,
@@ -278,6 +325,53 @@ export function serializeTask(t: import("@prisma/client").Task) {
     proofRequirement: t.proofRequirement,
     isActive: t.isActive,
     assignmentMode: t.assignmentMode,
+    teamSplit: t.teamSplit,
+    missedPenalty: t.missedPenalty,
     assignedToId: t.assignedToId,
   };
+}
+
+export async function joinTeam(
+  familyId: string,
+  taskId: string,
+  childId: string,
+  occurrenceDate: string | null,
+) {
+  const task = await prisma.task.findFirst({ where: { id: taskId, familyId, isActive: true } });
+  if (!task) throw HttpError.notFound("Task not found");
+  if (task.assignmentMode !== "TEAM") throw HttpError.badRequest("Task is not a team task");
+  const occ = task.kind === "RECURRING" ? occurrenceDate : null;
+  // Block joining after team submission already pending/approved.
+  const existingSubmission = await prisma.taskCompletion.findFirst({
+    where: { taskId, occurrenceDate: occ, status: { in: ["PENDING", "APPROVED"] } },
+  });
+  if (existingSubmission) throw HttpError.conflict("Team already submitted for this occurrence");
+  const existing = await prisma.taskJoin.findFirst({
+    where: { taskId, childId, occurrenceDate: occ },
+  });
+  if (!existing) {
+    await prisma.taskJoin.create({
+      data: { familyId, taskId, childId, occurrenceDate: occ },
+    });
+  }
+  return prisma.taskJoin.findMany({
+    where: { taskId, occurrenceDate: occ },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function leaveTeam(
+  familyId: string,
+  taskId: string,
+  childId: string,
+  occurrenceDate: string | null,
+) {
+  const task = await prisma.task.findFirst({ where: { id: taskId, familyId } });
+  if (!task) throw HttpError.notFound("Task not found");
+  const occ = task.kind === "RECURRING" ? occurrenceDate : null;
+  const submission = await prisma.taskCompletion.findFirst({
+    where: { taskId, occurrenceDate: occ, status: { in: ["PENDING", "APPROVED"] } },
+  });
+  if (submission) throw HttpError.conflict("Cannot leave after team submitted");
+  await prisma.taskJoin.deleteMany({ where: { taskId, childId, occurrenceDate: occ } });
 }

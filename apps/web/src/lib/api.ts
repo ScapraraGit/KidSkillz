@@ -2,6 +2,10 @@ import { useAuth } from "../store/auth";
 
 export const API_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:4000";
 
+// All business endpoints (including uploads) live under /v1 on the server. /health is
+// the only unversioned route, used by load-balancer probes.
+const API_V1 = `${API_URL}/v1`;
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -33,7 +37,7 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
     body = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_V1}${path}`, {
     method: opts.method ?? (opts.body !== undefined || opts.formData ? "POST" : "GET"),
     headers,
     body,
@@ -66,5 +70,5 @@ export function uploadProof(file: File): Promise<{ key: string }> {
 export function uploadUrl(key: string | null | undefined): string | undefined {
   if (!key) return undefined;
   const token = useAuth.getState().token;
-  return `${API_URL}/uploads/${key}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  return `${API_V1}/uploads/${key}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }

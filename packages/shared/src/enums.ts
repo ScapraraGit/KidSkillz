@@ -39,8 +39,22 @@ export type TaskKind = (typeof TaskKind)[keyof typeof TaskKind];
 export const AssignmentMode = {
   ASSIGNED: "ASSIGNED",
   UP_FOR_GRABS: "UP_FOR_GRABS",
+  TEAM: "TEAM",
 } as const;
 export type AssignmentMode = (typeof AssignmentMode)[keyof typeof AssignmentMode];
+
+export const TeamSplit = {
+  EVEN: "EVEN",
+  FULL: "FULL",
+} as const;
+export type TeamSplit = (typeof TeamSplit)[keyof typeof TeamSplit];
+
+export const MissedOpportunityMode = {
+  OFF: "OFF",
+  GENTLE: "GENTLE",
+  SAVAGE: "SAVAGE",
+} as const;
+export type MissedOpportunityMode = (typeof MissedOpportunityMode)[keyof typeof MissedOpportunityMode];
 
 export const RecurrenceFrequency = {
   DAILY: "DAILY",
@@ -82,6 +96,7 @@ export const LedgerKind = {
   ADJUSTMENT_NEGATIVE: "ADJUSTMENT_NEGATIVE",
   LEVEL_UP: "LEVEL_UP",
   CHALLENGE_BONUS: "CHALLENGE_BONUS",
+  PENALTY: "PENALTY",
 } as const;
 export type LedgerKind = (typeof LedgerKind)[keyof typeof LedgerKind];
 

@@ -9,12 +9,14 @@ import type {
   InvitationKind,
   InvitationStatus,
   LedgerKind,
+  MissedOpportunityMode,
   NotificationKind,
   ProofRequirement,
   RecurrenceFrequency,
   RewardType,
   Role,
   TaskKind,
+  TeamSplit,
 } from "./enums.js";
 
 export interface CaregiverScope {
@@ -69,6 +71,12 @@ export interface FamilySettings {
     endsAt?: string | null; // ISO; once past, server auto-deactivates
     note?: string | null;
   };
+  /** When true, kid-facing endpoints scrub siblings' balances, levels, leaderboards. */
+  siblingPrivacy?: boolean;
+  /** Master switch for negative-credit penalties on missed tasks. Off by default. */
+  penaltiesEnabled?: boolean;
+  /** Parent-self-claim FOMO overlay tone for kid dashboard. */
+  missedOpportunityMode?: MissedOpportunityMode;
   timezone: string; // IANA, e.g. "America/Phoenix"
 }
 
@@ -95,6 +103,9 @@ export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
   photoRetentionDays: 90,
   emailNotifications: false,
   vacationMode: { active: false, startsAt: null, endsAt: null, note: null },
+  siblingPrivacy: false,
+  penaltiesEnabled: false,
+  missedOpportunityMode: "GENTLE",
   timezone: "America/Phoenix",
 };
 
@@ -158,10 +169,20 @@ export interface AuthUserDTO {
 }
 
 /**
- * Current ToS/Privacy revision. Bump when material changes ship; users with
+ * Current ToS revision. Bump when material changes ship; users with
  * acceptedTermsVersion < CURRENT_TERMS_VERSION get re-prompted on next session.
  */
-export const CURRENT_TERMS_VERSION = 1;
+export const CURRENT_TERMS_VERSION = 2;
+
+/** Current Privacy Policy revision. Tracked alongside ToS via LegalAcceptance audit log. */
+export const CURRENT_PRIVACY_VERSION = 2;
+
+/** Server-recorded legal-acceptance event kinds. Mirrors api LegalAcceptanceKind enum. */
+export type LegalAcceptanceKind =
+  | "TERMS"
+  | "PRIVACY"
+  | "CHILD_PROFILE_CONSENT"
+  | "UPLOAD_ACK";
 
 export interface MeResponseDTO {
   user: AuthUserDTO;
@@ -180,7 +201,12 @@ export interface ChildDTO {
   proofRequirementOverride?: ProofRequirement | null;
   soundEnabled: boolean;
   viewMode: ChildViewMode;
+  /** @deprecated use savingsGoalRewardIds. Mirrors position-1 entry for back-compat. */
   savingsGoalRewardId?: string | null;
+  /** Up to 3 reward IDs in display order. Empty if kid hasn't pinned any. */
+  savingsGoalRewardIds: string[];
+  streakGraceCount: number;
+  penaltiesExempt: boolean;
   balance: number;
 }
 
@@ -190,7 +216,9 @@ export interface TaskDTO {
   title: string;
   description?: string | null;
   creditValue: number;
+  /** Free-text legacy category. Prefer categoryId + TaskCategoryDTO going forward. */
   category?: string | null;
+  categoryId?: string | null;
   kind: TaskKind;
   recurrence?: Recurrence | null;
   dueAt?: string | null;
@@ -199,8 +227,39 @@ export interface TaskDTO {
   proofRequirement: ProofRequirement;
   isActive: boolean;
   assignmentMode: AssignmentMode;
-  /** Null when assignmentMode is UP_FOR_GRABS. */
+  /** EVEN splits creditValue across joiners (rounded up). FULL gives each joiner full creditValue. */
+  teamSplit: TeamSplit;
+  /** Negative-credit penalty when kid misses this task. 0 = no penalty. Only applied when family.penaltiesEnabled. */
+  missedPenalty: number;
+  /** Null when assignmentMode is UP_FOR_GRABS or TEAM. */
   assignedToId: string | null;
+}
+
+export interface TaskCategoryDTO {
+  id: string;
+  familyId: string;
+  name: string;
+  icon: string;
+  color?: string | null;
+  position: number;
+}
+
+export interface TaskJoinDTO {
+  id: string;
+  taskId: string;
+  childId: string;
+  occurrenceDate: string | null;
+  createdAt: string;
+}
+
+export interface MissedOpportunityDTO {
+  id: string;
+  taskId: string;
+  occurrenceDate: string | null;
+  claimedByUserId: string;
+  claimedByName?: string;
+  taskTitle?: string;
+  createdAt: string;
 }
 
 export type LateTier = "ON_TIME" | "LATE" | "SEVERE";
@@ -217,6 +276,10 @@ export interface TodayTaskOccurrenceDTO {
   occurrenceDate: string; // YYYY-MM-DD in family TZ
   completionId?: string | null;
   completionStatus?: ApprovalStatus | null;
+  /** TEAM mode only: whether this kid has joined the team for this occurrence. */
+  joined?: boolean;
+  /** TEAM mode only: childIds on the team roster for this occurrence. */
+  teamJoinerIds?: string[];
 }
 
 export interface TaskCompletionDTO {

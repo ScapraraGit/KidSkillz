@@ -28,27 +28,33 @@ export async function createNotification(opts: CreateOpts) {
   });
 
   // Mirror to email when family setting is on and recipient has an email on file.
-  // Errors are swallowed — the in-app notification is already persisted.
-  try {
-    const settings = await getFamilySettings(opts.familyId);
-    if (settings.emailNotifications) {
-      const recipient = await prisma.user.findUnique({
-        where: { id: opts.userId },
-        select: { email: true },
-      });
-      if (recipient?.email) {
-        await sendNotificationEmail({
-          to: recipient.email,
-          title: opts.title,
-          body: opts.body ?? null,
-        });
-      }
-    }
-  } catch (e) {
-    console.error("[notifications:email]", e);
-  }
+  //
+  // Fire-and-forget via setImmediate so a slow SMTP call never blocks an active Prisma
+  // transaction. createNotification is called from inside approveCompletion,
+  // evaluateChallenges, evaluateLevelUp, etc., all of which run inside $transaction —
+  // awaiting a network round-trip there holds the DB connection open and risks pool
+  // starvation. The in-app notification row is already persisted (in or out of the
+  // caller's tx), so even if the email errors the user still sees the alert in-app.
+  setImmediate(() => {
+    void deliverEmailMirror(opts).catch((e) => console.error("[notifications:email]", e));
+  });
 
   return created;
+}
+
+async function deliverEmailMirror(opts: CreateOpts) {
+  const settings = await getFamilySettings(opts.familyId);
+  if (!settings.emailNotifications) return;
+  const recipient = await prisma.user.findUnique({
+    where: { id: opts.userId },
+    select: { email: true },
+  });
+  if (!recipient?.email) return;
+  await sendNotificationEmail({
+    to: recipient.email,
+    title: opts.title,
+    body: opts.body ?? null,
+  });
 }
 
 export async function listForUser(

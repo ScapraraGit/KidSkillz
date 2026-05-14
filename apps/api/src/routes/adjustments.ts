@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { postAdjustment } from "../services/adjustments.js";
+import { recordAudit } from "../services/audit.js";
 
 export const adjustmentsRouter = Router();
 
@@ -24,6 +25,14 @@ adjustmentsRouter.post("/", async (req, res) => {
     childId: input.childId,
     amount: input.amount,
     reason: input.reason,
+  });
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "ADJUSTMENT_POSTED",
+    targetType: "User",
+    targetId: input.childId,
+    payload: { amount: input.amount, reason: input.reason, ledgerEntryId: entry.id },
   });
   res.status(201).json({ entry });
 });

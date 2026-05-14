@@ -43,6 +43,18 @@ enum TaskKind {
 enum AssignmentMode {
   ASSIGNED
   UP_FOR_GRABS
+  TEAM
+}
+
+enum TeamSplit {
+  EVEN
+  FULL
+}
+
+enum MissedOpportunityMode {
+  OFF
+  GENTLE
+  SAVAGE
 }
 
 enum ApprovalStatus {
@@ -75,6 +87,7 @@ enum LedgerKind {
   ADJUSTMENT_NEGATIVE
   LEVEL_UP
   CHALLENGE_BONUS
+  PENALTY
 }
 
 enum ChallengeKind {
@@ -124,6 +137,27 @@ model Family {
   challenges      Challenge[]
   challengeProgress ChallengeProgress[]
   notifications   Notification[]
+  taskCategories  TaskCategory[]
+  taskJoins       TaskJoin[]
+  missedOpportunities MissedOpportunity[]
+  savingsGoals    ChildSavingsGoal[]
+  legalAcceptances LegalAcceptance[] @relation("LegalAcceptanceFamily")
+  auditEvents      AuditEvent[]
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  familyId   String
+  family     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  actorId    String?  // null = system-posted (cron, automation)
+  kind       String   // e.g. "FAMILY_SETTINGS_UPDATED", "CHILD_CREATED", "TASK_DELETED"
+  targetType String?  // e.g. "User", "Task", "Reward"
+  targetId   String?
+  payload    Json?    // small structured diff or context; redact secrets at call site
+  createdAt  DateTime @default(now())
+
+  @@index([familyId, createdAt])
+  @@index([actorId])
 }
 
 model User {
@@ -168,6 +202,7 @@ model User {
   notifications       Notification[]        @relation("NotificationUser")
   emailVerifications  EmailVerification[]   @relation("EmailVerificationUser")
   passwordResets      PasswordReset[]       @relation("PasswordResetUser")
+  legalAcceptances    LegalAcceptance[]     @relation("LegalAcceptanceUser")
 
   @@index([familyId])
 }
@@ -211,9 +246,13 @@ model ChildProfile {
   proofRequirementOverride ProofRequirement?
   soundEnabled             Boolean  @default(false)
   viewMode                 ChildViewMode @default(YOUNGER)
-  savingsGoalRewardId      String?
+  savingsGoalRewardId      String?  // deprecated — superseded by ChildSavingsGoal join table
+  streakGraceCount         Int      @default(0)
+  penaltiesExempt          Boolean  @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  savingsGoals ChildSavingsGoal[]
 
   @@index([familyId])
 }
@@ -234,15 +273,86 @@ model Task {
   proofRequirement ProofRequirement @default(NOTES_OPTIONAL)
   isActive         Boolean          @default(true)
   assignmentMode   AssignmentMode   @default(ASSIGNED)
+  teamSplit        TeamSplit        @default(EVEN)
+  missedPenalty    Int              @default(0)
+  categoryId       String?
+  taskCategory     TaskCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   assignedToId     String?
   assignedTo       User?            @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   completions TaskCompletion[]
+  taskJoins   TaskJoin[]
+  missedOpportunities MissedOpportunity[]
 
   @@index([familyId])
   @@index([assignedToId])
+  @@index([categoryId])
+}
+
+model TaskCategory {
+  id        String   @id @default(uuid())
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String   // emoji string
+  color     String?  // optional tailwind color token
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+
+  @@unique([familyId, name])
+  @@index([familyId])
+}
+
+model TaskJoin {
+  id             String   @id @default(uuid())
+  familyId       String
+  family         Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  taskId         String
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  childId        String
+  occurrenceDate String?  // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  createdAt      DateTime @default(now())
+
+  // Uniqueness on (taskId, childId, occurrenceDate) is enforced via two partial
+  // indexes in the 20260513210000_taskjoin_partial_unique migration: one WHERE
+  // occurrenceDate IS NOT NULL and one WHERE occurrenceDate IS NULL. The default
+  // Postgres NULLS DISTINCT semantics would otherwise let two ONE_TIME rows for the
+  // same (taskId, childId, NULL) coexist.
+  @@index([familyId])
+  @@index([taskId, occurrenceDate])
+}
+
+model MissedOpportunity {
+  id               String   @id @default(uuid())
+  familyId         String
+  family           Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  taskId           String
+  task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  occurrenceDate   String?  // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  claimedByUserId  String   // parent or caregiver who self-claimed
+  createdAt        DateTime @default(now())
+
+  @@unique([taskId, occurrenceDate])
+  @@index([familyId, createdAt])
+}
+
+model ChildSavingsGoal {
+  id        String   @id @default(uuid())
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  childId   String
+  child     ChildProfile @relation(fields: [childId], references: [userId], onDelete: Cascade)
+  rewardId  String
+  position  Int      // 1..3
+  createdAt DateTime @default(now())
+
+  @@unique([childId, position])
+  @@unique([childId, rewardId])
+  @@index([familyId])
 }
 
 model TaskCompletion {
@@ -435,4 +545,33 @@ model PasswordReset {
   createdAt  DateTime  @default(now())
 
   @@index([userId])
+}
+
+enum LegalAcceptanceKind {
+  TERMS
+  PRIVACY
+  CHILD_PROFILE_CONSENT
+  UPLOAD_ACK
+}
+
+// Append-only audit log of every legal/consent acceptance event.
+// Records: who accepted, what kind, which version, when, from where (IP + UA).
+// Optional subjectChildId for CHILD_PROFILE_CONSENT events.
+model LegalAcceptance {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation("LegalAcceptanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  familyId       String
+  family         Family              @relation("LegalAcceptanceFamily", fields: [familyId], references: [id], onDelete: Cascade)
+  kind           LegalAcceptanceKind
+  version        Int
+  subjectChildId String?
+  ipAddress      String?
+  userAgent      String?
+  context        String?
+  createdAt      DateTime            @default(now())
+
+  @@index([userId, kind])
+  @@index([familyId])
+  @@index([createdAt])
 }

@@ -35,24 +35,24 @@ Effort: **S** = under 1d · **M** = 1–3d · **L** = >3d. Effort is rough.
 
 ## Tier 3 — Feature gaps users will ask for fast
 
-- [ ] **Per-task multi-assign** — promote `Task.assignedToId` → `assignedToIds[]` OR new `TaskAssignment` join. Migration risk; soft path: keep current model, add UI shortcut "create-for-all" that already exists. **L**
-- [ ] **Recurring redemptions / standing orders** — `Reward.autoRedeemSchedule` JSON. Cron posts. **M**
-- [ ] **Streak grace days** — `ChildProfile.streakGraceCount` int (default 0). Parent grants from Kids page. Streak calc skips one missed day per grace. **S**
-- [ ] **Negative-credit task / debt mechanic** — `Task.missedPenalty` int? Posted by NO_MISSES-like nightly job when task unfinished. Off by default. Family setting opt-in. **M**
-- [ ] **Task categories with icons** — `Category` table or seeded enum; UI groups today's tasks by category. **S**
-- [ ] **Multi-pin savings goals** — change `ChildProfile.savingsGoalRewardId` → join table top-3. Dashboard shows mini-grid. **S**
-- [ ] **Sibling-private mode** — `Family.siblingPrivacy` boolean; when on, kid pages never see other kids' balances/levels. **S**
-- [ ] **Adult self-assign tasks** — allow `Task.assignedToId` = PARENT user. Affects `listTodayForChild` only if signed in as that parent. **M**
+- [x] **Per-task multi-assign → Team mode** — `AssignmentMode.TEAM` + new `TaskJoin` table + `Task.teamSplit` (EVEN | FULL). Kids "Join team" on dashboard; approval splits credit across joiners (EVEN ceiling-divides, FULL pays each joiner full amount). Late-joiner race closed by snapshotting `createdAt <= submittedAt`. Partial unique indexes on TaskJoin close the NULL-occurrence-date duplicate-row gap. **L**
+- [ ] **Recurring redemptions / standing orders** — `Reward.autoRedeemSchedule` JSON. Cron posts. **M** _(deferred per user)_
+- [x] **Streak grace days** — `ChildProfile.streakGraceCount` int. Parent grants from Edit Child modal. Pure-function `computeStreakWithGrace` ([lib/streak.ts](apps/api/src/lib/streak.ts)) consumes one token per missed non-vacation day. 7 unit tests. **S**
+- [x] **Negative-credit task / debt mechanic** — `Task.missedPenalty` int + `ChildProfile.penaltiesExempt` + `family.penaltiesEnabled` master switch. New `LedgerKind.PENALTY`. Nightly job [run-penalty-sweep.ts](apps/api/prisma/run-penalty-sweep.ts) sweeps yesterday's missed RECURRING ASSIGNED tasks; idempotent via `sourceId=${taskId}:${yesterday}` inside a per-child transaction. ASSIGNED-only — pool/team modes intentionally skipped (ambiguous attribution). **M**
+- [x] **Task categories with icons** — new `TaskCategory` table, `Task.categoryId` FK, 7 default categories seeded on family creation, parent CRUD UI in Settings → Categories. **S**
+- [x] **Multi-pin savings goals** — `ChildSavingsGoal` join table (1..3 positions, unique per kid). Legacy `ChildProfile.savingsGoalRewardId` kept for back-compat, mirrors position-1. Migration backfills from legacy column. Edit Child modal shows 3 slot dropdowns. **S**
+- [x] **Sibling-private mode** — `FamilySettings.siblingPrivacy` flag exposed in parent Settings. Existing kid-facing endpoints already scope by `userId`/`childId`; flag wired for any future cross-kid UI to honor. **S**
+- [x] **Adult self-assign → Missed Opportunity** — reframed from "parent earns" to FOMO mechanic. New `MissedOpportunity` table + `POST /tasks/:id/parent-claim`. Blocks subsequent kid submission. Kid dashboard shows GENTLE/SAVAGE/OFF overlay per `FamilySettings.missedOpportunityMode`. Parent triggers via "I did it" row action on Tasks page. **M**
 
 ## Tier 4 — Operational / quality
 
-- [ ] **Backup + restore docs** — `/docs/operations/backup.md`; document Neon PITR, restore drill steps. **S**
-- [ ] **Audit log table** — `AuditEvent { familyId, actorId, kind, targetType, targetId, payload, createdAt }`. Fire on member changes, settings, deletions. Parent UI to view. **M**
-- [ ] **API versioning** — prefix all routes under `/v1/`. Update web `API_URL` join. Keep `/health` unversioned. **S**
-- [ ] **Structured request logs** — replace morgan with pino or pino-http; include request-id, userId, familyId. **S**
-- [ ] **Healthcheck DB ping** — `/health` runs `prisma.$queryRaw\`SELECT 1\``; degrade to 503 on fail. **S**
-- [ ] **Migration rollback docs** — add `/docs/operations/migrations.md`; document Prisma no-down-script reality + revert pattern (new forward migration). **S**
-- [ ] **README + CONTRIBUTING** — human-facing setup, run, deploy. Link to `CLAUDE.md` for AI context. **S**
+- [x] **Backup + restore docs** — [docs/operations/backup.md](docs/operations/backup.md): Neon PITR walkthrough, restore drill checklist, photo backup notes, ledger-integrity sanity SQL. **S**
+- [x] **Audit log table** — `AuditEvent` model + [services/audit.ts](apps/api/src/services/audit.ts) + parent-only `GET /v1/audit`. Fires on family settings update, child create/update, task delete, adjustments. **M**
+- [x] **API versioning** — All business endpoints mounted under `/v1` (including `/uploads`); `/health` stays unversioned for LB probes. Web `api()` + `uploadUrl()` updated. Future `/v2` ships alongside `/v1` without retiring it. **S**
+- [x] **Structured request logs** — `pino-http` replaces morgan. JSON in prod, pretty in dev. Request-id from `X-Request-ID` or generated UUID. Custom props inject `userId` + `familyId` from `req.auth`. **S**
+- [x] **Healthcheck DB ping** — `/health` runs `prisma.$queryRaw\`SELECT 1\`` with a 1.5s timeout; returns 503 on failure. **S**
+- [x] **Migration rollback docs** — [docs/operations/migrations.md](docs/operations/migrations.md): forward-only model, two-phase pattern for destructive changes, recovery via PITR. **S**
+- [x] **README + CONTRIBUTING** — README refreshed with `/v1`, audit, pino, ops links. [CONTRIBUTING.md](CONTRIBUTING.md) covers workflow, conventions, schema discipline, security expectations. **S**
 
 ## Tier 5 — Accessibility + polish
 

@@ -32,6 +32,7 @@ import type {
   ChallengeProgressDTO,
   ChildDashboardDTO,
   LevelDTO,
+  MissedOpportunityDTO,
   TodayTaskOccurrenceDTO,
 } from "@chorechamps/shared";
 
@@ -320,6 +321,11 @@ export function ChildDashboard() {
                     {occ.task.assignmentMode === "UP_FOR_GRABS" && (
                       <Badge color="amber">🙋 Up for Grabs</Badge>
                     )}
+                    {occ.task.assignmentMode === "TEAM" && (
+                      <Badge color="brand">
+                        👥 Team ({occ.teamJoinerIds?.length ?? 0} joined)
+                      </Badge>
+                    )}
                     {occ.task.dueByTime && (
                       <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
                     )}
@@ -347,6 +353,8 @@ export function ChildDashboard() {
                   <Badge color="amber">Awaiting approval</Badge>
                 ) : occ.completionStatus === "APPROVED" ? (
                   <Badge color="emerald">✓ Done</Badge>
+                ) : occ.task.assignmentMode === "TEAM" && !occ.joined ? (
+                  <TeamJoinButton occ={occ} />
                 ) : (
                   <>
                     <StartTimerButton
@@ -429,9 +437,15 @@ export function ChildDashboard() {
       )}
 
       {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
+
+      {settings?.missedOpportunityMode && settings.missedOpportunityMode !== "OFF" && (
+        <MissedOpportunityOverlay mode={settings.missedOpportunityMode} childId={meId} />
+      )}
     </div>
   );
 }
+
+const UPLOAD_ACK_KEY_PREFIX = "cc:upload-ack:";
 
 function CompleteModal({
   occurrence,
@@ -442,15 +456,23 @@ function CompleteModal({
   onClose: () => void;
   onSubmitted: (credits: number) => void;
 }) {
+  const meId = useAuth.getState().user?.id ?? "anon";
+  const ackKey = `${UPLOAD_ACK_KEY_PREFIX}${meId}`;
   const [notes, setNotes] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoKey, setPhotoKey] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [hasPriorAck, setHasPriorAck] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ackKey) === "1";
+  });
+  const [uploadAck, setUploadAck] = useState(false);
 
   const proof = occurrence.task.proofRequirement;
   const photoNeeded = proof === "PHOTO_REQUIRED" || proof === "PHOTO_AND_NOTES";
   const photoAllowed = photoNeeded || proof === "PHOTO_OPTIONAL";
   const notesNeeded = proof === "NOTES_REQUIRED" || proof === "PHOTO_AND_NOTES";
+  const ackRequired = !!photo && !hasPriorAck && !uploadAck;
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -469,6 +491,14 @@ function CompleteModal({
           occurrenceDate: occurrence.occurrenceDate,
         },
       });
+      if (photo && !hasPriorAck) {
+        try {
+          window.localStorage.setItem(ackKey, "1");
+        } catch {
+          /* storage disabled — non-fatal */
+        }
+        setHasPriorAck(true);
+      }
     },
     onSuccess: () => onSubmitted(occurrence.task.creditValue),
     onError: (e: any) => setErr(e.message ?? "Could not submit"),
@@ -486,7 +516,12 @@ function CompleteModal({
           </Button>
           <Button
             onClick={() => submit.mutate()}
-            disabled={submit.isPending || (notesNeeded && !notes.trim()) || (photoNeeded && !photo)}
+            disabled={
+              submit.isPending ||
+              (notesNeeded && !notes.trim()) ||
+              (photoNeeded && !photo) ||
+              ackRequired
+            }
           >
             {submit.isPending ? "Submitting…" : "I'm done!"}
           </Button>
@@ -517,6 +552,25 @@ function CompleteModal({
             />
             {photo && <div className="text-xs text-slate-500 mt-1">{photo.name}</div>}
           </Field>
+        )}
+        {photo && !hasPriorAck && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
+            <div className="font-semibold">Before you send this photo</div>
+            <p>
+              Only show your chore — no selfies, no faces, no people in swimsuits, pajamas, or bathrooms.
+              A grown-up at home will see this photo.
+            </p>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={uploadAck}
+                onChange={(e) => setUploadAck(e.target.checked)}
+                title="Confirm you understand the photo rules"
+                className="mt-0.5"
+              />
+              <span>I checked my photo and it only shows the chore.</span>
+            </label>
+          </div>
         )}
         {err && <div className="text-sm text-rose-600">{err}</div>}
       </div>
@@ -581,6 +635,82 @@ function StartTimerButton({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function TeamJoinButton({ occ }: { occ: TodayTaskOccurrenceDTO }) {
+  const qc = useQueryClient();
+  const join = useMutation({
+    mutationFn: () =>
+      api(`/tasks/${occ.task.id}/join`, {
+        body: { occurrenceDate: occ.task.kind === "RECURRING" ? occ.occurrenceDate : null },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard"] }),
+  });
+  return (
+    <Tooltip label="Join this team task — share the credit with anyone else who joins.">
+      <Button size="sm" variant="secondary" onClick={() => join.mutate()} disabled={join.isPending}>
+        {join.isPending ? "Joining…" : "👥 Join team"}
+      </Button>
+    </Tooltip>
+  );
+}
+
+function MissedOpportunityOverlay({
+  mode,
+  childId,
+}: {
+  mode: "GENTLE" | "SAVAGE";
+  childId: string | undefined;
+}) {
+  const moQ = useQuery({
+    queryKey: ["missed-opportunities", "recent"],
+    queryFn: () => api<{ missedOpportunities: MissedOpportunityDTO[] }>("/missed-opportunities/recent?days=2"),
+    refetchInterval: 60_000,
+    enabled: !!childId,
+  });
+  const rows = moQ.data?.missedOpportunities ?? [];
+  const seenKey = `cc:seenMO:${childId ?? "anon"}`;
+  const seen = (() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem(seenKey) ?? "[]"));
+    } catch {
+      return new Set<string>();
+    }
+  })();
+  const unseen = rows.filter((r) => !seen.has(r.id));
+  if (unseen.length === 0) return null;
+  const r = unseen[0];
+
+  function dismiss() {
+    seen.add(r.id);
+    try {
+      localStorage.setItem(seenKey, JSON.stringify(Array.from(seen)));
+    } catch {
+      /* quota exceeded — overlay simply re-shows next render */
+    }
+    moQ.refetch();
+  }
+
+  const headline =
+    mode === "SAVAGE"
+      ? `💸 ${r.claimedByName ?? "A grown-up"} beat you to "${r.taskTitle}"! Too slow! 🤣`
+      : `${r.claimedByName ?? "A grown-up"} got "${r.taskTitle}" first — missed opportunity!`;
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4" onClick={dismiss}>
+      <div
+        className="bg-white rounded-3xl shadow-2xl px-8 py-6 max-w-md text-center animate-pop"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-6xl">💸</div>
+        <div className="text-lg font-bold mt-3">{headline}</div>
+        <div className="text-sm text-slate-500 mt-2">No credit this time. Get there first next round!</div>
+        <Button className="mt-4" onClick={dismiss}>
+          Got it
+        </Button>
+      </div>
     </div>
   );
 }

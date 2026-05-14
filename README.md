@@ -20,10 +20,10 @@ docker compose up --build
 Then:
 
 - Web: http://localhost:5173
-- API: http://localhost:4000 (`GET /health`)
+- API: http://localhost:4000 (`GET /health` for an LB-friendly DB-ping probe; everything else under `/v1`)
 - Postgres: localhost:5432
 
-The API container runs `prisma db push` and `prisma seed` on first boot.
+The API container applies pending migrations via `prisma migrate deploy` and runs `prisma seed` on first boot.
 
 ### Demo logins
 
@@ -121,26 +121,32 @@ Every domain table carries `familyId`. Every authenticated request resolves to a
 
 ## API surface
 
-| Method         | Path                                                | Notes                                                                           |
-| -------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| POST           | `/auth/parent/login`                                | email + password                                                                |
-| POST           | `/auth/child/login`                                 | `{childId, pin}` (individual mode) or `{childId, familyPassword}` (shared mode) |
-| GET            | `/auth/families/lookup?name=`                       | lightweight family lookup for shared-device profile picker                      |
-| GET            | `/auth/me`                                          | session check                                                                   |
-| GET            | `/family` · PATCH `/family/settings`                | parent settings                                                                 |
-| GET/POST/PATCH | `/children`, `/children/:id`                        | parents create/edit; pause flags here                                           |
-| GET            | `/children/:id/balance`, `/children/:id/stats`      | derived from ledger                                                             |
-| CRUD           | `/tasks` · GET `/tasks/today`                       | today resolves recurring on the fly                                             |
-| GET/POST       | `/completions`, `/completions/:id/{approve,reject}` | child submits, parent reviews                                                   |
-| GET/POST       | `/initiative`, `/initiative/:id/{approve,reject}`   | bonus on PLANNED                                                                |
-| CRUD           | `/rewards`                                          |                                                                                 |
-| GET/POST       | `/redemptions`, `/redemptions/:id/{approve,reject}` |                                                                                 |
-| POST           | `/adjustments`                                      | parent-only, signed amount                                                      |
-| GET            | `/ledger?childId=&limit=`                           | audit trail                                                                     |
-| GET            | `/dashboard/parent` · `/dashboard/child`            | aggregates everything for landing pages                                         |
-| POST           | `/uploads/proof` (multipart) · GET `/uploads/:key`  | proof storage                                                                   |
+All business endpoints are versioned under `/v1`. `/health` is the only unversioned route (used by load-balancer probes; pings the DB).
 
-All endpoints return `{ error, message }` on failure and 401 on missing/expired tokens.
+| Method         | Path (under `/v1`)                                     | Notes                                                                           |
+| -------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| POST           | `/auth/parent/login`                                  | email + password                                                                |
+| POST           | `/auth/child/login`                                   | `{childId, pin}` (individual) or `{childId, familyPassword}` (shared device)    |
+| GET            | `/auth/families/lookup?name=`                         | lightweight family lookup for shared-device profile picker                      |
+| GET            | `/auth/me`                                            | session check                                                                   |
+| GET/PATCH      | `/family`, `/family/settings`                         | parent settings                                                                 |
+| GET/POST/PATCH | `/children`, `/children/:id`                          | parents create/edit; pause flags + streak grace + savings goals here            |
+| GET            | `/children/:id/balance`, `/children/:id/stats`        | derived from ledger                                                             |
+| CRUD           | `/tasks` · GET `/tasks/today`                         | today resolves recurring + pool + team on the fly                               |
+| POST           | `/tasks/:id/{join,leave,parent-claim}`                | team-mode + parent Missed Opportunity                                           |
+| CRUD           | `/task-categories`                                    | parent-managed icons + names                                                    |
+| GET/POST       | `/completions`, `/completions/:id/{approve,reject}`   | child submits, parent reviews                                                   |
+| GET/POST       | `/initiative`, `/initiative/:id/{approve,reject}`     | bonus on PLANNED                                                                |
+| CRUD           | `/rewards`                                            |                                                                                 |
+| GET/POST       | `/redemptions`, `/redemptions/:id/{approve,reject}`   |                                                                                 |
+| POST           | `/adjustments`                                        | parent-only, signed amount                                                      |
+| GET            | `/ledger?childId=&limit=`                             | ledger view                                                                     |
+| GET            | `/audit?limit=&kind=&before=`                         | parent-only audit trail (settings changes, member edits, adjustments, deletes)  |
+| GET            | `/dashboard/parent` · `/dashboard/child`              | aggregates everything for landing pages                                         |
+| GET            | `/missed-opportunities/recent?days=`                  | kid dashboard FOMO overlay feed                                                 |
+| POST/GET       | `/uploads/proof` (multipart) · `/uploads/:key`        | proof storage                                                                   |
+
+All endpoints return `{ error, message }` on failure and 401 on missing/expired tokens. Request logs are emitted as line-delimited JSON via `pino-http` (pretty-printed in dev). Auth surface is rate-limited at 30 req / 15 min per IP; everything else at 300 req / min.
 
 ## Notes for future mobile-app readiness
 
@@ -159,19 +165,23 @@ All endpoints return `{ error, message }` on failure and 401 on missing/expired 
 - For real auth: replace local `bcrypt + JWT` with a hosted IdP (Clerk, Auth0, Supabase Auth) — the role/family claims map directly into the existing `JWTPayload` shape so middleware would barely change.
 - Rate limiting and request logging are intentionally not in the POC.
 
-## Things deliberately left out of the POC
+## Things deliberately left out
 
-- Email verification / password reset
-- Email notifications, push notifications
-- Background scheduler (no separate job runner — recurring task occurrences compute on demand)
-- Rate limiting / WAF
-- Audit log of _who saw what_ (only the credit ledger is audited)
 - Hardened image processing (no virus scan, no resize/strip-EXIF)
-- Test suite (a couple of service unit tests would slot in cleanly under `apps/api/src/services/__tests__/`)
 - Auto-approval branch when `reward.requiresApproval = false` (today all redemptions go through the approval queue, even auto-eligible ones)
-- ISO-week-aligned weekly resets (the week stat uses a rolling 7-day window via Postgres queries, which is simpler and arguably more correct)
+- ISO-week-aligned weekly resets (the week stat uses a rolling 7-day window — simpler and arguably more correct)
+- Push notifications (in-app + email mirror are wired; APNs/FCM are not)
 
-These are all clearly localized — none of them require schema changes.
+## Operations
+
+- **Backup + restore drills**: see [docs/operations/backup.md](./docs/operations/backup.md). Quarterly drill recommended.
+- **Migrations**: forward-only, two-phase for destructive changes. See [docs/operations/migrations.md](./docs/operations/migrations.md).
+- **Nightly jobs**: [.github/workflows/nightly-jobs.yml](./.github/workflows/nightly-jobs.yml) runs `penalty-sweep` + `photo-purge` at 09:10 UTC daily. Manual trigger via Actions tab.
+- **Health probe**: `GET /health` pings the DB with a 1.5s timeout; returns 503 on failure for the load balancer to drain traffic.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Architectural conventions in [CLAUDE.md](./CLAUDE.md) are authoritative.
 
 ## Tearing it down
 

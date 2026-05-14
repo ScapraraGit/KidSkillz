@@ -5,6 +5,7 @@ import { getFamily, getFamilySettings, updateSettings } from "../services/family
 import { deleteFamily, exportFamily } from "../services/data-export.js";
 import { HttpError } from "../errors.js";
 import { prisma } from "../db.js";
+import { recordAudit } from "../services/audit.js";
 
 export const familyRouter = Router();
 
@@ -62,6 +63,9 @@ const settingsSchema = z.object({
       note: z.string().max(200).nullable().optional(),
     })
     .optional(),
+  siblingPrivacy: z.boolean().optional(),
+  penaltiesEnabled: z.boolean().optional(),
+  missedOpportunityMode: z.enum(["OFF", "GENTLE", "SAVAGE"]).optional(),
   timezone: z.string().optional(),
 });
 
@@ -69,6 +73,14 @@ familyRouter.patch("/settings", requireRole("PARENT"), async (req, res) => {
   const patch = settingsSchema.parse(req.body);
   await updateSettings(req.auth!.fid, patch);
   const settings = await getFamilySettings(req.auth!.fid);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "FAMILY_SETTINGS_UPDATED",
+    targetType: "Family",
+    targetId: req.auth!.fid,
+    payload: { keys: Object.keys(patch) },
+  });
   res.json({ settings });
 });
 

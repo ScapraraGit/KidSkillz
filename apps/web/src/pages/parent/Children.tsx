@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -15,7 +15,7 @@ import type {
   ChildDTO,
   LevelDTO,
   TaskDTO,
-} from "@chorechamps/shared";
+} from "@chorechampz/shared";
 import { TaskFormModal } from "./Tasks";
 
 interface ChallengeRow {
@@ -387,7 +387,7 @@ function CreateChildModal({
               <Link to="/privacy" target="_blank" className="underline">
                 Privacy Policy
               </Link>{" "}
-              to create this profile. I am responsible for supervising this child's use of ChoreChamps and
+              to create this profile. I am responsible for supervising this child's use of ChoreChampz and
               for reviewing all content uploaded under this profile.
             </span>
           </label>

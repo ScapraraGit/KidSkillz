@@ -1,6 +1,6 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
-import type { TaskCategoryDTO } from "@chorechamps/shared";
+import type { TaskCategoryDTO } from "@chorechampz/shared";
 import type { TaskCategory } from "@prisma/client";
 
 const DEFAULT_CATEGORIES: { name: string; icon: string; color: string; position: number }[] = [

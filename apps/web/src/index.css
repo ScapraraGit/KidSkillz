@@ -36,3 +36,20 @@ body {
 .animate-pop {
   animation: pop 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
+
+/* Honor system-wide "reduce motion" preference. Disables animation entry for the
+   pop keyframe, and acts as a CSS-side safety net even when JS gates don't run
+   (e.g. SSR-style hydration mismatches). Confetti + pet bounce are gated in JS. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

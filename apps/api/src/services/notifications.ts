@@ -1,6 +1,6 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import type { NotificationKind, Prisma } from "@prisma/client";
-import type { NotificationDTO } from "@chorechamps/shared";
+import type { NotificationDTO } from "@chorechampz/shared";
 import { sendNotificationEmail } from "../lib/email.js";
 import { getFamilySettings } from "./family.js";
 

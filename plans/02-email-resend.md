@@ -1,4 +1,4 @@
-# Plan 2 — Email Wiring (Resend)
+﻿# Plan 2 — Email Wiring (Resend)
 
 ## Goal
 Replace console.log stubs in `apps/api/src/lib/email.ts` with real provider. Cloudflare alternative noted.
@@ -13,8 +13,8 @@ Replace console.log stubs in `apps/api/src/lib/email.ts` with real provider. Clo
 
 ```
 RESEND_API_KEY
-EMAIL_FROM                    # "ChoreChamps <no-reply@chorechamps.com>"
-EMAIL_REPLY_TO                # "support@chorechamps.com"
+EMAIL_FROM                    # "ChoreChampz <no-reply@chorechampz.com>"
+EMAIL_REPLY_TO                # "support@chorechampz.com"
 EMAIL_ENABLED=false           # kill-switch; off → fallback to console.log
 APP_URL                       # already exists; used in links
 ```
@@ -24,7 +24,7 @@ APP_URL                       # already exists; used in links
 - Add domain in Resend dashboard.
 - SPF: TXT `v=spf1 include:_spf.resend.com ~all`.
 - DKIM: 3 CNAMEs from Resend.
-- DMARC: TXT `v=DMARC1; p=none; rua=mailto:dmarc@chorechamps.com`.
+- DMARC: TXT `v=DMARC1; p=none; rua=mailto:dmarc@chorechampz.com`.
 - Verify before flipping `EMAIL_ENABLED=true`.
 
 ## Templates (apps/api/src/email/templates/ — new)

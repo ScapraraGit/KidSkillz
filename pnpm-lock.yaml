@@ -35,7 +35,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@chorechamps/shared':
+      '@chorechampz/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@prisma/client':
@@ -157,7 +157,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@chorechamps/shared':
+      '@chorechampz/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@dicebear/collection':

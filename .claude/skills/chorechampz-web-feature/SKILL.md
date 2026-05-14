@@ -1,9 +1,9 @@
----
-name: chorechamps-web-feature
-description: Scaffolding rules for new ChoreChamps web features (pages, buttons, modals, form fields). Mandates tooltips on every primary action and non-obvious icon. Use when adding any new page, button, or interactive control under apps/web/src.
+﻿---
+name: chorechampz-web-feature
+description: Scaffolding rules for new ChoreChampz web features (pages, buttons, modals, form fields). Mandates tooltips on every primary action and non-obvious icon. Use when adding any new page, button, or interactive control under apps/web/src.
 ---
 
-# Adding a web feature to ChoreChamps
+# Adding a web feature to ChoreChampz
 
 Every interactive element a user can touch must have a tooltip OR a visible label that is fully self-explanatory. No exceptions for "obvious" icons — what's obvious to the builder is not obvious to a tired parent or an 8-year-old.
 

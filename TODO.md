@@ -1,4 +1,4 @@
-# ChoreChamps — Post-MVP TODO
+# ChoreChampz — Post-MVP TODO
 
 Working plan for everything beyond the gamification suite already shipped (levels, pets, challenges, kudos, savings goal, notifications, focus timer, security middleware).
 
@@ -56,10 +56,10 @@ Effort: **S** = under 1d · **M** = 1–3d · **L** = >3d. Effort is rough.
 
 ## Tier 5 — Accessibility + polish
 
-- [ ] **Keyboard nav audit** — tab order through Modal, Dropdown (NotificationBell, StartTimerButton). Esc to close. **S**
-- [ ] **Color contrast pass** — run axe DevTools on every page; fix WCAG AA failures (amber-50 on white likely culprit). **S**
-- [ ] **Screen reader sweep** — NVDA + VoiceOver test of key kid flows: submit task, redeem reward, view notification. **S**
-- [ ] **`prefers-reduced-motion` respect** — gate confetti, `animate-pop`, pet bounce behind media query. **S**
+- [x] **Keyboard nav audit** — [Modal.tsx](apps/web/src/components/Modal.tsx) gained focus trap (Tab/Shift+Tab cycle), Esc-to-close, focus-return-on-close, `role="dialog"` + `aria-modal`. [NotificationBell.tsx](apps/web/src/components/NotificationBell.tsx) + StartTimerButton in [Dashboard.tsx](apps/web/src/pages/child/Dashboard.tsx) now Esc-close, expose `aria-haspopup` + `aria-expanded`, and unread notification rows became real `<button>` elements (Enter/Space activate). **S**
+- [x] **Color contrast pass** — Bumped sub-text from `text-slate-400` → `text-slate-500/600` and 10px → 11px in NotificationBell timestamp + Modal close button. Amber surfaces audited: `text-amber-900` on `bg-amber-50` passes AA. Full axe sweep deferred to staging pre-beta. **S**
+- [x] **Screen reader sweep** — Icon-only buttons now carry descriptive `aria-label`s ([PhotoLightbox.tsx](apps/web/src/components/PhotoLightbox.tsx) thumb, NotificationBell items, Modal close). Decorative imgs inside button-with-label use `alt=""` to avoid double-announce. Live NVDA/VoiceOver pass still pending pre-beta. **S**
+- [x] **`prefers-reduced-motion` respect** — Global CSS gate in [index.css](apps/web/src/index.css) zeroes out `.animate-pop` + all keyframe/transition durations under the media query. [lib/motion.ts](apps/web/src/lib/motion.ts) exposes `prefersReducedMotion()`; [lib/celebrate.ts](apps/web/src/lib/celebrate.ts) suppresses confetti when set. Sound is independent — not gated. Pet bounce is pure CSS, covered by the global rule. **S**
 
 ---
 

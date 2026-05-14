@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, uploadUrl } from "../../lib/api";
 import {
@@ -14,7 +14,7 @@ import {
 } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
 import { PhotoLightbox } from "../../components/PhotoLightbox";
-import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechamps/shared";
+import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechampz/shared";
 
 export function ParentApprovals() {
   const qc = useQueryClient();

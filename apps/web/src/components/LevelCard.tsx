@@ -1,6 +1,6 @@
-import { Card } from "./ui";
+﻿import { Card } from "./ui";
 import { titleFor, nextTitle } from "../lib/titles";
-import type { LevelDTO } from "@chorechamps/shared";
+import type { LevelDTO } from "@chorechampz/shared";
 
 interface Props {
   level: LevelDTO;

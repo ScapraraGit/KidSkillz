@@ -1,9 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
+﻿import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Button } from "./ui";
-import { CURRENT_TERMS_VERSION, type AuthUserDTO } from "@chorechamps/shared";
+import { CURRENT_TERMS_VERSION, type AuthUserDTO } from "@chorechampz/shared";
 
 /**
  * Blocking modal shown when the signed-in user's acceptedTermsVersion is missing or stale.

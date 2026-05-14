@@ -1,9 +1,9 @@
----
-name: chorechamps-test
-description: How to write Vitest unit tests for ChoreChamps services, lib helpers, and React components. Use when adding or extending tests in apps/api or apps/web.
+﻿---
+name: chorechampz-test
+description: How to write Vitest unit tests for ChoreChampz services, lib helpers, and React components. Use when adding or extending tests in apps/api or apps/web.
 ---
 
-# Writing tests in ChoreChamps
+# Writing tests in ChoreChampz
 
 Vitest is configured in both `apps/api` (node env) and `apps/web` (jsdom).
 
@@ -38,9 +38,9 @@ Patterns that are pure and worth covering:
 
 ```
 pnpm test                        # all workspaces
-pnpm --filter @chorechamps/api test
-pnpm --filter @chorechamps/web test
-pnpm --filter @chorechamps/api test:watch
+pnpm --filter @chorechampz/api test
+pnpm --filter @chorechampz/web test
+pnpm --filter @chorechampz/api test:watch
 ```
 
 ## Import style

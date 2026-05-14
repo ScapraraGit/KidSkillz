@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { createChild, getChild, listChildren, updateChild } from "../services/children.js";
@@ -10,7 +10,7 @@ import {
   recordLegalAcceptance,
   userAgentFrom,
 } from "../services/legal-acceptance.js";
-import { CURRENT_TERMS_VERSION } from "@chorechamps/shared";
+import { CURRENT_TERMS_VERSION } from "@chorechampz/shared";
 import { recordAudit } from "../services/audit.js";
 import { proofRequirementSchema } from "../lib/features.js";
 

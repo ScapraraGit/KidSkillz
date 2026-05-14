@@ -1,4 +1,4 @@
-# @chorechamps/demo
+﻿# @chorechampz/demo
 
 Generates `apps/web/public/demo.gif` for the landing-page hero.
 
@@ -21,5 +21,5 @@ pnpm all
 Override target host:
 
 ```sh
-DEMO_BASE_URL=https://chorechampsweb-production.up.railway.app pnpm record
+DEMO_BASE_URL=https://chorechampzweb-production.up.railway.app pnpm record
 ```

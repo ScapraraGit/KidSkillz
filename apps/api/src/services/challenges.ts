@@ -1,7 +1,7 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import type { Prisma, ChallengeKind, ChallengeWindow } from "@prisma/client";
 import { formatInTimeZone } from "date-fns-tz";
-import type { ChallengeDTO, ChallengeProgressDTO } from "@chorechamps/shared";
+import type { ChallengeDTO, ChallengeProgressDTO } from "@chorechampz/shared";
 import { postLedger } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
 import { evaluateLevelUp } from "./levels.js";

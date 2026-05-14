@@ -1,6 +1,6 @@
-# Backup + restore
+﻿# Backup + restore
 
-ChoreChamps stores authoritative state in Postgres (Neon in production). Restore-readiness rests on three pieces: Neon Point-in-Time Recovery, schema migrations replayed via `prisma migrate deploy`, and proof photos backed up from the storage volume.
+ChoreChampz stores authoritative state in Postgres (Neon in production). Restore-readiness rests on three pieces: Neon Point-in-Time Recovery, schema migrations replayed via `prisma migrate deploy`, and proof photos backed up from the storage volume.
 
 ## What's stored where
 
@@ -26,7 +26,7 @@ Neon retains write-ahead logs for the lifetime of your plan's history window. Re
 3. **Copy the recovery connection string.** Neon presents a new `DATABASE_URL` for the branch. It is read-write by default.
 4. **Validate against application code.**
    ```bash
-   DATABASE_URL='<recovery-url>' pnpm --filter @chorechamps/api exec prisma db pull --print
+   DATABASE_URL='<recovery-url>' pnpm --filter @chorechampz/api exec prisma db pull --print
    # Inspect: tables match HEAD schema, no surprise drift.
    ```
 5. **Spot-check tenant isolation.** Run a couple of `SELECT count(*) FROM "LedgerEntry" WHERE "familyId" = '<known-id>';` against the recovery branch — counts should match expectations for that point in time.

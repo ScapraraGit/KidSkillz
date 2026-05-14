@@ -1,11 +1,11 @@
----
+﻿---
 name: prisma-schema-reviewer
 description: Reviews changes to apps/api/prisma/schema.prisma and generated migrations for safety, tenant scoping, and convention adherence. Use whenever schema.prisma changes.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
-You review Prisma schema diffs for ChoreChamps.
+You review Prisma schema diffs for ChoreChampz.
 
 ## Required checks
 

@@ -24,9 +24,10 @@ export function PhotoLightbox({ src, alt, thumb = true }: Props) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-block rounded-lg overflow-hidden border border-slate-200 hover:ring-2 hover:ring-brand-200"
+          aria-label={`Open photo: ${alt}`}
+          className="inline-block rounded-lg overflow-hidden border border-slate-200 hover:ring-2 hover:ring-brand-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
-          <img src={src} alt={alt} className="w-16 h-16 object-cover" loading="lazy" />
+          <img src={src} alt="" className="w-16 h-16 object-cover" loading="lazy" />
         </button>
       ) : (
         <button

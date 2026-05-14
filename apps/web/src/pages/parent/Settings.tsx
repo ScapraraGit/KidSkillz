@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, API_URL } from "../../lib/api";
@@ -6,7 +6,7 @@ import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
-import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechamps/shared";
+import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechampz/shared";
 import { useFeatures } from "../../hooks/useFeatures";
 
 export function ParentSettings() {
@@ -488,7 +488,7 @@ function DataAndDeletionCard({ familyName }: { familyName: string }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `chorechamps-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `chorechampz-export-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();

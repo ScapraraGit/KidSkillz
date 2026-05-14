@@ -1,7 +1,7 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { getFamilySettings } from "./family.js";
-import type { MissedOpportunityDTO } from "@chorechamps/shared";
+import type { MissedOpportunityDTO } from "@chorechampz/shared";
 
 export async function claimMissedOpportunity(
   familyId: string,

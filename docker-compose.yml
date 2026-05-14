@@ -1,17 +1,17 @@
-services:
+﻿services:
   #  db:
   #    image: postgres:16-alpine
   #    restart: unless-stopped
   #    environment:
-  #      POSTGRES_USER: ${POSTGRES_USER:-chorechamps}
-  #      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chorechamps}
-  #      POSTGRES_DB: ${POSTGRES_DB:-chorechamps}
+  #      POSTGRES_USER: ${POSTGRES_USER:-chorechampz}
+  #      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chorechampz}
+  #      POSTGRES_DB: ${POSTGRES_DB:-chorechampz}
   #    ports:
   #      - "${POSTGRES_PORT:-5432}:5432"
   #    volumes:
   #      - db-data:/var/lib/postgresql/data
   #    healthcheck:
-  #      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chorechamps}"]
+  #      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chorechampz}"]
   #      interval: 5s
   #      timeout: 5s
   #      retries: 10
@@ -26,7 +26,7 @@ services:
     #        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://neondb_owner:npg_aNVhzjB8Jfu2@ep-raspy-sky-ap8vb4u3-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-      #postgresql://${POSTGRES_USER:-chorechamps}:${POSTGRES_PASSWORD:-chorechamps}@db:5432/${POSTGRES_DB:-chorechamps}?schema=public
+      #postgresql://${POSTGRES_USER:-chorechampz}:${POSTGRES_PASSWORD:-chorechampz}@db:5432/${POSTGRES_DB:-chorechampz}?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       JWT_TTL: ${JWT_TTL:-7d}
       UPLOAD_DIR: /data/uploads

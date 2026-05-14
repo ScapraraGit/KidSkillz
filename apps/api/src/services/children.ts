@@ -1,10 +1,10 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { Prisma } from "@prisma/client";
 import { hashPassword } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { getBalance } from "./ledger.js";
-import type { AvatarConfig, ChildDTO } from "@chorechamps/shared";
-import { ChildViewMode } from "@chorechamps/shared";
+import type { AvatarConfig, ChildDTO } from "@chorechampz/shared";
+import { ChildViewMode } from "@chorechampz/shared";
 import { effectiveProofRequirement } from "../lib/features.js";
 
 async function loadSavingsGoals(childId: string): Promise<string[]> {

@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { Card } from "./ui";
-import type { ChildDTO, RewardDTO, TaskDTO } from "@chorechamps/shared";
+import type { ChildDTO, RewardDTO, TaskDTO } from "@chorechampz/shared";
 
 interface Step {
   key: string;

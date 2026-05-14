@@ -1,9 +1,9 @@
----
+﻿---
 name: ledger-rules
-description: Authoritative rules for posting, reading, and changing credit balances in ChoreChamps. Use whenever editing code that touches LedgerEntry, balances, completions approval, redemption approval, adjustments, or initiative bonuses.
+description: Authoritative rules for posting, reading, and changing credit balances in ChoreChampz. Use whenever editing code that touches LedgerEntry, balances, completions approval, redemption approval, adjustments, or initiative bonuses.
 ---
 
-# ChoreChamps ledger rules
+# ChoreChampz ledger rules
 
 The `LedgerEntry` table is the single source of truth for child credit balances. There is no mutable balance column anywhere.
 

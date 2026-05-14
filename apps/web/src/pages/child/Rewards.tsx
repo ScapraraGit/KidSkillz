@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import {
@@ -15,7 +15,7 @@ import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { celebrate as fireCelebrate } from "../../lib/celebrate";
-import type { ChildDTO, RewardDTO } from "@chorechamps/shared";
+import type { ChildDTO, RewardDTO } from "@chorechampz/shared";
 
 export function ChildRewards() {
   const meId = useAuth((s) => s.user?.id);

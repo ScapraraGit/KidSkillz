@@ -1,4 +1,4 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { getFamilySettings, isVacationActive } from "./family.js";
 import { ensureChildCanEarn, ensureChildInFamily } from "./children.js";
@@ -11,7 +11,7 @@ import { todayInTz } from "../lib/time.js";
 import { serializeTask } from "./tasks.js";
 import { computeSuggestedAward } from "./awards.js";
 import type { ProofRequirement } from "@prisma/client";
-import type { SuggestedAwardDTO } from "@chorechamps/shared";
+import type { SuggestedAwardDTO } from "@chorechampz/shared";
 
 import { computeTeamSplit } from "../lib/team-split.js";
 import { effectiveProofRequirement, features } from "../lib/features.js";

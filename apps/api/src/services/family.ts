@@ -1,5 +1,5 @@
-import { prisma } from "../db.js";
-import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechamps/shared";
+﻿import { prisma } from "../db.js";
+import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechampz/shared";
 import { HttpError } from "../errors.js";
 
 export async function getFamily(familyId: string) {

@@ -1,9 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
-import type { CaregiverScope, InvitationDTO } from "@chorechamps/shared";
+import type { CaregiverScope, InvitationDTO } from "@chorechampz/shared";
 
 const DEFAULT_SCOPE: CaregiverScope = {
   canApproveTasks: true,

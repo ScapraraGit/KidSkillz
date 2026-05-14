@@ -1,4 +1,4 @@
-FROM node:20-slim
+﻿FROM node:20-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
@@ -10,7 +10,7 @@ RUN corepack enable && corepack prepare pnpm@9.7.0 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
-RUN pnpm install --filter @chorechamps/api... --frozen-lockfile=false
+RUN pnpm install --filter @chorechampz/api... --frozen-lockfile=false
 
 # Source
 COPY packages/shared ./packages/shared

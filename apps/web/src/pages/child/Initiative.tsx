@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
-import type { InitiativeRequestDTO } from "@chorechamps/shared";
+import type { InitiativeRequestDTO } from "@chorechampz/shared";
 
 export function ChildInitiative() {
   const settings = useAuth((s) => s.settings);

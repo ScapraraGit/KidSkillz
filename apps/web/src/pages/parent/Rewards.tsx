@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
-import type { ChildDTO, RewardDTO, RewardType } from "@chorechamps/shared";
+import type { ChildDTO, RewardDTO, RewardType } from "@chorechampz/shared";
 
 const TYPES: RewardType[] = [
   "SCREEN_TIME",

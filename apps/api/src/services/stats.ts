@@ -1,9 +1,9 @@
-import { parseISO } from "date-fns";
+﻿import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "../db.js";
 import { startOfWeekInTz, todayInTz } from "../lib/time.js";
 import { computeStreakWithGrace } from "../lib/streak.js";
-import type { ChildStatsDTO } from "@chorechamps/shared";
+import type { ChildStatsDTO } from "@chorechampz/shared";
 import { getBalance } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
 

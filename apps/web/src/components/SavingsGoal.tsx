@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { Card, ProgressBar } from "./ui";
-import type { RewardDTO } from "@chorechamps/shared";
+import type { RewardDTO } from "@chorechampz/shared";
 
 interface Props {
   rewardId: string;

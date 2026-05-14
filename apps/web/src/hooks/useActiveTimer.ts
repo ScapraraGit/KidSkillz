@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActiveTimer, clearTimer, isExpired, loadTimer, saveTimer, timeLeftMs } from "../lib/activeTimer";
+import { playTick } from "../lib/celebrate";
+import { prefersReducedMotion } from "../lib/motion";
 
 interface UseActiveTimer {
   timer: ActiveTimer | null;
@@ -13,12 +15,15 @@ interface Opts {
   childId: string | null | undefined;
   /** Fires once each time the active timer transitions from running to expired. */
   onExpire?: (t: ActiveTimer) => void;
+  /** When true, plays a soft tick each second (rushed tick in the last 10s). */
+  soundEnabled?: boolean;
 }
 
-export function useActiveTimer({ childId, onExpire }: Opts): UseActiveTimer {
+export function useActiveTimer({ childId, onExpire, soundEnabled = false }: Opts): UseActiveTimer {
   const [timer, setTimer] = useState<ActiveTimer | null>(() => (childId ? loadTimer(childId) : null));
   const [now, setNow] = useState(() => Date.now());
   const firedExpireRef = useRef<string | null>(null);
+  const lastTickSecRef = useRef<number | null>(null);
 
   // Reload when childId changes (e.g. login switch).
   useEffect(() => {
@@ -42,6 +47,28 @@ export function useActiveTimer({ childId, onExpire }: Opts): UseActiveTimer {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [childId]);
+
+  // Play a tick once per whole second of remaining time. Last 10s get a rushed
+  // (higher, sharper) variant. Gated on soundEnabled + prefers-reduced-motion
+  // since constant beeping is exactly what that preference asks us to avoid.
+  // lastTickSecRef ensures we don't double-fire if the now state updates twice
+  // within the same second (e.g. after a tab regains focus).
+  useEffect(() => {
+    if (!timer || !soundEnabled) return;
+    if (prefersReducedMotion()) return;
+    const remaining = timeLeftMs(timer, now);
+    if (remaining <= 0) return;
+    const secLeft = Math.ceil(remaining / 1000);
+    if (lastTickSecRef.current === secLeft) return;
+    lastTickSecRef.current = secLeft;
+    playTick(secLeft <= 10 ? "rush" : "normal");
+  }, [timer, now, soundEnabled]);
+
+  // Reset the tick-second guard when the timer instance changes (new start,
+  // cancel, etc) so a fresh 10:00 timer ticks at 600s rather than skipping.
+  useEffect(() => {
+    lastTickSecRef.current = null;
+  }, [timer?.startedAt]);
 
   // Fire onExpire once per timer instance.
   useEffect(() => {

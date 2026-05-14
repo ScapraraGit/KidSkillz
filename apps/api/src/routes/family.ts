@@ -85,7 +85,7 @@ familyRouter.patch("/settings", requireRole("PARENT"), async (req, res) => {
 
 familyRouter.get("/export", requireRole("PARENT"), async (req, res) => {
   const data = await exportFamily(req.auth!.fid);
-  const filename = `chorechamps-export-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `chorechampz-export-${new Date().toISOString().slice(0, 10)}.json`;
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send(JSON.stringify(data, null, 2));

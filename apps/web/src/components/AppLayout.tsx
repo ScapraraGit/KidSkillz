@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../store/auth";
@@ -14,7 +14,7 @@ import { TermsGate } from "./TermsGate";
 import { LegalFooter } from "./LegalFooter";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
-import type { MeResponseDTO } from "@chorechamps/shared";
+import type { MeResponseDTO } from "@chorechampz/shared";
 
 interface NavLinkDef {
   to: string;
@@ -105,7 +105,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">🪙</span>
-            <span className="font-semibold text-slate-800">ChoreChamps</span>
+            <span className="font-semibold text-slate-800">ChoreChampz</span>
             <nav className="hidden sm:flex items-center gap-1 ml-4">
               {links.map((l) => (
                 <Tooltip key={l.to} label={l.tip} side="bottom">

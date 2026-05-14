@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { Tooltip } from "./Tooltip";
-import type { NotificationDTO } from "@chorechamps/shared";
+import type { NotificationDTO } from "@chorechampz/shared";
 
 interface ListResponse {
   notifications: NotificationDTO[];
@@ -36,8 +36,15 @@ export function NotificationBell() {
     function onClick(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const unread = q.data?.unread ?? 0;
@@ -53,7 +60,9 @@ export function NotificationBell() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="relative text-xl leading-none rounded-full px-2 py-1 hover:bg-slate-100 transition"
-          aria-label="Open notifications"
+          aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+          aria-haspopup="true"
+          aria-expanded={open}
         >
           🔔
           {unread > 0 && (
@@ -65,7 +74,10 @@ export function NotificationBell() {
       </Tooltip>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 z-50">
+        <div
+          aria-label="Notifications"
+          className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 z-50"
+        >
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
             <span className="font-semibold text-sm">Notifications</span>
             {unread > 0 && (
@@ -89,19 +101,24 @@ export function NotificationBell() {
                   <li
                     key={n.id}
                     className={
-                      "px-3 py-2 text-sm cursor-pointer " +
-                      (unreadItem ? "bg-brand-50/40 hover:bg-brand-50" : "hover:bg-slate-50")
+                      "text-sm " +
+                      (unreadItem ? "bg-brand-50/40" : "")
                     }
-                    onClick={() => unreadItem && readOne.mutate(n.id)}
                   >
-                    <div className="flex items-start gap-2">
-                      <span className="text-base">{glyphFor(n.kind)}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className={"truncate " + (unreadItem ? "font-semibold" : "")}>{n.title}</div>
-                        {n.body && <div className="text-xs text-slate-600 line-clamp-2">{n.body}</div>}
-                        <div className="text-[10px] text-slate-400 mt-0.5">{relTime(n.createdAt)}</div>
+                    {unreadItem ? (
+                      <button
+                        type="button"
+                        aria-label={`Mark "${n.title}" as read`}
+                        className="w-full text-left px-3 py-2 hover:bg-brand-50 focus:bg-brand-100 focus:outline-none"
+                        onClick={() => readOne.mutate(n.id)}
+                      >
+                        <NotificationRow n={n} unread />
+                      </button>
+                    ) : (
+                      <div className="px-3 py-2 hover:bg-slate-50">
+                        <NotificationRow n={n} unread={false} />
                       </div>
-                    </div>
+                    )}
                   </li>
                 );
               })}
@@ -109,6 +126,19 @@ export function NotificationBell() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function NotificationRow({ n, unread }: { n: NotificationDTO; unread: boolean }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-base">{glyphFor(n.kind)}</span>
+      <div className="flex-1 min-w-0">
+        <div className={"truncate " + (unread ? "font-semibold" : "")}>{n.title}</div>
+        {n.body && <div className="text-xs text-slate-600 line-clamp-2">{n.body}</div>}
+        <div className="text-[11px] text-slate-600 mt-0.5">{relTime(n.createdAt)}</div>
+      </div>
     </div>
   );
 }

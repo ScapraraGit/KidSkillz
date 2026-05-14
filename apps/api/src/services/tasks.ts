@@ -1,6 +1,6 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { Prisma } from "@prisma/client";
-import type { Recurrence, TodayTaskOccurrenceDTO } from "@chorechamps/shared";
+import type { Recurrence, TodayTaskOccurrenceDTO } from "@chorechampz/shared";
 import { HttpError } from "../errors.js";
 import { getFamilySettings } from "./family.js";
 import { dowSunFirst, todayInTz } from "../lib/time.js";

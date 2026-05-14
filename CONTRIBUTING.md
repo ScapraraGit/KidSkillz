@@ -1,4 +1,4 @@
-# Contributing to ChoreChamps
+﻿# Contributing to ChoreChampz
 
 This is a working POC + product. The bar for contributions is correctness, clarity, and respect for the conventions already in place. Read this top to bottom before your first PR.
 
@@ -7,16 +7,16 @@ This is a working POC + product. The bar for contributions is correctness, clari
 ```bash
 pnpm install
 cp .env.example .env       # set DATABASE_URL etc.
-pnpm --filter @chorechamps/api prisma migrate dev
-pnpm --filter @chorechamps/api seed
+pnpm --filter @chorechampz/api prisma migrate dev
+pnpm --filter @chorechampz/api seed
 pnpm dev                   # docker compose up (web + api + db)
 ```
 
 Or, without Docker, run web and API in two terminals:
 
 ```bash
-pnpm --filter @chorechamps/api dev
-pnpm --filter @chorechamps/web dev
+pnpm --filter @chorechampz/api dev
+pnpm --filter @chorechampz/web dev
 ```
 
 ## Stack overview
@@ -39,7 +39,7 @@ pnpm lint
 pnpm format:check
 pnpm typecheck
 pnpm test
-pnpm --filter @chorechamps/api exec prisma validate
+pnpm --filter @chorechampz/api exec prisma validate
 ```
 
 All must pass before merge.
@@ -60,7 +60,7 @@ All must pass before merge.
 
 - **One fetch wrapper.** Always go through `apps/web/src/lib/api.ts` for the Auth header.
 - **Every primary action and non-obvious icon needs a `<Tooltip>`** from `apps/web/src/components/Tooltip.tsx`. Don't use the native `title=""` attribute.
-- **Type imports from `@chorechamps/shared`**, not from `@prisma/client`.
+- **Type imports from `@chorechampz/shared`**, not from `@prisma/client`.
 
 ### Shared types
 
@@ -79,7 +79,7 @@ All must pass before merge.
 
 See [docs/operations/migrations.md](./docs/operations/migrations.md). Short version:
 
-- Generate via `pnpm --filter @chorechamps/api prisma migrate dev --name <snake_case>`.
+- Generate via `pnpm --filter @chorechampz/api prisma migrate dev --name <snake_case>`.
 - Inspect the generated SQL before committing.
 - Forward-only. Destructive changes ship in two phases (deploy 1: stop using the column; deploy 2: drop it).
 - Mirror the schema field in `packages/shared/src/types.ts`.

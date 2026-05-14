@@ -1,11 +1,11 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { ensureChildCanRedeem, ensureChildInFamily } from "./children.js";
 import { getReward } from "./rewards.js";
 import { getBalance, postLedger } from "./ledger.js";
 import { getFamilySettings } from "./family.js";
 import { createNotification } from "./notifications.js";
-import type { RewardMetadata } from "@chorechamps/shared";
+import type { RewardMetadata } from "@chorechampz/shared";
 
 export interface RequestRedemptionInput {
   childId: string;

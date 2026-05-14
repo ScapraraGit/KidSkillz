@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import type { FeatureFlagsDTO, MeResponseDTO } from "@chorechamps/shared";
+﻿import { useQuery } from "@tanstack/react-query";
+import type { FeatureFlagsDTO, MeResponseDTO } from "@chorechampz/shared";
 import { api } from "../lib/api";
 
 const DEFAULTS: FeatureFlagsDTO = {

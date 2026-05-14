@@ -1,4 +1,4 @@
-# Migration discipline
+﻿# Migration discipline
 
 Prisma's migration model is **forward-only**: it does not generate down-scripts, and `prisma migrate reset` drops the schema. In production, recovery from a bad migration is a new forward migration, not a rollback.
 
@@ -19,7 +19,7 @@ Implications:
 ```bash
 # 1. Edit schema.prisma
 # 2. Generate migration (creates folder + SQL, applies to local DB)
-pnpm --filter @chorechamps/api prisma migrate dev --name <short_snake_case>
+pnpm --filter @chorechampz/api prisma migrate dev --name <short_snake_case>
 
 # 3. Inspect the generated SQL — Prisma occasionally generates inefficient or
 #    surprising DDL (especially for ENUM changes and nullability). Edit if needed
@@ -27,8 +27,8 @@ pnpm --filter @chorechamps/api prisma migrate dev --name <short_snake_case>
 $EDITOR apps/api/prisma/migrations/<timestamp>_<name>/migration.sql
 
 # 4. Verify against a fresh DB
-pnpm --filter @chorechamps/api prisma migrate reset --force
-pnpm --filter @chorechamps/api seed
+pnpm --filter @chorechampz/api prisma migrate reset --force
+pnpm --filter @chorechampz/api seed
 ```
 
 ## Production deploy

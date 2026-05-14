@@ -1,9 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Button, Card, Field, inputCls } from "../components/ui";
-import type { AuthUserDTO, FamilySettings } from "@chorechamps/shared";
+import type { AuthUserDTO, FamilySettings } from "@chorechampz/shared";
 
 interface FamilyLookup {
   id: string;

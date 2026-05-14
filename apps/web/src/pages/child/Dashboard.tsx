@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, uploadProof } from "../../lib/api";
 import {
@@ -27,7 +27,23 @@ import { StreakSaver } from "../../components/StreakSaver";
 import { SavingsGoal } from "../../components/SavingsGoal";
 import { VacationBanner } from "../../components/VacationBanner";
 import { ActiveTimerCard } from "../../components/ActiveTimerCard";
+import { FullscreenTimer } from "../../components/FullscreenTimer";
 import { useActiveTimer } from "../../hooks/useActiveTimer";
+
+type TimerDisplayMode = "fullscreen" | "inline";
+
+function timerModeKey(childId: string | null | undefined) {
+  return `cc:timerDisplayMode:${childId ?? "anon"}`;
+}
+
+function loadTimerMode(childId: string | null | undefined): TimerDisplayMode {
+  try {
+    const v = localStorage.getItem(timerModeKey(childId));
+    return v === "inline" ? "inline" : "fullscreen";
+  } catch {
+    return "fullscreen";
+  }
+}
 import type {
   ChallengeDTO,
   ChallengeProgressDTO,
@@ -35,7 +51,7 @@ import type {
   LevelDTO,
   MissedOpportunityDTO,
   TodayTaskOccurrenceDTO,
-} from "@chorechamps/shared";
+} from "@chorechampz/shared";
 
 interface ChallengeRow {
   challenge: ChallengeDTO;
@@ -71,8 +87,25 @@ export function ChildDashboard() {
   const soundEnabled = dash.data?.child.soundEnabled ?? false;
   const timer = useActiveTimer({
     childId: meId,
+    soundEnabled,
     onExpire: () => fireCelebrate("task", { sound: soundEnabled }),
   });
+
+  const [timerMode, setTimerModeState] = useState<TimerDisplayMode>(() => loadTimerMode(meId));
+  useEffect(() => {
+    setTimerModeState(loadTimerMode(meId));
+  }, [meId]);
+  const setTimerMode = useCallback(
+    (mode: TimerDisplayMode) => {
+      setTimerModeState(mode);
+      try {
+        localStorage.setItem(timerModeKey(meId), mode);
+      } catch {
+        // ignore quota
+      }
+    },
+    [meId],
+  );
 
   const seenLevelRef = useRef<number | null>(null);
   const seenChallengeRef = useRef<Set<string> | null>(null);
@@ -189,12 +222,22 @@ export function ChildDashboard() {
 
       {onVacation && <VacationBanner endsAt={vacation?.endsAt} note={vacation?.note} />}
 
-      {timer.timer && (
+      {timer.timer && timerMode === "inline" && (
         <ActiveTimerCard
           timer={timer.timer}
           timeLeft={timer.timeLeft}
           expired={timer.expired}
           onCancel={timer.cancel}
+          onExpand={() => setTimerMode("fullscreen")}
+        />
+      )}
+      {timer.timer && timerMode === "fullscreen" && (
+        <FullscreenTimer
+          timer={timer.timer}
+          timeLeft={timer.timeLeft}
+          expired={timer.expired}
+          onCancel={timer.cancel}
+          onMinimize={() => setTimerMode("inline")}
         />
       )}
 
@@ -363,9 +406,10 @@ export function ChildDashboard() {
                       taskTitle={occ.task.title}
                       defaultMinutes={occ.task.defaultDurationMinutes ?? null}
                       disabled={!!timer.timer || onVacation}
-                      onStart={(durationMs) =>
-                        timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs })
-                      }
+                      onStart={(durationMs) => {
+                        setTimerMode("fullscreen");
+                        timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs });
+                      }}
                     />
                     <Tooltip
                       label={
@@ -606,8 +650,15 @@ function StartTimerButton({
     function onClick(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const presets =
@@ -618,12 +669,22 @@ function StartTimerButton({
   return (
     <div className="relative" ref={wrapRef}>
       <Tooltip label={disabled ? "A timer is already running" : "Start a focus timer for this task"}>
-        <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} disabled={disabled}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setOpen((v) => !v)}
+          disabled={disabled}
+          aria-haspopup="true"
+          aria-expanded={open}
+        >
           ▶ Timer
         </Button>
       </Tooltip>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 p-2 flex flex-col gap-1 min-w-[120px]">
+        <div
+          aria-label="Pick a focus timer length"
+          className="absolute right-0 z-30 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 p-2 flex flex-col gap-1 min-w-[120px]"
+        >
           <div className="text-[10px] text-slate-500 px-2 pt-1">Pick a length</div>
           {presets.map((m) => (
             <button

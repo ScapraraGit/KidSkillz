@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
@@ -10,7 +10,7 @@ import {
   type AuthUserDTO,
   type AvatarConfig,
   type FamilySettings,
-} from "@chorechamps/shared";
+} from "@chorechampz/shared";
 
 type Mode = "PARENT" | "CHILD" | "SIGNUP";
 
@@ -22,7 +22,7 @@ export function Login({ initialMode = "PARENT" }: { initialMode?: Mode } = {}) {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl">🪙</div>
-          <h1 className="text-3xl font-bold mt-2 tracking-tight">ChoreChamps</h1>
+          <h1 className="text-3xl font-bold mt-2 tracking-tight">ChoreChampz</h1>
           <p className="text-slate-500">Earn credits, plan ahead, do something amazing.</p>
         </div>
         <Card>
@@ -330,7 +330,7 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
             className="mt-0.5"
           />
           <span>
-            I understand ChoreChamps is a household task-management tool — <strong>not</strong> childcare,
+            I understand ChoreChampz is a household task-management tool — <strong>not</strong> childcare,
             therapy, education, medical advice, a financial service, or an emergency service — and that
             notification delivery is not guaranteed.
           </span>

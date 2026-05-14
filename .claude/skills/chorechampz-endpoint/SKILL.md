@@ -1,9 +1,9 @@
----
-name: chorechamps-endpoint
-description: Scaffolds a new ChoreChamps API endpoint with the conventional layering — Zod validation in the route, business logic in a service, tenant scoping, serializer, and a unit test stub. Use when adding any new REST endpoint to apps/api.
+﻿---
+name: chorechampz-endpoint
+description: Scaffolds a new ChoreChampz API endpoint with the conventional layering — Zod validation in the route, business logic in a service, tenant scoping, serializer, and a unit test stub. Use when adding any new REST endpoint to apps/api.
 ---
 
-# Scaffolding a new ChoreChamps endpoint
+# Scaffolding a new ChoreChampz endpoint
 
 Follow this exact layering. Routes stay thin. Services own logic. Tenant scope is mandatory.
 
@@ -78,11 +78,11 @@ Prefer pure-logic tests (no DB). For DB tests, use the `__tests__` folder and a 
 
 ## 6. Web side (if any)
 
-If the new endpoint surfaces UI, invoke the `chorechamps-web-feature` skill while wiring up the page. Every primary action and non-obvious icon needs a `<Tooltip>` — that skill has the rules and the wrapper import.
+If the new endpoint surfaces UI, invoke the `chorechampz-web-feature` skill while wiring up the page. Every primary action and non-obvious icon needs a `<Tooltip>` — that skill has the rules and the wrapper import.
 
 ## 7. Shared types
 
-If the response shape is consumed by the web app, add a DTO to [packages/shared/src/types.ts](packages/shared/src/types.ts) and import from `@chorechamps/shared` on both sides.
+If the response shape is consumed by the web app, add a DTO to [packages/shared/src/types.ts](packages/shared/src/types.ts) and import from `@chorechampz/shared` on both sides.
 
 ## 8. Checklist before declaring done
 
@@ -93,4 +93,4 @@ If the response shape is consumed by the web app, add a DTO to [packages/shared/
 - [ ] Serializer returns only intended fields.
 - [ ] At least one `it.todo` or real test added.
 - [ ] Router wired in `index.ts`.
-- [ ] If endpoint is consumed by new UI: every new button/control has a `<Tooltip>` (see `chorechamps-web-feature`).
+- [ ] If endpoint is consumed by new UI: every new button/control has a `<Tooltip>` (see `chorechampz-web-feature`).

@@ -1,4 +1,4 @@
-import { initSentry, Sentry } from "./lib/sentry.js";
+﻿import { initSentry, Sentry } from "./lib/sentry.js";
 initSentry();
 
 import express from "express";
@@ -143,8 +143,8 @@ const dbHost = (() => {
     return "INVALID_URL";
   }
 })();
-console.log(`[chorechamps-api] DB host: ${dbHost}`);
+console.log(`[chorechampz-api] DB host: ${dbHost}`);
 
 app.listen(env.PORT, () => {
-  console.log(`[chorechamps-api] listening on :${env.PORT}`);
+  console.log(`[chorechampz-api] listening on :${env.PORT}`);
 });

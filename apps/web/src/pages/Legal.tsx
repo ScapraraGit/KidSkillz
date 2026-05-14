@@ -1,14 +1,14 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { Card, PageHeader } from "../components/ui";
-import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from "@chorechamps/shared";
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from "@chorechampz/shared";
 
 const EFFECTIVE_DATE = "2026-05-13";
-const COMPANY_NAME = "ChoreChamps, Inc.";
-const CONTACT_EMAIL = "legal@chorechamps.com";
-const PRIVACY_EMAIL = "privacy@chorechamps.com";
-const SECURITY_EMAIL = "security@chorechamps.com";
-const TRUST_EMAIL = "trust@chorechamps.com";
-const DMCA_EMAIL = "dmca@chorechamps.com";
+const COMPANY_NAME = "ChoreChampz, Inc.";
+const CONTACT_EMAIL = "legal@chorechampz.com";
+const PRIVACY_EMAIL = "privacy@chorechampz.com";
+const SECURITY_EMAIL = "security@chorechampz.com";
+const TRUST_EMAIL = "trust@chorechampz.com";
+const DMCA_EMAIL = "dmca@chorechampz.com";
 
 function LegalShell({
   title,
@@ -63,7 +63,7 @@ export function TermsOfService() {
       <p>
         These Terms of Service ("<strong>Terms</strong>") form a binding legal agreement between you and{" "}
         {COMPANY_NAME} ("<strong>Company</strong>," "<strong>we</strong>," "<strong>us</strong>," or "
-        <strong>our</strong>") governing your access to and use of the ChoreChamps service, including the
+        <strong>our</strong>") governing your access to and use of the ChoreChampz service, including the
         Platform and any related websites, mobile applications, APIs, and content (collectively, the "
         <strong>Service</strong>").
       </p>
@@ -296,7 +296,7 @@ export function TermsOfService() {
         laws. Subject to your compliance with these Terms, the Company grants you a limited, revocable,
         non-exclusive, non-transferable, non-sublicensable license to access and use the Service for the
         personal, non-commercial use of your household. All rights not expressly granted are reserved.
-        "ChoreChamps" and associated marks are trademarks of the Company.
+        "ChoreChampz" and associated marks are trademarks of the Company.
       </p>
 
       <h3>18. DMCA / Copyright Complaints</h3>

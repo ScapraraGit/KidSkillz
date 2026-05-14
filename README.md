@@ -1,4 +1,4 @@
-# ChoreChamps
+﻿# ChoreChampz
 
 Kids and teens earn credits for chores, tasks, good behavior, planning ahead, and going above and beyond. Parents approve, configure rules, and run a reward catalog. Multi-family by design, even though this POC runs locally on Docker Compose.
 
@@ -43,16 +43,16 @@ You'll need Node 20 and pnpm, plus a Postgres on `5432`.
 ```bash
 pnpm install
 cp .env.example .env  # edit DATABASE_URL if needed
-pnpm --filter @chorechamps/api prisma db push
-pnpm --filter @chorechamps/api seed
-pnpm --filter @chorechamps/api dev   # in one terminal
-pnpm --filter @chorechamps/web dev   # in another
+pnpm --filter @chorechampz/api prisma db push
+pnpm --filter @chorechampz/api seed
+pnpm --filter @chorechampz/api dev   # in one terminal
+pnpm --filter @chorechampz/web dev   # in another
 ```
 
 ## Project layout
 
 ```
-chorechamps/
+chorechampz/
 ├── apps/
 │   ├── api/
 │   │   ├── prisma/

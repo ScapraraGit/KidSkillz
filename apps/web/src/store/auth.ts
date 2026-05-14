@@ -1,6 +1,6 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AuthUserDTO, FamilySettings } from "@chorechamps/shared";
+import type { AuthUserDTO, FamilySettings } from "@chorechampz/shared";
 
 interface AuthState {
   token: string | null;
@@ -23,6 +23,6 @@ export const useAuth = create<AuthState>()(
       setUser: (user) => set({ user }),
       logout: () => set({ token: null, user: null, settings: null }),
     }),
-    { name: "chorechamps-auth" },
+    { name: "chorechampz-auth" },
   ),
 );

@@ -1,4 +1,5 @@
 import confetti from "canvas-confetti";
+import { prefersReducedMotion } from "./motion";
 
 export type CelebrateKind = "task" | "redeem" | "levelup" | "challenge" | "badge";
 
@@ -9,7 +10,9 @@ interface FireOpts {
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#3b82f6"];
 
 export function celebrate(kind: CelebrateKind, opts: FireOpts = {}) {
-  fireConfetti(kind);
+  // Audio is still played when reduced motion is on — it isn't motion. Only the
+  // visual confetti burst is suppressed.
+  if (!prefersReducedMotion()) fireConfetti(kind);
   if (opts.sound) playTone(kind);
 }
 
@@ -65,6 +68,23 @@ function playTone(kind: CelebrateKind) {
   notes.forEach((n, i) => beep(ctx, n.freq, now + i * n.gap, n.dur));
 }
 
+// Single short tick. Used by the focus-timer countdown — soft thunk each second,
+// brighter/louder under the 10-second mark so the kid feels the rush. Exposed
+// separately from celebrate() so the timer can call it without firing confetti.
+export function playTick(variant: "normal" | "rush" = "normal") {
+  const ctx = getCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") void ctx.resume();
+  const now = ctx.currentTime;
+  if (variant === "rush") {
+    // Higher pitch, sharper attack, longer ring so the last 10 seconds feel urgent.
+    beep(ctx, 1320, now, 0.09, 0.34);
+  } else {
+    // Low wood-block thunk — quiet enough to fade behind other audio.
+    beep(ctx, 520, now, 0.05, 0.18);
+  }
+}
+
 const NOTE_PATTERNS: Record<CelebrateKind, { freq: number; dur: number; gap: number }[]> = {
   task: [
     { freq: 660, dur: 0.08, gap: 0 },
@@ -89,13 +109,13 @@ const NOTE_PATTERNS: Record<CelebrateKind, { freq: number; dur: number; gap: num
   ],
 };
 
-function beep(ctx: AudioContext, freq: number, when: number, dur: number) {
+function beep(ctx: AudioContext, freq: number, when: number, dur: number, peakGain = 0.4) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = "triangle";
   osc.frequency.setValueAtTime(freq, when);
   gain.gain.setValueAtTime(0, when);
-  gain.gain.linearRampToValueAtTime(0.18, when + 0.01);
+  gain.gain.linearRampToValueAtTime(peakGain, when + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.001, when + dur);
   osc.connect(gain).connect(ctx.destination);
   osc.start(when);

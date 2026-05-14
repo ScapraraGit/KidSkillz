@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
@@ -9,6 +9,7 @@ import { getFamilySettings } from "../services/family.js";
 import { features } from "../lib/features.js";
 import { seedDefaultChallenges } from "../services/challenges.js";
 import { seedDefaultCategories } from "../services/task-categories.js";
+import { seedDefaultRewards, seedDefaultTasks } from "../services/seed-defaults.js";
 import {
   consumePasswordReset,
   consumeVerificationToken,
@@ -21,7 +22,7 @@ import {
   CURRENT_TERMS_VERSION,
   DEFAULT_FAMILY_SETTINGS,
   type AvatarConfig,
-} from "@chorechamps/shared";
+} from "@chorechampz/shared";
 import {
   clientIpFrom,
   recordLegalAcceptance,
@@ -56,6 +57,9 @@ authRouter.post("/parent/register", async (req, res) => {
   });
   await seedDefaultChallenges(family.id);
   await seedDefaultCategories(family.id);
+  // Starter tasks reference category IDs, so they must run after categories seed.
+  await seedDefaultTasks(family.id);
+  await seedDefaultRewards(family.id);
   const user = await prisma.user.create({
     data: {
       familyId: family.id,

@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -38,10 +38,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm --filter @chorechamps/api exec prisma generate
+        run: pnpm --filter @chorechampz/api exec prisma generate
 
       - name: Validate Prisma schema
-        run: pnpm --filter @chorechamps/api exec prisma validate
+        run: pnpm --filter @chorechampz/api exec prisma validate
 
       - name: Lint
         run: pnpm lint

@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { Avatar, Card, CreditChip, EmptyState, PageHeader, inputCls } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
-import { LedgerKind, type ChildDTO, type LedgerEntryDTO } from "@chorechamps/shared";
+import { LedgerKind, type ChildDTO, type LedgerEntryDTO } from "@chorechampz/shared";
 
 const ALL_KINDS = Object.values(LedgerKind);
 

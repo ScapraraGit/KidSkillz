@@ -6,9 +6,10 @@ interface Props {
   timeLeft: number;
   expired: boolean;
   onCancel: () => void;
+  onExpand?: () => void;
 }
 
-export function ActiveTimerCard({ timer, timeLeft, expired, onCancel }: Props) {
+export function ActiveTimerCard({ timer, timeLeft, expired, onCancel, onExpand }: Props) {
   const pct = expired
     ? 100
     : Math.min(100, Math.round(((timer.durationMs - timeLeft) / timer.durationMs) * 100));
@@ -44,9 +45,16 @@ export function ActiveTimerCard({ timer, timeLeft, expired, onCancel }: Props) {
             />
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          {expired ? "Dismiss" : "Cancel"}
-        </Button>
+        <div className="flex flex-col gap-1 shrink-0">
+          {onExpand && !expired && (
+            <Button variant="ghost" size="sm" onClick={onExpand} title="Expand to fullscreen">
+              ⛶ Expand
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {expired ? "Dismiss" : "Cancel"}
+          </Button>
+        </div>
       </div>
     </Card>
   );

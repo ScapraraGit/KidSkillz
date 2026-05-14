@@ -1,6 +1,6 @@
-import { Card } from "./ui";
+﻿import { Card } from "./ui";
 import { getPet, petStageForLevel, PET_STAGE_NAMES } from "../lib/pets";
-import type { LevelDTO } from "@chorechamps/shared";
+import type { LevelDTO } from "@chorechampz/shared";
 
 interface Props {
   petId: string | undefined | null;

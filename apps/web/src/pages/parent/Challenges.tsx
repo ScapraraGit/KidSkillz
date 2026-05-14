@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../lib/api";
 import { Button, Card, EmptyState, Field, PageHeader, Badge, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
-import type { ChallengeDTO, ChallengeKind, ChallengeWindow } from "@chorechamps/shared";
+import type { ChallengeDTO, ChallengeKind, ChallengeWindow } from "@chorechampz/shared";
 
 type WriteInput = {
   kind: ChallengeKind;

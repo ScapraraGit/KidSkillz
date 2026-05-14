@@ -1,4 +1,4 @@
-name: Nightly Jobs
+﻿name: Nightly Jobs
 
 # Runs background maintenance jobs that don't fit a long-lived process:
 #   - penalty-sweep: posts negative-credit entries for yesterday's missed RECURRING
@@ -55,12 +55,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm --filter @chorechamps/api exec prisma generate
+        run: pnpm --filter @chorechampz/api exec prisma generate
 
       - name: Penalty sweep
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'penalty-sweep' }}
-        run: pnpm --filter @chorechamps/api jobs:penalty-sweep:ci
+        run: pnpm --filter @chorechampz/api jobs:penalty-sweep:ci
 
       - name: Photo purge
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'photo-purge' }}
-        run: pnpm --filter @chorechamps/api jobs:photo-purge:ci
+        run: pnpm --filter @chorechampz/api jobs:photo-purge:ci

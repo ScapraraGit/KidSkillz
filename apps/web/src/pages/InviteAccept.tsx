@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Button, Card, Field, inputCls } from "../components/ui";
-import type { AuthUserDTO, FamilySettings, InvitationKind } from "@chorechamps/shared";
+import type { AuthUserDTO, FamilySettings, InvitationKind } from "@chorechampz/shared";
 
 interface Preview {
   kind: InvitationKind;
@@ -146,7 +146,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl">🪙</div>
-          <h1 className="text-3xl font-bold mt-2 tracking-tight">ChoreChamps</h1>
+          <h1 className="text-3xl font-bold mt-2 tracking-tight">ChoreChampz</h1>
         </div>
         {children}
       </div>

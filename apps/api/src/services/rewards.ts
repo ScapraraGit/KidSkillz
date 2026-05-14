@@ -1,6 +1,6 @@
-import { prisma } from "../db.js";
+﻿import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
-import type { RewardMetadata, RewardDTO } from "@chorechamps/shared";
+import type { RewardMetadata, RewardDTO } from "@chorechampz/shared";
 import type { RewardType } from "@prisma/client";
 
 export interface UpsertRewardInput {

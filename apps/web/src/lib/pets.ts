@@ -6,7 +6,7 @@ export interface PetDef {
 }
 
 export const PETS: PetDef[] = [
-  { id: "dragon", label: "Dragon", stages: ["🥚", "🐣", "🐉", "🐲"] },
+  { id: "dragon", label: "Dragon", stages: ["🥚", "🐲", "🐉", "🔥🐉"] },
   { id: "cat", label: "Cat", stages: ["🥚", "🐱", "🐈", "🦁"] },
   { id: "dog", label: "Dog", stages: ["🥚", "🐶", "🐕", "🐺"] },
   { id: "fox", label: "Fox", stages: ["🥚", "🐣", "🦊", "🦊"] },

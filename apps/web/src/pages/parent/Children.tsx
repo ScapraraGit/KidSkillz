@@ -17,6 +17,7 @@ import type {
   TaskDTO,
 } from "@chorechampz/shared";
 import { TaskFormModal } from "./Tasks";
+import { ParentLedger } from "./Ledger";
 
 interface ChallengeRow {
   challenge: ChallengeDTO;
@@ -100,6 +101,8 @@ export function ParentChildren() {
           </Card>
         ))}
       </div>
+
+      <ParentLedger />
 
       {creating && (
         <CreateChildModal

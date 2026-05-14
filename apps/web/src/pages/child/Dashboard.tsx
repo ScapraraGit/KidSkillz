@@ -317,6 +317,9 @@ export function ChildDashboard() {
                     <div className="text-xs text-slate-500">{occ.task.description}</div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-1">
+                    {occ.task.assignmentMode === "UP_FOR_GRABS" && (
+                      <Badge color="amber">🙋 Up for Grabs</Badge>
+                    )}
                     {occ.task.dueByTime && (
                       <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
                     )}

@@ -40,7 +40,8 @@ const createTaskSchema = z.object({
     .enum(["NONE", "NOTES_OPTIONAL", "NOTES_REQUIRED", "PHOTO_OPTIONAL", "PHOTO_REQUIRED", "PHOTO_AND_NOTES"])
     .optional(),
   isActive: z.boolean().optional(),
-  assignedToId: z.string().uuid(),
+  assignmentMode: z.enum(["ASSIGNED", "UP_FOR_GRABS"]).optional(),
+  assignedToId: z.string().uuid().nullable().optional(),
 });
 
 tasksRouter.get("/", async (req, res) => {

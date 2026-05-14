@@ -36,6 +36,12 @@ export const TaskKind = {
 } as const;
 export type TaskKind = (typeof TaskKind)[keyof typeof TaskKind];
 
+export const AssignmentMode = {
+  ASSIGNED: "ASSIGNED",
+  UP_FOR_GRABS: "UP_FOR_GRABS",
+} as const;
+export type AssignmentMode = (typeof AssignmentMode)[keyof typeof AssignmentMode];
+
 export const RecurrenceFrequency = {
   DAILY: "DAILY",
   WEEKLY: "WEEKLY",

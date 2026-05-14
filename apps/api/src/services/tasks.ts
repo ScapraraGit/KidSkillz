@@ -17,7 +17,8 @@ export interface CreateTaskInput {
   defaultDurationMinutes?: number | null;
   proofRequirement?: import("@prisma/client").ProofRequirement;
   isActive?: boolean;
-  assignedToId: string;
+  assignmentMode?: "ASSIGNED" | "UP_FOR_GRABS";
+  assignedToId?: string | null;
 }
 
 export async function listTasks(familyId: string, opts?: { activeOnly?: boolean; assignedTo?: string }) {
@@ -41,6 +42,10 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
   if (input.kind === "RECURRING" && !input.recurrence) {
     throw HttpError.badRequest("Recurring task requires a recurrence rule");
   }
+  const assignmentMode = input.assignmentMode ?? "ASSIGNED";
+  if (assignmentMode === "ASSIGNED" && !input.assignedToId) {
+    throw HttpError.badRequest("Assigned tasks require an assignee");
+  }
   return prisma.task.create({
     data: {
       familyId,
@@ -55,7 +60,8 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
       defaultDurationMinutes: input.defaultDurationMinutes ?? null,
       proofRequirement: input.proofRequirement ?? "NOTES_OPTIONAL",
       isActive: input.isActive ?? true,
-      assignedToId: input.assignedToId,
+      assignmentMode,
+      assignedToId: assignmentMode === "UP_FOR_GRABS" ? null : input.assignedToId!,
     },
   });
 }
@@ -65,6 +71,9 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
 // so re-clicking won't pile up duplicates.
 export async function duplicateAcrossKids(familyId: string, taskId: string) {
   const source = await getTask(familyId, taskId);
+  if (source.assignmentMode === "UP_FOR_GRABS") {
+    throw HttpError.badRequest("Up-for-grabs tasks are already available to every kid");
+  }
   const kids = await prisma.user.findMany({
     where: { familyId, role: "CHILD", isActive: true },
     select: { id: true },
@@ -104,7 +113,13 @@ export async function duplicateAcrossKids(familyId: string, taskId: string) {
 }
 
 export async function updateTask(familyId: string, taskId: string, input: Partial<CreateTaskInput>) {
-  await getTask(familyId, taskId);
+  const current = await getTask(familyId, taskId);
+  const nextMode = input.assignmentMode ?? current.assignmentMode;
+  const nextAssignee =
+    input.assignedToId !== undefined ? input.assignedToId : current.assignedToId;
+  if (nextMode === "ASSIGNED" && !nextAssignee) {
+    throw HttpError.badRequest("Assigned tasks require an assignee");
+  }
   return prisma.task.update({
     where: { id: taskId },
     data: {
@@ -123,7 +138,8 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
       }),
       ...(input.proofRequirement !== undefined && { proofRequirement: input.proofRequirement }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
-      ...(input.assignedToId !== undefined && { assignedToId: input.assignedToId }),
+      ...(input.assignmentMode !== undefined && { assignmentMode: input.assignmentMode }),
+      assignedToId: nextMode === "UP_FOR_GRABS" ? null : nextAssignee!,
     },
   });
 }
@@ -159,15 +175,18 @@ export async function listTodayForChild(
     where: {
       familyId,
       isActive: true,
-      assignedToId: childId,
+      OR: [{ assignedToId: childId }, { assignmentMode: "UP_FOR_GRABS" }],
     },
     orderBy: { createdAt: "asc" },
   });
 
+  const taskIds = tasks.map((t) => t.id);
+
+  // For UP_FOR_GRABS tasks we need to see ANY child's claim for the occurrence,
+  // not just this child's, so we can hide already-claimed pool tasks.
   const completions = await prisma.taskCompletion.findMany({
     where: {
-      childId,
-      task: { familyId },
+      taskId: { in: taskIds },
       OR: [
         { occurrenceDate: today },
         { occurrenceDate: null }, // ONE_TIME completions
@@ -175,18 +194,48 @@ export async function listTodayForChild(
     },
   });
 
-  const compByKey = new Map<string, (typeof completions)[number]>();
+  // Per-(taskId, childId) lookup for this child's own row.
+  const ownByKey = new Map<string, (typeof completions)[number]>();
+  // Per-(taskId, occurrenceDate) "claimed by anyone" lookup for pool tasks.
+  const claimedByOcc = new Map<string, (typeof completions)[number]>();
   for (const c of completions) {
-    const key = `${c.taskId}|${c.occurrenceDate ?? "ONE"}`;
-    compByKey.set(key, c);
+    const occKey = `${c.taskId}|${c.occurrenceDate ?? "ONE"}`;
+    if (c.childId === childId) ownByKey.set(occKey, c);
+    if (c.status === "PENDING" || c.status === "APPROVED") {
+      const prior = claimedByOcc.get(occKey);
+      // Earliest live claim wins; rejected entries never block.
+      if (!prior) claimedByOcc.set(occKey, c);
+    }
   }
 
   const out: TodayTaskOccurrenceDTO[] = [];
   for (const t of tasks) {
+    const occDate = t.kind === "RECURRING" ? today : null;
+    const occKey = `${t.id}|${occDate ?? "ONE"}`;
+    const isPool = t.assignmentMode === "UP_FOR_GRABS";
+
+    if (t.kind === "RECURRING" && t.recurrence) {
+      const rec = t.recurrence as unknown as Recurrence;
+      if (!recurrenceMatchesDate(rec, today, dow)) continue;
+    } else if (t.kind !== "ONE_TIME") {
+      continue;
+    }
+
+    if (isPool) {
+      const claim = claimedByOcc.get(occKey);
+      if (claim && claim.childId !== childId) continue; // someone else grabbed it
+      out.push({
+        task: serializeTask(t),
+        occurrenceDate: today,
+        completionId: claim?.id ?? null,
+        completionStatus: claim?.status ?? null,
+      });
+      continue;
+    }
+
+    const c = ownByKey.get(occKey);
     if (t.kind === "ONE_TIME") {
-      const c = compByKey.get(`${t.id}|ONE`);
       if (c && c.status !== "REJECTED") {
-        // approved or pending — still show the row so child sees status; hide if approved & old?
         out.push({
           task: serializeTask(t),
           occurrenceDate: today,
@@ -201,10 +250,7 @@ export async function listTodayForChild(
           completionStatus: null,
         });
       }
-    } else if (t.kind === "RECURRING" && t.recurrence) {
-      const rec = t.recurrence as unknown as Recurrence;
-      if (!recurrenceMatchesDate(rec, today, dow)) continue;
-      const c = compByKey.get(`${t.id}|${today}`);
+    } else {
       out.push({
         task: serializeTask(t),
         occurrenceDate: today,
@@ -231,6 +277,7 @@ export function serializeTask(t: import("@prisma/client").Task) {
     defaultDurationMinutes: t.defaultDurationMinutes ?? null,
     proofRequirement: t.proofRequirement,
     isActive: t.isActive,
+    assignmentMode: t.assignmentMode,
     assignedToId: t.assignedToId,
   };
 }

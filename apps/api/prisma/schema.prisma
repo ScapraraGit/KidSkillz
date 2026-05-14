@@ -40,6 +40,11 @@ enum TaskKind {
   RECURRING
 }
 
+enum AssignmentMode {
+  ASSIGNED
+  UP_FOR_GRABS
+}
+
 enum ApprovalStatus {
   PENDING
   APPROVED
@@ -228,8 +233,9 @@ model Task {
   defaultDurationMinutes Int?       // optional kid-focus timer default; 1..240
   proofRequirement ProofRequirement @default(NOTES_OPTIONAL)
   isActive         Boolean          @default(true)
-  assignedToId     String
-  assignedTo       User             @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignmentMode   AssignmentMode   @default(ASSIGNED)
+  assignedToId     String?
+  assignedTo       User?            @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: Cascade)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

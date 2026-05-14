@@ -59,6 +59,8 @@ export function ParentTasks() {
 
   const visibleTasks = (tasksQ.data?.tasks ?? []).filter((t) => {
     if (assignedFilter === "all") return true;
+    // Pool tasks are visible to every kid, so they belong in every kid's filtered view.
+    if (t.assignmentMode === "UP_FOR_GRABS") return true;
     return t.assignedToId === assignedFilter;
   });
 
@@ -134,7 +136,11 @@ export function ParentTasks() {
                   return (
                     <tr key={t.id} className={t.isActive ? "" : "opacity-50"}>
                       <td className="p-3 whitespace-nowrap font-medium">
-                        {child?.name ?? <span className="text-slate-400">Unknown</span>}
+                        {t.assignmentMode === "UP_FOR_GRABS" ? (
+                          <Badge color="amber">🙋 Up for Grabs</Badge>
+                        ) : (
+                          (child?.name ?? <span className="text-slate-400">Unknown</span>)
+                        )}
                       </td>
                       <td className="p-3">
                         <div className="font-medium">{t.title}</div>
@@ -229,6 +235,9 @@ function TaskFormModal({
   const [frequency, setFrequency] = useState(initial?.recurrence?.frequency ?? "DAILY");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(initial?.recurrence?.daysOfWeek ?? []);
   const [proofRequirement, setProofRequirement] = useState(initial?.proofRequirement ?? "NOTES_OPTIONAL");
+  const [assignmentMode, setAssignmentMode] = useState<"ASSIGNED" | "UP_FOR_GRABS">(
+    initial?.assignmentMode ?? "ASSIGNED",
+  );
   const [assignedToId, setAssignedToId] = useState(initial?.assignedToId ?? defaultAssignedToId ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [dueByTime, setDueByTime] = useState(initial?.dueByTime ?? "");
@@ -247,7 +256,8 @@ function TaskFormModal({
         kind,
         proofRequirement,
         isActive,
-        assignedToId,
+        assignmentMode,
+        assignedToId: assignmentMode === "UP_FOR_GRABS" ? null : assignedToId,
         defaultDurationMinutes: defaultDurationMinutes.trim() ? Number(defaultDurationMinutes) : null,
       };
       if (kind === "RECURRING") {
@@ -278,7 +288,12 @@ function TaskFormModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !title || !assignedToId}>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={
+              save.isPending || !title || (assignmentMode === "ASSIGNED" && !assignedToId)
+            }
+          >
             {save.isPending ? "Saving…" : "Save"}
           </Button>
         </>
@@ -323,8 +338,37 @@ function TaskFormModal({
             </select>
           </Field>
           <Field
+            label="Assignment"
+            hint="Assigned belongs to one kid. Up for Grabs lets any kid claim it — first to submit wins."
+          >
+            <div className="flex flex-col gap-1 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="assignmentMode"
+                  value="ASSIGNED"
+                  checked={assignmentMode === "ASSIGNED"}
+                  onChange={() => setAssignmentMode("ASSIGNED")}
+                />
+                Assigned
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="assignmentMode"
+                  value="UP_FOR_GRABS"
+                  checked={assignmentMode === "UP_FOR_GRABS"}
+                  onChange={() => setAssignmentMode("UP_FOR_GRABS")}
+                />
+                Up for Grabs
+              </label>
+            </div>
+          </Field>
+        </div>
+        {assignmentMode === "ASSIGNED" && (
+          <Field
             label="Assigned to"
-            hint="Tasks always belong to one kid. Use 'Copy to all kids' from the table for shared chores."
+            hint="Use 'Copy to all kids' from the table for separate copies per kid."
           >
             <select
               className={inputCls}
@@ -342,7 +386,7 @@ function TaskFormModal({
               ))}
             </select>
           </Field>
-        </div>
+        )}
         {kind === "RECURRING" && (
           <>
             <Field label="Frequency">

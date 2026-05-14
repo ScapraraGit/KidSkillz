@@ -1,5 +1,6 @@
 import type {
   ApprovalStatus,
+  AssignmentMode,
   ChallengeKind,
   ChallengeWindow,
   ChildAuthMode,
@@ -197,7 +198,9 @@ export interface TaskDTO {
   defaultDurationMinutes?: number | null; // optional kid-focus timer suggestion
   proofRequirement: ProofRequirement;
   isActive: boolean;
-  assignedToId: string;
+  assignmentMode: AssignmentMode;
+  /** Null when assignmentMode is UP_FOR_GRABS. */
+  assignedToId: string | null;
 }
 
 export type LateTier = "ON_TIME" | "LATE" | "SEVERE";

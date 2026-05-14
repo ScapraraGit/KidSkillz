@@ -74,6 +74,21 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
   });
   if (existing) throw HttpError.conflict("Already submitted for this occurrence");
 
+  if (task.assignmentMode === "UP_FOR_GRABS") {
+    // Pool tasks: first kid to submit claims it. Block if anyone else has a live claim.
+    const claimed = await prisma.taskCompletion.findFirst({
+      where: {
+        taskId: task.id,
+        occurrenceDate,
+        status: { in: ["PENDING", "APPROVED"] },
+        NOT: { childId: child.id },
+      },
+    });
+    if (claimed) throw HttpError.conflict("Another kid already grabbed this one");
+  } else if (task.assignedToId !== child.id) {
+    throw HttpError.forbidden("This task is assigned to a different kid");
+  }
+
   return prisma.taskCompletion.create({
     data: {
       taskId: task.id,

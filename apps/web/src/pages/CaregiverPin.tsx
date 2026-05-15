@@ -31,7 +31,13 @@ export function CaregiverPin() {
       });
       setFamilyId(r.family.id);
     } catch (e: any) {
-      setErr(e.message);
+      if (e?.status === 404) {
+        setErr(
+          "No matching family. Check the family name and 6-character code from the parent.",
+        );
+      } else {
+        setErr(e?.message ?? "Lookup failed");
+      }
     }
   };
 

@@ -452,7 +452,17 @@ function ChildLogin() {
       });
       setPicked(r.family);
     } catch (e: any) {
-      setErr(e.message);
+      if (e?.status === 404) {
+        setErr(
+          "No matching family. Double-check the family name (must match exactly) and the 6-character family code. Parents can find the code under Settings → Family code.",
+        );
+      } else if (e?.code === "CAPTCHA_REQUIRED" || e?.code === "CAPTCHA_FAILED") {
+        setErr("CAPTCHA check failed. Refresh and try again.");
+      } else if (e?.status === 429) {
+        setErr("Too many lookup attempts. Wait a minute and try again.");
+      } else {
+        setErr(e?.message ?? "Lookup failed");
+      }
     }
   };
 

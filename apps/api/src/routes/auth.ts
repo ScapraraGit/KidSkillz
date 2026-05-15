@@ -22,9 +22,10 @@ import { recordAudit } from "../services/audit.js";
 import { lookupRateLimiter } from "../middleware/lookup-rate-limit.js";
 import { requireTurnstile } from "../middleware/turnstile.js";
 import { requireDeviceToken } from "../middleware/device.js";
-import { redeemEnrollment } from "../services/device-pairing.js";
+import { findActiveDeviceByToken, redeemEnrollment } from "../services/device-pairing.js";
 import { env } from "../env.js";
 import { checkPassword } from "../lib/password-policy.js";
+import { redeemCaregiverPin } from "../services/caregiver-pin.js";
 import {
   bumpTokenVersionAndRevokeAll,
   clientIpFromReq,
@@ -176,6 +177,25 @@ authRouter.post("/child/login", async (req, res) => {
     throw HttpError.unauthorized("Invalid credentials");
   const settings = await getFamilySettings(child.familyId);
 
+  // When device pairing is enabled, every kid login MUST come from a paired
+  // device. The device's family must match the child's family so a stolen
+  // device token from family A can never authenticate a kid in family B. The
+  // legacy `familyPassword` SHARED_DEVICE branch is dead under the flag.
+  if (env.DEVICE_PAIRING_ENABLED) {
+    const raw = req.header("x-device-token")?.trim();
+    if (!raw) throw HttpError.unauthorized("Device not paired");
+    const device = await findActiveDeviceByToken(raw);
+    if (!device || device.familyId !== child.familyId) {
+      throw HttpError.unauthorized("Device not paired");
+    }
+    if (familyPassword) {
+      throw HttpError.badRequest(
+        "Legacy familyPassword not accepted on paired devices",
+        "LEGACY_AUTH_DISABLED",
+      );
+    }
+  }
+
   if (settings.childAuthMode === "INDIVIDUAL") {
     await assertPinNotLocked(child.id);
     const ok = !!pin && child.pin === pin;
@@ -189,6 +209,11 @@ authRouter.post("/child/login", async (req, res) => {
       }
       throw HttpError.unauthorized("Invalid PIN");
     }
+  } else if (env.DEVICE_PAIRING_ENABLED) {
+    // SHARED_DEVICE on a paired device: device token already proved family scope.
+    // Per plan, profile selection alone is sufficient (auto-login). The PIN-required
+    // path is INDIVIDUAL mode above. Future per-family opt-out (require PIN even
+    // in SHARED_DEVICE) lands as a Family.settings flag.
   } else {
     // SHARED_DEVICE: single device-password hash on the family. Constant bcrypt
     // cost regardless of parent count, no parent-count timing leak.
@@ -237,6 +262,42 @@ authRouter.post("/child/login", async (req, res) => {
     refreshToken: refresh.refreshToken,
     refreshExpiresAt: refresh.expiresAt.toISOString(),
     user: serializeUser(child),
+  });
+});
+
+// --- Caregiver PIN login (device-scoped) -------------------------------
+
+const caregiverPinSchema = z.object({
+  pin: z.string().regex(/^\d{4,8}$/),
+  name: z.string().trim().min(1).max(80).optional(),
+});
+
+// Device-scoped caregiver login. The device token supplies the family scope
+// (no client-supplied familyId, no /families/lookup), the PIN authenticates.
+authRouter.post("/caregiver/pin-login", requireDeviceToken, async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  const input = caregiverPinSchema.parse(req.body);
+  const user = await redeemCaregiverPin({
+    familyId: req.device!.familyId,
+    pin: input.pin,
+    name: input.name,
+  });
+  const token = signToken({
+    sub: user.id,
+    fid: user.familyId,
+    role: user.role,
+    tv: user.tokenVersion,
+  });
+  const refresh = await issueRefreshToken({
+    userId: user.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(user),
   });
 });
 

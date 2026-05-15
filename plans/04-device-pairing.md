@@ -108,9 +108,9 @@ JWT (existing user auth) stays orthogonal. Device token is a *family scope* gate
   - Device stores `deviceToken` in localStorage / IndexedDB (long-lived).
 - `GET /auth/device/profiles` (device-auth)
   - Returns `[{ id, name, avatarColor, avatarConfig }]` for active kids in `req.device.familyId`.
-- `POST /auth/child/login` (device-auth, PIN check)
+- `POST /auth/child/login` (device-auth, PIN check) ✅ Done 2026-05-15
   - Drops `familyPassword` branch entirely. familyCode/SHARED_DEVICE password become legacy. Body: `{ childId, pin? }`. PIN required when `family.childAuthMode === INDIVIDUAL`; auto-login (no PIN) is opt-in per-family setting.
-- `POST /auth/caregiver/pin-login` (device-auth)
+- `POST /auth/caregiver/pin-login` (device-auth) ✅ Done 2026-05-15
   - Body: `{ pin, name? }`. Replaces current `/invitations/pin-login` lookup-by-familyId.
 
 ### Web routes
@@ -163,7 +163,7 @@ JWT (existing user auth) stays orthogonal. Device token is a *family scope* gate
   - `POST /v1/auth/devices/redeem` (unauth, behind `lookupRateLimiter` + Turnstile)
   - `GET /v1/auth/device/profiles` (device-auth)
   - `GET /v1/family/devices`, `POST /v1/family/devices/:id/revoke`, `POST /v1/family/devices/:id/rename` (parent-auth)
-- Update `POST /v1/auth/child/login` and `POST /v1/invitations/pin-login` to require device token; remove `familyPassword` branch under feature flag.
+- Update `POST /v1/auth/child/login` and `POST /v1/invitations/pin-login` to require device token; remove `familyPassword` branch under feature flag. ✅ Done 2026-05-15 — child-login flag-gated to device token, legacy familyPassword rejected with `LEGACY_AUTH_DISABLED`. Caregiver path now `POST /v1/auth/caregiver/pin-login` (device-scoped); old `/v1/invitations/pin-login` 404s when flag on.
 - Feature flag `DEVICE_PAIRING_ENABLED` on env + propagated to `/v1/auth/me` features payload.
 - Audit kinds: `DEVICE_ENROLLED`, `DEVICE_REDEEMED`, `DEVICE_REVOKED`, `DEVICE_RENAMED`, `DEVICE_PAIRING_FAILED`.
 
@@ -172,7 +172,7 @@ JWT (existing user auth) stays orthogonal. Device token is a *family scope* gate
 - `apps/web/src/lib/deviceToken.ts` — get/set/clear in localStorage. Adds `x-device-token` header in `lib/api.ts` when present.
 - `apps/web/src/pages/Pair.tsx` — QR + 8-char input. On success, stores token, redirects to `/login`.
 - `apps/web/src/pages/Login.tsx` ChildLogin — drop family lookup, hit `/auth/device/profiles` on mount. On 401: redirect `/pair`.
-- `apps/web/src/pages/CaregiverPin.tsx` — same redirect-on-no-device pattern.
+- `apps/web/src/pages/CaregiverPin.tsx` — same redirect-on-no-device pattern. ✅ Done 2026-05-15 — paired branch skips lookup, hits `/auth/caregiver/pin-login` directly; unpaired branch keeps legacy lookup + adds "Pair this device" link.
 - `apps/web/src/pages/parent/Settings.tsx` — new Devices card. Buttons: "Pair a new device" (opens modal with code + QR), per-row Rename / Revoke.
 - `apps/web/src/components/QrCode.tsx` — small wrapper around `qrcode` lib (vendored, no remote calls).
 - Remove familyCode + family-password inputs from kid/caregiver flows when feature flag on.

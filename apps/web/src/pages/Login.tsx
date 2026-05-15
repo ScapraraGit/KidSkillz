@@ -545,14 +545,19 @@ function ChildLogin() {
             setErr(null);
             setLoading(true);
             try {
+              // Paired device: device-token header authenticates family, so we
+              // only need childId (+ PIN in INDIVIDUAL mode). Legacy familyPassword
+              // is rejected server-side when DEVICE_PAIRING_ENABLED is on.
+              const onPairedDevice = hasDevice;
+              const body =
+                mode === "INDIVIDUAL"
+                  ? { childId, pin }
+                  : onPairedDevice
+                    ? { childId }
+                    : { childId, familyPassword };
               const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
                 "/auth/child/login",
-                {
-                  body: {
-                    childId,
-                    ...(mode === "INDIVIDUAL" ? { pin } : { familyPassword }),
-                  },
-                },
+                { body },
               );
               setSession(r.token, r.user, r.refreshToken ?? null);
               const me = await api<{ settings: FamilySettings }>("/auth/me");
@@ -587,6 +592,10 @@ function ChildLogin() {
                 required
               />
             </Field>
+          ) : hasDevice ? (
+            // SHARED_DEVICE on a paired device: device token is the family
+            // unlock, no further credential needed. Profile pick = sign-in.
+            <div className="text-sm text-slate-500">Tap "Let's go!" to sign in.</div>
           ) : (
             <Field label="Family password">
               <input

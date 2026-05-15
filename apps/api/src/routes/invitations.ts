@@ -15,6 +15,7 @@ import {
 import { sendInvitationEmail } from "../lib/email.js";
 import { env } from "../env.js";
 import type { Request } from "express";
+import { redeemCaregiverPin } from "../services/caregiver-pin.js";
 
 export const invitationsRouter = Router();
 
@@ -210,46 +211,24 @@ const pinLoginSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
 });
 
-// Caregiver PIN login. Creates a short-lived caregiver User row + JWT.
+// Legacy caregiver PIN login (familyId in body). Kept for back-compat with
+// any client still using the `/families/lookup` -> `/invitations/pin-login`
+// flow. New clients on a paired device should use `/v1/auth/caregiver/pin-login`.
+//
+// When DEVICE_PAIRING_ENABLED is on this legacy route refuses the request so
+// caregivers funnel through the device-scoped path.
 invitationsRouter.post("/pin-login", async (req, res) => {
-  const { familyId, pin, name } = pinLoginSchema.parse(req.body);
-  const hash = hashToken(pin);
-  const inv = await prisma.invitation.findFirst({
-    where: {
-      familyId,
-      kind: "CAREGIVER_PIN",
-      tokenHash: hash,
-      status: "PENDING",
-    },
-  });
-  if (!inv) throw HttpError.unauthorized("Invalid PIN");
-  const now = new Date();
-  if (inv.expiresAt < now) {
-    await prisma.invitation.update({ where: { id: inv.id }, data: { status: "EXPIRED" } });
-    throw HttpError.unauthorized("PIN expired");
+  if (env.DEVICE_PAIRING_ENABLED) {
+    throw HttpError.notFound("Legacy caregiver login disabled — pair the device first");
   }
-
-  const user = await prisma.$transaction(async (tx) => {
-    const u = await tx.user.create({
-      data: {
-        familyId,
-        role: "CAREGIVER",
-        name: name ?? inv.inviteeName ?? "Caregiver",
-        avatarColor: "#f59e0b",
-        validFrom: inv.validFrom ?? now,
-        validUntil: inv.validUntil ?? inv.expiresAt,
-        scope: inv.scope ?? undefined,
-        invitedById: inv.createdById,
-      },
-    });
-    await tx.invitation.update({
-      where: { id: inv.id },
-      data: { status: "ACCEPTED", acceptedAt: now, acceptedById: u.id },
-    });
-    return u;
+  const { familyId, pin, name } = pinLoginSchema.parse(req.body);
+  const user = await redeemCaregiverPin({ familyId, pin, name });
+  const token = signToken({
+    sub: user.id,
+    fid: user.familyId,
+    role: user.role,
+    tv: user.tokenVersion,
   });
-
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
   res.json({ token, user: serializeUser(user) });
 });
 

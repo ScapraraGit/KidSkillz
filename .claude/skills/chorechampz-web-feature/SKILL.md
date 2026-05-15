@@ -102,3 +102,7 @@ Before opening a PR that touches `apps/web`, grep for new `<Button` / `<button` 
 3. Be inside a Modal footer where the action is stated unambiguously by the modal title.
 
 If your diff adds a new icon-only control and there's no `<Tooltip>` on it, the diff is incomplete.
+
+## 9. Env vars
+
+If you read `import.meta.env.VITE_*` for any new variable, add a commented entry to [.env.example](../../.env.example) in the same change. Place it under the `# Web — apps/web` section with a one-line description of what it does and what happens when unset. Same rule applies for any new server-side env var read in `apps/api/src/env.ts` (under the API section).

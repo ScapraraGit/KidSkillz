@@ -49,7 +49,7 @@ services:
     depends_on:
       - api
     ports:
-      - "${WEB_PORT:-5173}:5173"
+      - "${WEB_PORT:-5173}:8080"
 
 volumes:
   db-data:

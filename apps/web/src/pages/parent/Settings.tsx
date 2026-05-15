@@ -8,6 +8,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechampz/shared";
 import { useFeatures } from "../../hooks/useFeatures";
+import { DevicesCard } from "../../components/DevicesCard";
 
 export function ParentSettings() {
   const qc = useQueryClient();
@@ -113,6 +114,8 @@ export function ParentSettings() {
           </Field>
         )}
       </Card>
+
+      {features.devicePairing && <DevicesCard />}
 
       <Card className="space-y-4">
         <h3 className="font-semibold">Proof and balance defaults</h3>

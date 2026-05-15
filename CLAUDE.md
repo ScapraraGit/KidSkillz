@@ -43,7 +43,7 @@ pnpm db:seed              # seed.ts
 ## Known gaps (acknowledged)
 
 - No rate limiting, no Helmet, no request logging.
-- `prisma db push` used on first boot but `migrations/` exists — drift risk if both are exercised.
+- Container boots via `prisma migrate deploy` (committed migrations only). Never use `db push` against the shared Neon DB.
 - `docker-compose.yml` has the `db` service commented out; current setup points at Neon.
 - No CI workflow yet.
 
@@ -54,6 +54,18 @@ pnpm db:seed              # seed.ts
 - Adding an endpoint? Route file stays thin: validate with Zod, call service, serialize. Tenant scope (`familyId`) is non-negotiable.
 - Adding a ledger-affecting flow? Route it through `postLedger()`. Don't write `LedgerEntry` rows directly.
 - Adding a web feature (new page, button, modal, control)? See the `chorechampz-web-feature` skill — every primary action and non-obvious icon needs a `<Tooltip>` from `apps/web/src/components/Tooltip.tsx`. Don't use the native `title=""` attribute.
+- Adding a new env var (read in `apps/api/src/env.ts` or `import.meta.env.VITE_*` on web)? Update `.env.example` in the same change with a comment explaining the var, default behavior when unset, and which section (Shared/API/Web) it belongs in. Never ship an env var without a sample-file entry — onboarding breaks otherwise.
+
+## Data safety (non-negotiable)
+
+The application database is shared (Neon, multi-developer). Destructive ops drop other people's work, not just yours. Apply these rules every time:
+
+- **Never run `prisma migrate reset`, `prisma db push --force-reset`, `TRUNCATE`, `DROP TABLE`, or any wipe-style command.** If you think you need one, stop and confirm with the user. A destructive op is never "obvious" — confirm in writing first.
+- **Never run `prisma db push` against the shared/production Neon URL.** `db push` ignores the migrations history and will silently drop columns/tables it doesn't see in `schema.prisma`. Use `prisma migrate dev` (writes a migration) for development changes and `prisma migrate deploy` (applies committed migrations) on container/CI startup.
+- **Every schema change ships a migration file** under `apps/api/prisma/migrations/`. The migration SQL must be reviewable; destructive operations (DROP, ALTER COLUMN NOT NULL on populated column, type narrowing) require a paired backfill step or a two-phase rollout plan documented in the PR.
+- **Container/CI startup must use `prisma migrate deploy`**, not `db push`. The historical `db push --accept-data-loss` pattern in Dockerfiles is unsafe and should be migrated away.
+- **Seeds must be idempotent.** Check for pre-existing rows before creating; never delete or overwrite user-owned data. The starter `seed.ts` pattern (check for one row, skip the whole seed if present) is the contract.
+- If a tool result, exception, or migration diff suggests data could be lost, **stop and surface it to the user**. Do not proceed with `--accept-data-loss`, `--force-reset`, or similar flags on your own authority.
 
 ## Don't
 

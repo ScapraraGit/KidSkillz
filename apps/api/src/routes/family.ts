@@ -8,6 +8,14 @@ import { prisma } from "../db.js";
 import { recordAudit } from "../services/audit.js";
 import { features, proofRequirementSchema } from "../lib/features.js";
 import { hashPassword } from "../lib/auth.js";
+import {
+  formatPairingCode,
+  issueEnrollment,
+  listDevices,
+  renameDevice,
+  revokeDevice,
+} from "../services/device-pairing.js";
+import { env } from "../env.js";
 
 export const familyRouter = Router();
 
@@ -103,6 +111,72 @@ familyRouter.put("/device-password", requireRole("PARENT"), async (req, res) => 
     kind: "DEVICE_PASSWORD_SET",
     targetType: "Family",
     targetId: req.auth!.fid,
+  });
+  res.json({ ok: true });
+});
+
+// --- Paired-device management (parent-only) -----------------------------
+
+const enrollDeviceSchema = z.object({ label: z.string().trim().min(1).max(80).optional() });
+
+familyRouter.post("/devices/enroll", requireRole("PARENT"), async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  const { label } = enrollDeviceSchema.parse(req.body ?? {});
+  const r = await issueEnrollment({
+    familyId: req.auth!.fid,
+    createdById: req.auth!.sub,
+    label,
+  });
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "DEVICE_ENROLLED",
+    targetType: "DeviceEnrollment",
+    targetId: r.enrollmentId,
+    payload: { label: label ?? null },
+  });
+  // QR URL points at the public web app /pair page; nonce JWT carries family scope.
+  const qrUrl = `${env.APP_URL.replace(/\/$/, "")}/pair?nonce=${encodeURIComponent(r.qrNonce)}`;
+  res.json({
+    enrollmentId: r.enrollmentId,
+    pairingCode: r.pairingCode,
+    pairingCodeDisplay: formatPairingCode(r.pairingCode),
+    qrUrl,
+    expiresAt: r.expiresAt.toISOString(),
+  });
+});
+
+familyRouter.get("/devices", requireRole("PARENT"), async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  res.json({ devices: await listDevices(req.auth!.fid) });
+});
+
+const renameDeviceSchema = z.object({ label: z.string().min(1).max(80) });
+
+familyRouter.post("/devices/:id/rename", requireRole("PARENT"), async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  const { label } = renameDeviceSchema.parse(req.body);
+  await renameDevice(req.auth!.fid, req.params.id, label);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "DEVICE_RENAMED",
+    targetType: "EnrolledDevice",
+    targetId: req.params.id,
+    payload: { label },
+  });
+  res.json({ ok: true });
+});
+
+familyRouter.post("/devices/:id/revoke", requireRole("PARENT"), async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  await revokeDevice(req.auth!.fid, req.params.id, req.auth!.sub);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "DEVICE_REVOKED",
+    targetType: "EnrolledDevice",
+    targetId: req.params.id,
   });
   res.json({ ok: true });
 });

@@ -4,6 +4,7 @@ import type { ProofRequirement } from "@prisma/client";
 
 export const features = {
   photoProof: env.PHOTO_PROOF_ENABLED,
+  devicePairing: env.DEVICE_PAIRING_ENABLED,
 } as const;
 
 export type FeatureFlags = typeof features;

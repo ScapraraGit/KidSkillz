@@ -149,6 +149,48 @@ model Family {
   savingsGoals    ChildSavingsGoal[]
   legalAcceptances LegalAcceptance[] @relation("LegalAcceptanceFamily")
   auditEvents      AuditEvent[]
+  enrolledDevices    EnrolledDevice[]
+  deviceEnrollments  DeviceEnrollment[]
+}
+
+// Long-lived family-scoped credential held by a paired kid/caregiver device.
+// The device token itself never identifies a user — it only allows the device
+// to enumerate that family's kid profiles and submit PIN attempts scoped to
+// that family. User identity still comes from PIN + the resulting JWT.
+model EnrolledDevice {
+  id              String    @id @default(uuid())
+  familyId        String
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  label           String
+  // sha256(deviceToken). Raw token returned once at redeem time.
+  deviceTokenHash String    @unique
+  enrolledAt      DateTime?
+  lastSeenAt      DateTime?
+  revokedAt       DateTime?
+  revokedById     String?
+  createdById     String
+  createdAt       DateTime  @default(now())
+
+  @@index([familyId])
+}
+
+// Short-lived single-use pairing artifact. The parent UI displays an 8-char
+// pairingCode + a QR-encoded JWT (qrNonce); either can be redeemed to mint
+// an EnrolledDevice + raw deviceToken.
+model DeviceEnrollment {
+  id               String    @id @default(uuid())
+  familyId         String
+  family           Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  codeHash         String    @unique
+  nonceHash        String?   @unique
+  label            String?
+  expiresAt        DateTime
+  consumedAt       DateTime?
+  consumedDeviceId String?
+  createdById      String
+  createdAt        DateTime  @default(now())
+
+  @@index([familyId, expiresAt])
 }
 
 model AuditEvent {

@@ -17,6 +17,14 @@ You review Prisma schema diffs for ChoreChampz.
 6. **Unique constraints** for natural keys: e.g. `(taskId, childId, occurrenceDate)` for completions.
 7. **JSON columns** (recurrence, settings, scope) — flag if not paired with a Zod schema or TS type in `packages/shared`.
 8. **Migration file present?** If `schema.prisma` changed and `apps/api/prisma/migrations/` has no new dir, the change is using `db push` only — call it out, especially for prod-bound branches.
+9. **Destructive ops in the generated migration**. Scan the SQL for any of:
+   - `DROP TABLE`, `DROP COLUMN`, `DROP CONSTRAINT` (if it removes a UNIQUE on a populated column)
+   - `ALTER TABLE ... RENAME COLUMN` (data preserved but client code must move in lockstep)
+   - `ALTER COLUMN ... SET NOT NULL` on a column with rows but no backfill in the same migration
+   - `ALTER COLUMN ... TYPE` between incompatible types
+   - `TRUNCATE`, `DELETE FROM` without `WHERE`
+   Flag every instance as **HIGH** severity. Require: (a) a backfill SQL step in the same migration OR (b) a documented two-phase rollout (write to new column, dual-read, drop old in follow-up). Never accept silent destructive ops.
+10. **`db push --accept-data-loss` in Dockerfiles, scripts, or CI**. If a diff introduces or keeps that pattern alongside non-empty `migrations/`, flag as **HIGH** — production startup must use `prisma migrate deploy`, never `db push`. `db push` is a dev-loop tool only.
 
 ## Output
 

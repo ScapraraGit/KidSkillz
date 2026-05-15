@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 import { Button, Card, Field, inputCls } from "../components/ui";
 import { KidAvatar } from "../components/KidAvatar";
 import { Turnstile, turnstileEnabled } from "../components/Turnstile";
+import { clearDeviceSession, getDeviceSession } from "../lib/deviceToken";
+import { useEffect } from "react";
 import {
   CURRENT_TERMS_VERSION,
   type AuthUserDTO,
@@ -398,6 +400,40 @@ function ChildLogin() {
   const [familyPassword, setFamilyPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasDevice, setHasDevice] = useState<boolean>(() => !!getDeviceSession());
+
+  // On a paired device we can skip family lookup entirely — fetch the kid roster
+  // for the device's family and render the profile picker straight away.
+  useEffect(() => {
+    if (!hasDevice || picked) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api<{
+          familyId: string;
+          kids: { id: string; name: string; avatarColor: string; avatarConfig?: AvatarConfig | null }[];
+        }>(`/auth/device/profiles`);
+        if (cancelled) return;
+        // Shape into the existing FamilyLookup envelope so downstream UI is unchanged.
+        const settings = { childAuthMode: "INDIVIDUAL" } as unknown as FamilySettings;
+        setPicked({
+          id: r.familyId,
+          name: getDeviceSession()?.label ?? "This device",
+          settings,
+          users: r.kids,
+        });
+      } catch (e: any) {
+        if (e?.status === 401) {
+          clearDeviceSession();
+          setHasDevice(false);
+          nav("/pair");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasDevice, picked, nav]);
 
   const lookup = async () => {
     setErr(null);
@@ -450,6 +486,16 @@ function ChildLogin() {
             </div>
           </Field>
           <Turnstile onVerify={setLookupTurnstile} />
+          <div className="text-center text-xs text-slate-500 pt-1">
+            Have a pairing code from a parent?{" "}
+            <button
+              type="button"
+              className="text-brand-600 hover:underline"
+              onClick={() => nav("/pair")}
+            >
+              Pair this device
+            </button>
+          </div>
         </>
       )}
 

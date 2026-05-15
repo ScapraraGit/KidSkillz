@@ -21,6 +21,9 @@ import { assertPinNotLocked, recordPinAttempt } from "../services/child-auth.js"
 import { recordAudit } from "../services/audit.js";
 import { lookupRateLimiter } from "../middleware/lookup-rate-limit.js";
 import { requireTurnstile } from "../middleware/turnstile.js";
+import { requireDeviceToken } from "../middleware/device.js";
+import { redeemEnrollment } from "../services/device-pairing.js";
+import { env } from "../env.js";
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -180,6 +183,55 @@ authRouter.post("/child/login", async (req, res) => {
   res.json({ token, user: serializeUser(child) });
 });
 
+// --- Device pairing ----------------------------------------------------
+
+const redeemSchema = z
+  .object({
+    pairingCode: z.string().trim().min(1).max(20).optional(),
+    qrNonce: z.string().min(20).max(2000).optional(),
+  })
+  .refine((v) => v.pairingCode || v.qrNonce, {
+    message: "Provide pairingCode or qrNonce",
+  });
+
+// Unauth — rate-limited + Turnstile-gated. Returns the raw deviceToken once.
+authRouter.post(
+  "/devices/redeem",
+  lookupRateLimiter,
+  requireTurnstile,
+  async (req, res) => {
+    if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+    const input = redeemSchema.parse(req.body);
+    const r = await redeemEnrollment(input);
+    await recordAudit({
+      familyId: r.familyId,
+      actorId: null,
+      kind: "DEVICE_REDEEMED",
+      targetType: "EnrolledDevice",
+      targetId: r.deviceId,
+      payload: { label: r.label },
+    });
+    res.json({
+      deviceToken: r.deviceToken,
+      deviceId: r.deviceId,
+      familyId: r.familyId,
+      label: r.label,
+    });
+  },
+);
+
+// Device-scoped: lists kid profiles for the device's family. No JWT needed —
+// the device token IS the family-scope credential.
+authRouter.get("/device/profiles", requireDeviceToken, async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  const kids = await prisma.user.findMany({
+    where: { familyId: req.device!.familyId, role: "CHILD", isActive: true },
+    select: { id: true, name: true, avatarColor: true, avatarConfig: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({ familyId: req.device!.familyId, kids });
+});
+
 const familyLookupSchema = z.object({
   name: z.string().trim().min(2).max(80),
   familyCode: z
@@ -229,7 +281,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     user: serializeUser(user),
     settings,
     needsOnboarding: user.onboardedAt == null,
-    features: { photoProof: features.photoProof },
+    features: { photoProof: features.photoProof, devicePairing: features.devicePairing },
   });
 });
 

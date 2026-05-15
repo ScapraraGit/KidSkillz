@@ -20,4 +20,8 @@ WORKDIR /app/apps/api
 RUN pnpm prisma generate
 
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm prisma db push --skip-generate --accept-data-loss && pnpm seed && pnpm start"]
+# `migrate deploy` only applies committed migrations from prisma/migrations/. It
+# never drops columns or tables on its own — unlike `db push --accept-data-loss`,
+# which silently destructively syncs the DB to schema.prisma. Seed is idempotent
+# (checks for The Caprara Family) so re-running on every boot is safe.
+CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm seed && pnpm start"]

@@ -29,6 +29,7 @@ import {
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
+import { Pair } from "./pages/Pair";
 
 export default function App() {
   const { token, user } = useAuth();
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/pair" element={<Pair />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

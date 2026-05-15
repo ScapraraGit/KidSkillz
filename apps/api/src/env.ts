@@ -28,4 +28,8 @@ export const env = {
   PHOTO_PROOF_ENABLED: (process.env.PHOTO_PROOF_ENABLED ?? "false").toLowerCase() === "true",
   // Cloudflare Turnstile secret for the siteverify call. Unset = fail-open (dev/local).
   TURNSTILE_SECRET: process.env.TURNSTILE_SECRET ?? "",
+  // Gates the device-pairing endpoints + middleware. Off by default until the
+  // web /pair page + Settings devices card ship in the follow-up PR.
+  DEVICE_PAIRING_ENABLED:
+    (process.env.DEVICE_PAIRING_ENABLED ?? "false").toLowerCase() === "true",
 };

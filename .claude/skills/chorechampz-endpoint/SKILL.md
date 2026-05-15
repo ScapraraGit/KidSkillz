@@ -94,3 +94,4 @@ If the response shape is consumed by the web app, add a DTO to [packages/shared/
 - [ ] At least one `it.todo` or real test added.
 - [ ] Router wired in `index.ts`.
 - [ ] If endpoint is consumed by new UI: every new button/control has a `<Tooltip>` (see `chorechampz-web-feature`).
+- [ ] If the endpoint reads any new env var (via `apps/api/src/env.ts` or `import.meta.env.VITE_*`): `.env.example` has a matching commented entry in the same change. No exceptions.

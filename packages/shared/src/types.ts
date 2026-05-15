@@ -184,6 +184,8 @@ export type LegalAcceptanceKind = "TERMS" | "PRIVACY" | "CHILD_PROFILE_CONSENT" 
 export interface FeatureFlagsDTO {
   /** Whether photo proof on tasks is currently available end-to-end. When false, web hides PHOTO_* options and API rejects them. */
   photoProof: boolean;
+  /** Whether device pairing is enabled. When true, kid login requires a paired device; familyCode/family-password flow is hidden. */
+  devicePairing: boolean;
 }
 
 export interface MeResponseDTO {

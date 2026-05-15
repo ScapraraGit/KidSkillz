@@ -1,4 +1,5 @@
 import { useAuth } from "../store/auth";
+import { getDeviceToken } from "./deviceToken";
 
 export const API_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:4000";
 
@@ -29,6 +30,8 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
   const token = useAuth.getState().token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  const deviceToken = getDeviceToken();
+  if (deviceToken) headers["x-device-token"] = deviceToken;
   let body: BodyInit | undefined;
   if (opts.formData) {
     body = opts.formData;

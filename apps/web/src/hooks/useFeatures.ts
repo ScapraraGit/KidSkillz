@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 
 const DEFAULTS: FeatureFlagsDTO = {
   photoProof: false,
+  devicePairing: false,
 };
 
 // Reads feature flags off the cached /auth/me response. AppLayout primes the

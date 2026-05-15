@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { postAdjustment } from "../services/adjustments.js";
 import { recordAudit } from "../services/audit.js";
 
@@ -17,7 +18,7 @@ const schema = z.object({
   reason: z.string().min(1).max(500),
 });
 
-adjustmentsRouter.post("/", async (req, res) => {
+adjustmentsRouter.post("/", idempotency, async (req, res) => {
   const input = schema.parse(req.body);
   const entry = await postAdjustment({
     familyId: req.auth!.fid,

@@ -5,6 +5,7 @@ import { useAuth } from "../store/auth";
 import { Link } from "react-router-dom";
 import { Button, Card, Field, inputCls } from "../components/ui";
 import { KidAvatar } from "../components/KidAvatar";
+import { Turnstile, turnstileEnabled } from "../components/Turnstile";
 import {
   CURRENT_TERMS_VERSION,
   type AuthUserDTO,
@@ -143,6 +144,7 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
   const [acceptedNoCash, setAcceptedNoCash] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const allAccepted = acceptedTerms && acceptedGuardian && acceptedNotService && acceptedNoCash;
 
   return (
@@ -166,10 +168,21 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           setErr("Please review and confirm each acknowledgement to continue.");
           return;
         }
+        if (turnstileEnabled() && !turnstileToken) {
+          setErr("Please complete the CAPTCHA");
+          return;
+        }
         setLoading(true);
         try {
           const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/register", {
-            body: { familyName, parentName, email, password, acceptedTermsVersion: CURRENT_TERMS_VERSION },
+            body: {
+              familyName,
+              parentName,
+              email,
+              password,
+              acceptedTermsVersion: CURRENT_TERMS_VERSION,
+              ...(turnstileToken && { "cf-turnstile-response": turnstileToken }),
+            },
           });
           setSession(r.token, r.user);
           const me = await api<{ settings: FamilySettings }>("/auth/me");
@@ -350,6 +363,7 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           </span>
         </label>
       </div>
+      <Turnstile onVerify={setTurnstileToken} />
       {err && <div className="text-sm text-rose-600">{err}</div>}
       <Button type="submit" className="w-full" disabled={loading || !allAccepted}>
         {loading ? "Creating family..." : "Create family"}
@@ -375,8 +389,9 @@ function ChildLogin() {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
   const nav = useNavigate();
-  const [familyName, setFamilyName] = useState("Caprara");
-  const [families, setFamilies] = useState<FamilyLookup[]>([]);
+  const [familyName, setFamilyName] = useState("");
+  const [familyCode, setFamilyCode] = useState("");
+  const [lookupTurnstile, setLookupTurnstile] = useState<string | null>(null);
   const [picked, setPicked] = useState<FamilyLookup | null>(null);
   const [childId, setChildId] = useState<string | null>(null);
   const [pin, setPin] = useState("");
@@ -387,11 +402,19 @@ function ChildLogin() {
   const lookup = async () => {
     setErr(null);
     try {
-      const r = await api<{ families: FamilyLookup[] }>(
-        `/auth/families/lookup?name=${encodeURIComponent(familyName)}`,
-      );
-      setFamilies(r.families);
-      if (r.families.length === 1) setPicked(r.families[0]);
+      if (turnstileEnabled() && !lookupTurnstile) {
+        setErr("Please complete the CAPTCHA");
+        return;
+      }
+      const r = await api<{ family: FamilyLookup }>(`/auth/families/lookup`, {
+        method: "POST",
+        body: {
+          name: familyName,
+          familyCode: familyCode.toUpperCase(),
+          ...(lookupTurnstile && { "cf-turnstile-response": lookupTurnstile }),
+        },
+      });
+      setPicked(r.family);
     } catch (e: any) {
       setErr(e.message);
     }
@@ -404,31 +427,29 @@ function ChildLogin() {
     <div className="space-y-3">
       {!picked && (
         <>
-          <Field label="Family">
+          <Field label="Family name">
+            <input
+              className={inputCls}
+              placeholder="Family name"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+            />
+          </Field>
+          <Field label="Family code">
             <div className="flex gap-2">
               <input
                 className={inputCls}
-                placeholder="Family name"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
+                placeholder="6-char code"
+                maxLength={6}
+                value={familyCode}
+                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
               />
               <Button variant="secondary" onClick={lookup} type="button">
                 Find
               </Button>
             </div>
           </Field>
-          {families.map((f) => (
-            <button
-              key={f.id}
-              className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50"
-              onClick={() => setPicked(f)}
-            >
-              <div className="font-medium">{f.name}</div>
-              <div className="text-xs text-slate-500">
-                {f.users.length} kid{f.users.length === 1 ? "" : "s"}
-              </div>
-            </button>
-          ))}
+          <Turnstile onVerify={setLookupTurnstile} />
         </>
       )}
 

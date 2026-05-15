@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireParentOrCaregiver } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import {
   approveRedemption,
   listRedemptions,
@@ -39,6 +40,7 @@ const reviewSchema = z.object({ reason: z.string().max(500).optional() });
 redemptionsRouter.post(
   "/:id/approve",
   requireParentOrCaregiver("canApproveRedemptions"),
+  idempotency,
   async (req, res) => {
     const r = await approveRedemption(req.auth!.fid, req.params.id, req.auth!.sub);
     res.json({ redemption: serializeRedemption(r) });

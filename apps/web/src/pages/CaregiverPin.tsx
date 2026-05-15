@@ -15,7 +15,7 @@ export function CaregiverPin() {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
   const [familyName, setFamilyName] = useState("");
-  const [families, setFamilies] = useState<FamilyLookup[]>([]);
+  const [familyCode, setFamilyCode] = useState("");
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
@@ -25,11 +25,11 @@ export function CaregiverPin() {
   const lookup = async () => {
     setErr(null);
     try {
-      const r = await api<{ families: FamilyLookup[] }>(
-        `/auth/families/lookup?name=${encodeURIComponent(familyName)}`,
-      );
-      setFamilies(r.families);
-      if (r.families.length === 1) setFamilyId(r.families[0].id);
+      const r = await api<{ family: FamilyLookup }>(`/auth/families/lookup`, {
+        method: "POST",
+        body: { name: familyName, familyCode: familyCode.toUpperCase() },
+      });
+      setFamilyId(r.family.id);
     } catch (e: any) {
       setErr(e.message);
     }
@@ -47,26 +47,28 @@ export function CaregiverPin() {
           {!familyId ? (
             <>
               <Field label="Family name">
+                <input
+                  className={inputCls}
+                  placeholder="Family name"
+                  value={familyName}
+                  onChange={(e) => setFamilyName(e.target.value)}
+                />
+              </Field>
+              <Field label="Family code">
                 <div className="flex gap-2">
                   <input
                     className={inputCls}
-                    value={familyName}
-                    onChange={(e) => setFamilyName(e.target.value)}
+                    maxLength={6}
+                    value={familyCode}
+                    onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                    placeholder="6-char code"
                   />
                   <Button type="button" variant="secondary" onClick={lookup}>
                     Find
                   </Button>
                 </div>
               </Field>
-              {families.map((f) => (
-                <button
-                  key={f.id}
-                  className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50"
-                  onClick={() => setFamilyId(f.id)}
-                >
-                  <div className="font-medium">{f.name}</div>
-                </button>
-              ))}
+              {err && <div className="text-sm text-rose-600">{err}</div>}
             </>
           ) : (
             <form

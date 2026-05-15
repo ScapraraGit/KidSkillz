@@ -15,7 +15,22 @@ export function ParentSettings() {
   const features = useFeatures();
   const familyQ = useQuery({
     queryKey: ["family"],
-    queryFn: () => api<{ id: string; name: string; settings: FamilySettings }>("/family"),
+    queryFn: () =>
+      api<{ id: string; name: string; familyCode: string | null; settings: FamilySettings }>(
+        "/family",
+      ),
+  });
+
+  const [devicePassword, setDevicePassword] = useState("");
+  const [devicePwMsg, setDevicePwMsg] = useState<string | null>(null);
+  const saveDevicePw = useMutation({
+    mutationFn: (password: string) =>
+      api<{ ok: true }>("/family/device-password", { method: "PUT", body: { password } }),
+    onSuccess: () => {
+      setDevicePwMsg("Saved.");
+      setDevicePassword("");
+    },
+    onError: (e: any) => setDevicePwMsg(e?.message ?? "Failed to save"),
   });
 
   const [s, setS] = useState<FamilySettings | null>(null);
@@ -63,6 +78,40 @@ export function ParentSettings() {
             <option value="SHARED_DEVICE">Shared device — family password unlocks profile picker</option>
           </select>
         </Field>
+        {familyQ.data?.familyCode && (
+          <Field label="Family code (share with kids on shared devices)">
+            <input
+              className={inputCls}
+              placeholder="Family code"
+              value={familyQ.data.familyCode}
+              readOnly
+              onFocus={(e) => e.currentTarget.select()}
+            />
+          </Field>
+        )}
+        {s.childAuthMode === "SHARED_DEVICE" && (
+          <Field label="Shared-device password (separate from parent passwords)">
+            <div className="flex gap-2">
+              <input
+                className={inputCls}
+                type="password"
+                placeholder="Min 8 characters"
+                minLength={8}
+                value={devicePassword}
+                onChange={(e) => setDevicePassword(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={devicePassword.length < 8 || saveDevicePw.isPending}
+                onClick={() => saveDevicePw.mutate(devicePassword)}
+              >
+                {saveDevicePw.isPending ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            {devicePwMsg && <div className="text-xs text-slate-500 mt-1">{devicePwMsg}</div>}
+          </Field>
+        )}
       </Card>
 
       <Card className="space-y-4">

@@ -16,6 +16,8 @@
     "jobs:photo-purge:ci": "tsx prisma/run-photo-purge.ts",
     "jobs:penalty-sweep": "dotenv -e ../../.env -- tsx prisma/run-penalty-sweep.ts",
     "jobs:penalty-sweep:ci": "tsx prisma/run-penalty-sweep.ts",
+    "jobs:ledger-recon": "dotenv -e ../../.env -- tsx prisma/run-ledger-recon.ts",
+    "jobs:ledger-recon:ci": "tsx prisma/run-ledger-recon.ts",
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest",

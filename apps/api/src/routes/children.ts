@@ -9,6 +9,7 @@ import { clientIpFrom, recordLegalAcceptance, userAgentFrom } from "../services/
 import { CURRENT_TERMS_VERSION } from "@chorechampz/shared";
 import { recordAudit } from "../services/audit.js";
 import { proofRequirementSchema } from "../lib/features.js";
+import { unlockChildPin } from "../services/child-auth.js";
 
 const stringArray = z.array(z.string().max(40)).max(40);
 
@@ -151,6 +152,20 @@ childrenRouter.get("/:id/stats", async (req, res) => {
   if (req.auth!.role === "CHILD" && req.auth!.sub !== req.params.id) throw HttpError.forbidden();
   await getChild(req.auth!.fid, req.params.id); // family scope guard
   res.json({ stats: await childStats(req.auth!.fid, req.params.id) });
+});
+
+childrenRouter.post("/:id/unlock-pin", requireRole("PARENT"), async (req, res) => {
+  // family-scope guard
+  await getChild(req.auth!.fid, req.params.id);
+  await unlockChildPin(req.params.id);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "CHILD_PIN_UNLOCKED",
+    targetType: "User",
+    targetId: req.params.id,
+  });
+  res.json({ ok: true });
 });
 
 childrenRouter.get("/:id/level", async (req, res) => {

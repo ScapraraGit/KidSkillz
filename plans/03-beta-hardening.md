@@ -8,7 +8,7 @@ Effort: **S** <1d · **M** 1–3d · **L** >3d.
 
 ## P0 — Ship before any external beta user
 
-### 1. Per-child PIN lockout — **S**
+### 1. Per-child PIN lockout — **S** — ✅ Done 2026-05-14
 
 Threat: 4-digit PIN = 10k space; IP rate limiter useless on shared NAT or shared device.
 
@@ -20,7 +20,7 @@ Threat: 4-digit PIN = 10k space; IP rate limiter useless on shared NAT or shared
 - Parent UI: "Unlock PIN" button on Edit Child modal — clears lock + counter. Audit-log it.
 - Tests: pure-function `evaluatePinAttempt(state, ok, now)` → next state.
 
-### 2. Shared-device login bcrypt amplification — **S**
+### 2. Shared-device login bcrypt amplification — **S** — ✅ Done 2026-05-14
 
 [apps/api/src/routes/auth.ts:134-143](apps/api/src/routes/auth.ts#L134-L143) iterates every parent's bcrypt. N bcrypts/req = DoS + parent-count timing leak.
 
@@ -29,7 +29,7 @@ Threat: 4-digit PIN = 10k space; IP rate limiter useless on shared NAT or shared
 - Login: compare once vs `devicePasswordHash`. Migrate existing families: first parent password copied on first SHARED_DEVICE login, prompt parent to set explicit device pw.
 - Tests: route returns 401 in constant bcrypts regardless of parent count.
 
-### 3. `/families/lookup` enumeration — **S**
+### 3. `/families/lookup` enumeration — **S** — ✅ Done 2026-05-14
 
 Unauth partial-match leaks family + kid names globally.
 
@@ -48,14 +48,14 @@ Unauth partial-match leaks family + kid names globally.
 - Storage layer: store keys as `fam_<familyId>/<uuid>.<ext>`. Migration backfills existing keys + DB references.
 - Tests: spoofed `.png` containing PHP → 400; cross-family key fetch → 404.
 
-### 5. CAPTCHA / Turnstile on unauth endpoints — **S**
+### 5. CAPTCHA / Turnstile on unauth endpoints — **S** — ✅ Done 2026-05-14
 
 Targets: `/auth/parent/register`, `/auth/forgot-password`, `/auth/families/lookup` (after #3).
 
 - Cloudflare Turnstile (free, no PII). `TURNSTILE_SECRET` env, `VITE_TURNSTILE_SITEKEY`.
 - Middleware `requireTurnstile` POSTs `cf-turnstile-response` body field to siteverify. Fail-open if env unset (dev).
 
-### 6. Ledger idempotency — **S**
+### 6. Ledger idempotency — **S** — ✅ Done 2026-05-14
 
 Double-tap on flaky mobile = double credit.
 
@@ -63,7 +63,7 @@ Double-tap on flaky mobile = double credit.
 - Middleware `apps/api/src/middleware/idempotency.ts`: `IdempotencyKey` table `(key, familyId, route, responseJson, createdAt)` unique on `(familyId, key)`. Cache 24h. Return cached response on hit.
 - Apply to: `POST /completions/:id/approve`, `/completions/bulk-approve`, `/redemptions/:id/approve`, `/adjustments`.
 
-### 7. Nightly ledger reconciliation — **S**
+### 7. Nightly ledger reconciliation — **S** — ✅ Done 2026-05-14
 
 - Job `apps/api/prisma/run-ledger-recon.ts`: per child, assert `SUM(amount) >= 0` (unless `family.allowNegativeBalance`). Alert via Sentry `captureMessage` on drift.
 - Wire into [.github/workflows/nightly-jobs.yml](.github/workflows/nightly-jobs.yml).

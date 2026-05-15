@@ -22,6 +22,7 @@ on:
           - all
           - penalty-sweep
           - photo-purge
+          - ledger-recon
 
 concurrency:
   group: nightly-jobs
@@ -35,6 +36,7 @@ jobs:
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
     steps:
       - name: Checkout
@@ -64,3 +66,7 @@ jobs:
       - name: Photo purge
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'photo-purge' }}
         run: pnpm --filter @chorechampz/api jobs:photo-purge:ci
+
+      - name: Ledger reconciliation
+        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'ledger-recon' }}
+        run: pnpm --filter @chorechampz/api jobs:ledger-recon:ci

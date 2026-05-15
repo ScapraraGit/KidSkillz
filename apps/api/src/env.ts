@@ -26,4 +26,6 @@ export const env = {
   // surfaced anywhere are NONE / NOTES_OPTIONAL / NOTES_REQUIRED. Flip to "true"
   // when S3 + the photo-retention cron are both deployed.
   PHOTO_PROOF_ENABLED: (process.env.PHOTO_PROOF_ENABLED ?? "false").toLowerCase() === "true",
+  // Cloudflare Turnstile secret for the siteverify call. Unset = fail-open (dev/local).
+  TURNSTILE_SECRET: process.env.TURNSTILE_SECRET ?? "",
 };

@@ -1,6 +1,44 @@
+import { randomBytes } from "node:crypto";
 import { prisma } from "../db.js";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechampz/shared";
 import { HttpError } from "../errors.js";
+
+// 6-char alphanumeric, ambiguous chars (0/O/1/I/L) removed for verbal sharing.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+export function generateFamilyCode(): string {
+  const bytes = randomBytes(6);
+  let out = "";
+  for (let i = 0; i < 6; i++) out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  return out;
+}
+
+/**
+ * Ensures the family has a familyCode, generating one on demand with retry on
+ * the rare unique-collision. Returns the resulting code.
+ */
+export async function ensureFamilyCode(familyId: string): Promise<string> {
+  const fam = await prisma.family.findUnique({
+    where: { id: familyId },
+    select: { familyCode: true },
+  });
+  if (!fam) throw HttpError.notFound("Family not found");
+  if (fam.familyCode) return fam.familyCode;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateFamilyCode();
+    try {
+      const updated = await prisma.family.update({
+        where: { id: familyId },
+        data: { familyCode: code },
+        select: { familyCode: true },
+      });
+      return updated.familyCode!;
+    } catch (e: any) {
+      if (e?.code !== "P2002") throw e; // not a unique-violation
+    }
+  }
+  throw HttpError.serviceUnavailable("Failed to allocate family code");
+}
 
 export async function getFamily(familyId: string) {
   const family = await prisma.family.findUnique({ where: { id: familyId } });

@@ -124,6 +124,12 @@ model Family {
   id        String   @id @default(uuid())
   name      String
   settings  Json
+  // 6-char alphanumeric code parents share verbally for SHARED_DEVICE family lookup.
+  // Unique across all families. Null only on legacy rows pending backfill.
+  familyCode          String?  @unique
+  // bcrypt hash of the shared-device password (distinct from any parent password).
+  // Required when childAuthMode = SHARED_DEVICE. Null during migration window.
+  devicePasswordHash  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -169,6 +175,8 @@ model User {
   email        String?  @unique
   passwordHash String?
   pin          String?  // 4-digit, child individual mode
+  failedPinAttempts Int       @default(0)
+  pinLockedUntil    DateTime?
   avatarColor  String   @default("#6366f1")
   avatarConfig Json?
   isActive     Boolean  @default(true)
@@ -553,6 +561,22 @@ enum LegalAcceptanceKind {
   PRIVACY
   CHILD_PROFILE_CONSENT
   UPLOAD_ACK
+}
+
+// Replay-protection cache for ledger-affecting mutations. Clients send
+// `Idempotency-Key: <uuid>` on approve/redeem/adjust; the middleware caches the
+// first response and serves it on subsequent hits with the same key for 24h.
+model IdempotencyKey {
+  id            String   @id @default(uuid())
+  familyId      String
+  key           String
+  route         String
+  statusCode    Int
+  responseJson  Json
+  createdAt     DateTime @default(now())
+
+  @@unique([familyId, key])
+  @@index([createdAt])
 }
 
 // Append-only audit log of every legal/consent acceptance event.

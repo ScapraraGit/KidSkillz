@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { Button, Card, Field, inputCls } from "../components/ui";
+import { Turnstile, turnstileEnabled } from "../components/Turnstile";
 
 export function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4">
@@ -35,7 +37,17 @@ export function ForgotPassword() {
                 setErr(null);
                 setLoading(true);
                 try {
-                  await api("/auth/forgot-password", { body: { email } });
+                  if (turnstileEnabled() && !turnstileToken) {
+                    setErr("Please complete the CAPTCHA");
+                    setLoading(false);
+                    return;
+                  }
+                  await api("/auth/forgot-password", {
+                    body: {
+                      email,
+                      ...(turnstileToken && { "cf-turnstile-response": turnstileToken }),
+                    },
+                  });
                   setSent(true);
                 } catch (e: any) {
                   setErr(e.message ?? "Could not send reset email");
@@ -53,6 +65,7 @@ export function ForgotPassword() {
                   required
                 />
               </Field>
+              <Turnstile onVerify={setTurnstileToken} />
               {err && <div className="text-sm text-rose-600">{err}</div>}
               <Button type="submit" className="w-full" disabled={loading || !email}>
                 {loading ? "Sending…" : "Send reset link"}

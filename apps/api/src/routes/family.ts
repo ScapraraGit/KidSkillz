@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { getFamily, getFamilySettings, updateSettings } from "../services/family.js";
+import { ensureFamilyCode, getFamily, getFamilySettings, updateSettings } from "../services/family.js";
 import { deleteFamily, exportFamily } from "../services/data-export.js";
 import { HttpError } from "../errors.js";
 import { prisma } from "../db.js";
 import { recordAudit } from "../services/audit.js";
 import { features, proofRequirementSchema } from "../lib/features.js";
+import { hashPassword } from "../lib/auth.js";
 
 export const familyRouter = Router();
 
@@ -15,7 +16,11 @@ familyRouter.use(requireAuth);
 familyRouter.get("/", async (req, res) => {
   const fam = await getFamily(req.auth!.fid);
   const settings = await getFamilySettings(fam.id);
-  res.json({ id: fam.id, name: fam.name, settings });
+  // Lazily backfill familyCode for parents so the Settings page always has one
+  // to show. Children/caregivers never see the code, so only auto-allocate for parents.
+  const familyCode =
+    req.auth!.role === "PARENT" ? await ensureFamilyCode(fam.id) : fam.familyCode;
+  res.json({ id: fam.id, name: fam.name, familyCode: familyCode ?? null, settings });
 });
 
 familyRouter.get("/members", requireRole("PARENT"), async (req, res) => {
@@ -81,6 +86,25 @@ familyRouter.patch("/settings", requireRole("PARENT"), async (req, res) => {
     payload: { keys: Object.keys(patch) },
   });
   res.json({ settings });
+});
+
+const devicePasswordSchema = z.object({ password: z.string().min(8).max(128) });
+
+familyRouter.put("/device-password", requireRole("PARENT"), async (req, res) => {
+  const { password } = devicePasswordSchema.parse(req.body);
+  const hash = await hashPassword(password);
+  await prisma.family.update({
+    where: { id: req.auth!.fid },
+    data: { devicePasswordHash: hash },
+  });
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "DEVICE_PASSWORD_SET",
+    targetType: "Family",
+    targetId: req.auth!.fid,
+  });
+  res.json({ ok: true });
 });
 
 familyRouter.get("/export", requireRole("PARENT"), async (req, res) => {

@@ -17,6 +17,10 @@ import {
   issueVerificationEmail,
 } from "../services/auth-tokens.js";
 import { avatarConfigSchema } from "./children.js";
+import { assertPinNotLocked, recordPinAttempt } from "../services/child-auth.js";
+import { recordAudit } from "../services/audit.js";
+import { lookupRateLimiter } from "../middleware/lookup-rate-limit.js";
+import { requireTurnstile } from "../middleware/turnstile.js";
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -35,7 +39,7 @@ const parentRegisterSchema = z.object({
   acceptedTermsVersion: z.number().int().positive(),
 });
 
-authRouter.post("/parent/register", async (req, res) => {
+authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
   const { familyName, parentName, email, password, acceptedTermsVersion } = parentRegisterSchema.parse(
     req.body,
   );
@@ -128,35 +132,70 @@ authRouter.post("/child/login", async (req, res) => {
   const settings = await getFamilySettings(child.familyId);
 
   if (settings.childAuthMode === "INDIVIDUAL") {
-    if (!pin || child.pin !== pin) throw HttpError.unauthorized("Invalid PIN");
-  } else {
-    // SHARED_DEVICE: any parent's password unlocks the device + child profile pick
-    if (!familyPassword) throw HttpError.unauthorized("Family password required");
-    const parents = await prisma.user.findMany({
-      where: { familyId: child.familyId, role: "PARENT", isActive: true },
-    });
-    let ok = false;
-    for (const p of parents) {
-      if (p.passwordHash && (await comparePassword(familyPassword, p.passwordHash))) {
-        ok = true;
-        break;
+    await assertPinNotLocked(child.id);
+    const ok = !!pin && child.pin === pin;
+    const next = await recordPinAttempt(child.id, ok);
+    if (!ok) {
+      if (next.locked) {
+        const seconds = Math.ceil(
+          ((next.pinLockedUntil?.getTime() ?? 0) - Date.now()) / 1000,
+        );
+        throw HttpError.unauthorized(`Too many attempts. Locked for ${seconds}s.`);
       }
+      throw HttpError.unauthorized("Invalid PIN");
     }
-    if (!ok) throw HttpError.unauthorized("Invalid family password");
+  } else {
+    // SHARED_DEVICE: single device-password hash on the family. Constant bcrypt
+    // cost regardless of parent count, no parent-count timing leak.
+    if (!familyPassword) throw HttpError.unauthorized("Family password required");
+    let deviceHash = child.family.devicePasswordHash;
+    if (!deviceHash) {
+      // Migration: fall back to any parent password ONCE so existing families don't
+      // brick at boot. On the first successful match we copy the hash up to
+      // Family.devicePasswordHash and prompt parents to set an explicit one.
+      const parents = await prisma.user.findMany({
+        where: { familyId: child.familyId, role: "PARENT", isActive: true },
+        select: { passwordHash: true },
+      });
+      let migrated: string | null = null;
+      for (const p of parents) {
+        if (p.passwordHash && (await comparePassword(familyPassword, p.passwordHash))) {
+          migrated = p.passwordHash;
+          break;
+        }
+      }
+      if (!migrated) throw HttpError.unauthorized("Invalid family password");
+      await prisma.family.update({
+        where: { id: child.familyId },
+        data: { devicePasswordHash: migrated },
+      });
+      deviceHash = migrated;
+    } else {
+      const ok = await comparePassword(familyPassword, deviceHash);
+      if (!ok) throw HttpError.unauthorized("Invalid family password");
+    }
   }
 
   const token = signToken({ sub: child.id, fid: child.familyId, role: child.role });
   res.json({ token, user: serializeUser(child) });
 });
 
-authRouter.get("/families/lookup", async (req, res) => {
-  // For shared-device login screen: list children for a known family.
-  // In a real app this would be gated by the device having been unlocked.
-  // POC: list non-sensitive child profiles by family name for the demo seed.
-  const name = (req.query.name as string | undefined)?.trim();
-  if (!name) return res.json({ families: [] });
-  const families = await prisma.family.findMany({
-    where: { name: { contains: name, mode: "insensitive" } },
+const familyLookupSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  familyCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{6}$/, "familyCode must be 6 alphanumeric characters"),
+});
+
+// Exact-match lookup for shared-device login. Returning the family + child list
+// requires both the family display name AND the 6-char familyCode the parent
+// shares verbally. Avoids the partial-match enumeration leak the old endpoint had.
+authRouter.post("/families/lookup", lookupRateLimiter, requireTurnstile, async (req, res) => {
+  const { name, familyCode } = familyLookupSchema.parse(req.body);
+  const family = await prisma.family.findFirst({
+    where: { familyCode, name: { equals: name, mode: "insensitive" } },
     select: {
       id: true,
       name: true,
@@ -167,7 +206,19 @@ authRouter.get("/families/lookup", async (req, res) => {
       },
     },
   });
-  res.json({ families });
+  if (!family) {
+    // Generic response: never reveal which of name/code was wrong.
+    return res.status(404).json({ error: "NOT_FOUND", message: "No matching family" });
+  }
+  await recordAudit({
+    familyId: family.id,
+    actorId: null,
+    kind: "FAMILY_LOOKUP_HIT",
+    targetType: "Family",
+    targetId: family.id,
+    payload: { ip: clientIpFrom(req) },
+  });
+  res.json({ family });
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
@@ -232,7 +283,7 @@ authRouter.post("/verify-email/resend", requireAuth, async (req, res) => {
 
 const forgotSchema = z.object({ email: z.string().email() });
 
-authRouter.post("/forgot-password", async (req, res) => {
+authRouter.post("/forgot-password", requireTurnstile, async (req, res) => {
   const { email } = forgotSchema.parse(req.body);
   await issuePasswordReset(email);
   // Always 200, no enumeration leak.

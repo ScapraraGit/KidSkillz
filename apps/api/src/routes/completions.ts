@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import {
   approveCompletion,
   listCompletions,
@@ -50,7 +51,7 @@ const reviewSchema = z.object({
   parentNote: z.string().max(280).optional(),
 });
 
-completionsRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) => {
+completionsRouter.post("/:id/approve", requireRole("PARENT"), idempotency, async (req, res) => {
   const { creditOverride, parentNote } = reviewSchema.parse(req.body ?? {});
   const c = await approveCompletion(req.auth!.fid, req.params.id, req.auth!.sub, creditOverride, parentNote);
   res.json({ completion: serializeCompletion(c) });
@@ -58,7 +59,7 @@ completionsRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) =
 
 const bulkApproveSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(100) });
 
-completionsRouter.post("/bulk-approve", requireRole("PARENT"), async (req, res) => {
+completionsRouter.post("/bulk-approve", requireRole("PARENT"), idempotency, async (req, res) => {
   const { ids } = bulkApproveSchema.parse(req.body);
   const results = await Promise.allSettled(
     ids.map((id) => approveCompletion(req.auth!.fid, id, req.auth!.sub)),

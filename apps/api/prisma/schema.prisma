@@ -219,6 +219,10 @@ model User {
   pin          String?  // 4-digit, child individual mode
   failedPinAttempts Int       @default(0)
   pinLockedUntil    DateTime?
+  // Monotonically incremented by "logout everywhere" — JWTs carry the value at
+  // mint time, requireAuth rejects on mismatch so all outstanding access tokens
+  // for the user die instantly.
+  tokenVersion      Int       @default(0)
   avatarColor  String   @default("#6366f1")
   avatarConfig Json?
   isActive     Boolean  @default(true)
@@ -253,6 +257,7 @@ model User {
   notifications       Notification[]        @relation("NotificationUser")
   emailVerifications  EmailVerification[]   @relation("EmailVerificationUser")
   passwordResets      PasswordReset[]       @relation("PasswordResetUser")
+  refreshTokens       RefreshToken[]        @relation("RefreshTokenUser")
   legalAcceptances    LegalAcceptance[]     @relation("LegalAcceptanceUser")
 
   @@index([familyId])
@@ -603,6 +608,26 @@ enum LegalAcceptanceKind {
   PRIVACY
   CHILD_PROFILE_CONSENT
   UPLOAD_ACK
+}
+
+// Long-lived refresh token issued at login. Rotated on every use: consuming a
+// refresh token marks it revoked and links `replacedById` to the freshly minted
+// successor, so a stolen-and-replayed token after rotation hits a tripwire.
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation("RefreshTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   // id of the rotation successor, when revoked due to use
+  userAgent    String?
+  ip           String?
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Replay-protection cache for ledger-affecting mutations. Clients send

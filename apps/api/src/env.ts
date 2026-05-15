@@ -15,6 +15,11 @@ export const env = {
   DATABASE_URL: req("DATABASE_URL"),
   JWT_SECRET: req("JWT_SECRET", "dev-secret-change-me"),
   JWT_TTL: process.env.JWT_TTL ?? "7d",
+  // Short-lived access token. 15 minutes is the common balance between user
+  // friction and stolen-token window.
+  JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL ?? "15m",
+  // Refresh token lifetime. Each use rotates and resets the clock client-side.
+  REFRESH_TOKEN_TTL_DAYS: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 30),
   UPLOAD_DIR: process.env.UPLOAD_DIR ?? "/data/uploads",
   UPLOAD_MAX_BYTES: Number(process.env.UPLOAD_MAX_BYTES ?? 5_242_880),
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",

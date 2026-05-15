@@ -180,8 +180,18 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                     <div className="my-1 h-px bg-slate-100" />
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setMenuOpen(false);
+                        // Best-effort: tell the server to revoke this refresh token
+                        // so a stolen one can't outlive the sign-out click. Fire-and-forget.
+                        const rt = useAuth.getState().refreshToken;
+                        if (rt) {
+                          try {
+                            await api("/auth/logout", { body: { refreshToken: rt } });
+                          } catch {
+                            /* ignore — logging out locally regardless */
+                          }
+                        }
                         logout();
                         nav("/login");
                       }}

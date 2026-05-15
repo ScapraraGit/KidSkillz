@@ -38,7 +38,7 @@ Unauth partial-match leaks family + kid names globally.
 - Hard rate limit: 10/min/IP via stricter `expressRateLimit` on this route.
 - Audit log on every lookup hit (familyId, ip).
 
-### 4. Upload hardening — **M**
+### 4. Upload hardening — **M** — ✅ Done 2026-05-15
 
 [apps/api/src/routes/uploads.ts](apps/api/src/routes/uploads.ts)
 
@@ -72,7 +72,7 @@ Double-tap on flaky mobile = double credit.
 
 ## P1 — Ship in first beta week
 
-### 8. JWT lifecycle — **M**
+### 8. JWT lifecycle — **M** — ✅ Done 2026-05-15
 
 Stolen token currently forever-valid.
 
@@ -80,13 +80,13 @@ Stolen token currently forever-valid.
 - `User.tokenVersion Int @default(0)`. `signToken` embeds it. `requireAuth` rejects mismatch. Logout-everywhere = bump version.
 - New routes: `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/logout-all`.
 
-### 9. Password policy — **S**
+### 9. Password policy — **S** — ✅ Done 2026-05-15
 
 - Add `zxcvbn` server-side: score ≥ 3 required.
 - Reject top-10k common passwords (bundled list).
 - Web shows strength meter inline.
 
-### 10. CORS + CSP tighten — **S**
+### 10. CORS + CSP tighten — **S** — ✅ Done 2026-05-15
 
 [apps/api/src/index.ts:39-47](apps/api/src/index.ts#L39-L47)
 
@@ -94,7 +94,7 @@ Stolen token currently forever-valid.
 - Re-enable Helmet CSP with explicit allowlist: `default-src 'self'`, `img-src 'self' data: <storage-host>`, `connect-src 'self' <api-host> <sentry-ingest>`, `frame-ancestors 'none'`, `base-uri 'self'`.
 - Test in staging — confetti / web fonts likely to break.
 
-### 11. Sentry PII scrubbing — **S**
+### 11. Sentry PII scrubbing — **S** — ✅ Done 2026-05-15
 
 - `beforeSend` strips: `event.user.email`, `event.user.ip_address`, request body for `/auth/*`, query `token=` params.
 - Verify in staging — trigger error w/ email payload, inspect captured event.
@@ -112,14 +112,14 @@ Docs exist ([docs/operations/backup.md](docs/operations/backup.md)) — never ex
 - Run app against it, log into seeded family, verify ledger sums.
 - Time-box, record runbook timings.
 
-### 14. Playwright smoke — **M**
+### 14. Playwright smoke — **M** — ✅ Done 2026-05-15
 
 Currently zero web tests. One golden-path E2E catches the loudest regressions cheap.
 
 - `apps/web/e2e/golden-path.spec.ts`: parent register → verify email (stub) → create kid → create task → kid login → submit w/ photo → parent approve → balance reflects.
 - CI job runs against ephemeral docker-compose stack.
 
-### 15. Per-route integration tests — **M**
+### 15. Per-route integration tests — **M** — ✅ Done 2026-05-15
 
 - `apps/api/src/routes/__tests__/*.test.ts` — supertest against test schema.
 - Minimum: auth, tasks, completions/approve, redemptions/approve, adjustments. Happy path + 401 + cross-tenant 404.
@@ -135,7 +135,7 @@ Currently zero web tests. One golden-path E2E catches the loudest regressions ch
 - Add per-kid `parentalConsent` audit event on child create. Already covered by [services/audit.ts](apps/api/src/services/audit.ts)? Verify.
 - Data export (Tier 1 done) — verify includes proof URLs + audit events.
 
-### 17. Uptime + metrics — **S**
+### 17. Uptime + metrics — **S** — ✅ Done 2026-05-15
 
 - BetterStack/UptimeRobot pings `/health` every 60s, alerts to email.
 - Optional: `/metrics` Prometheus endpoint (prom-client) — request count, latency p95, DB pool in-use.

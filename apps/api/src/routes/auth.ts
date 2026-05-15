@@ -24,6 +24,14 @@ import { requireTurnstile } from "../middleware/turnstile.js";
 import { requireDeviceToken } from "../middleware/device.js";
 import { redeemEnrollment } from "../services/device-pairing.js";
 import { env } from "../env.js";
+import { checkPassword } from "../lib/password-policy.js";
+import {
+  bumpTokenVersionAndRevokeAll,
+  clientIpFromReq,
+  issueRefreshToken,
+  revokeRefreshToken,
+  rotateRefreshToken,
+} from "../services/refresh-tokens.js";
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -51,6 +59,8 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
   }
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw HttpError.badRequest("Email already in use");
+  const pw = checkPassword(password, [email, parentName, familyName]);
+  if (!pw.ok) throw HttpError.badRequest(pw.reason ?? "Weak password", "WEAK_PASSWORD");
   const passwordHash = await hashPassword(password);
   const family = await prisma.family.create({
     data: {
@@ -97,8 +107,24 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
   }).catch((e) => console.error("[legal:accept privacy]", e));
   // Fire-and-forget verification email; failures don't block registration.
   await issueVerificationEmail(user.id).catch((e) => console.error("[verify:send]", e));
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role, adm: user.isAdmin });
-  res.json({ token, user: serializeUser(user) });
+  const token = signToken({
+    sub: user.id,
+    fid: user.familyId,
+    role: user.role,
+    adm: user.isAdmin,
+    tv: user.tokenVersion,
+  });
+  const refresh = await issueRefreshToken({
+    userId: user.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(user),
+  });
 });
 
 const parentLoginSchema = z.object({
@@ -114,8 +140,24 @@ authRouter.post("/parent/login", async (req, res) => {
   if (!user.isActive) throw HttpError.forbidden("Account is inactive");
   const ok = await comparePassword(password, user.passwordHash);
   if (!ok) throw HttpError.unauthorized("Invalid credentials");
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role, adm: user.isAdmin });
-  res.json({ token, user: serializeUser(user) });
+  const token = signToken({
+    sub: user.id,
+    fid: user.familyId,
+    role: user.role,
+    adm: user.isAdmin,
+    tv: user.tokenVersion,
+  });
+  const refresh = await issueRefreshToken({
+    userId: user.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(user),
+  });
 });
 
 const childLoginSchema = z.object({
@@ -179,8 +221,60 @@ authRouter.post("/child/login", async (req, res) => {
     }
   }
 
-  const token = signToken({ sub: child.id, fid: child.familyId, role: child.role });
-  res.json({ token, user: serializeUser(child) });
+  const token = signToken({
+    sub: child.id,
+    fid: child.familyId,
+    role: child.role,
+    tv: child.tokenVersion,
+  });
+  const refresh = await issueRefreshToken({
+    userId: child.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(child),
+  });
+});
+
+// --- Refresh / logout --------------------------------------------------
+
+const refreshSchema = z.object({ refreshToken: z.string().min(16).max(1024) });
+
+authRouter.post("/refresh", async (req, res) => {
+  const { refreshToken } = refreshSchema.parse(req.body);
+  const r = await rotateRefreshToken(refreshToken, {
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token: r.accessToken,
+    refreshToken: r.refreshToken,
+    refreshExpiresAt: r.expiresAt.toISOString(),
+  });
+});
+
+const logoutSchema = z.object({ refreshToken: z.string().min(1).max(1024).optional() });
+
+authRouter.post("/logout", async (req, res) => {
+  const { refreshToken } = logoutSchema.parse(req.body ?? {});
+  if (refreshToken) await revokeRefreshToken(refreshToken);
+  res.json({ ok: true });
+});
+
+authRouter.post("/logout-all", requireAuth, async (req, res) => {
+  await bumpTokenVersionAndRevokeAll(req.auth!.sub);
+  await recordAudit({
+    familyId: req.auth!.fid,
+    actorId: req.auth!.sub,
+    kind: "LOGOUT_ALL",
+    targetType: "User",
+    targetId: req.auth!.sub,
+  });
+  res.json({ ok: true });
 });
 
 // --- Device pairing ----------------------------------------------------

@@ -26,10 +26,39 @@ interface ApiOpts {
   signal?: AbortSignal;
 }
 
-export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promise<T> {
-  const token = useAuth.getState().token;
+// Single-flight refresh so a flurry of parallel 401s only hits /auth/refresh once.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+  const rt = useAuth.getState().refreshToken;
+  if (!rt) return null;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_V1}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+      if (!res.ok) {
+        useAuth.getState().logout();
+        return null;
+      }
+      const data = (await res.json()) as { token: string; refreshToken: string };
+      useAuth.getState().setAccessToken(data.token, data.refreshToken);
+      return data.token;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
+async function performFetch(path: string, opts: ApiOpts, accessToken: string | null): Promise<Response> {
   const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   const deviceToken = getDeviceToken();
   if (deviceToken) headers["x-device-token"] = deviceToken;
   let body: BodyInit | undefined;
@@ -39,13 +68,28 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(opts.body);
   }
-
-  const res = await fetch(`${API_V1}${path}`, {
+  return fetch(`${API_V1}${path}`, {
     method: opts.method ?? (opts.body !== undefined || opts.formData ? "POST" : "GET"),
     headers,
     body,
     signal: opts.signal,
   });
+}
+
+export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promise<T> {
+  // Don't try to refresh on the refresh endpoint itself — recursion guard.
+  const isRefreshCall = path === "/auth/refresh";
+  let accessToken = useAuth.getState().token;
+  let res = await performFetch(path, opts, accessToken);
+
+  if (res.status === 401 && !isRefreshCall) {
+    const newAccess = await refreshAccessToken();
+    if (newAccess) {
+      accessToken = newAccess;
+      res = await performFetch(path, opts, accessToken);
+    }
+  }
+
   const text = await res.text();
   const json = text ? safeJSON(text) : null;
   if (!res.ok) {
@@ -73,5 +117,11 @@ export function uploadProof(file: File): Promise<{ key: string }> {
 export function uploadUrl(key: string | null | undefined): string | undefined {
   if (!key) return undefined;
   const token = useAuth.getState().token;
-  return `${API_V1}/uploads/${key}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  // Keys are `fam_<id>/<uuid>.<ext>` — encode each segment but keep the slash so
+  // the multi-segment Express route matches without losing path traversal protections.
+  const safeKey = key
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `${API_V1}/uploads/${safeKey}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }

@@ -1,0 +1,78 @@
+name: E2E (Playwright)
+
+# Manual + nightly Playwright golden-path. Brings up the docker-compose stack
+# against an ephemeral throwaway DB, runs the spec, tears down. Kept off the
+# default push/PR trigger until the suite proves stable — flip to `pull_request`
+# once it has run cleanly for ~2 weeks.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 8 * * *" # 08:30 UTC daily
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright golden-path
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+      JWT_SECRET: e2e-secret-not-real
+      CORS_ORIGIN: http://localhost:5173
+      VITE_API_URL: http://localhost:4000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @chorechampz/api exec prisma generate
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @chorechampz/web exec playwright install --with-deps chromium
+
+      - name: Apply migrations
+        run: pnpm --filter @chorechampz/api exec prisma migrate deploy
+
+      - name: Bring up stack
+        run: |
+          docker compose up -d --build
+          # Wait for API health.
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4000/health >/dev/null; then break; fi
+            sleep 2
+          done
+
+      - name: Run Playwright
+        run: pnpm --filter @chorechampz/web test:e2e
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 14

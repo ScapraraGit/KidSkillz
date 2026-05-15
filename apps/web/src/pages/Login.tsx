@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Button, Card, Field, inputCls } from "../components/ui";
 import { KidAvatar } from "../components/KidAvatar";
 import { Turnstile, turnstileEnabled } from "../components/Turnstile";
+import { PasswordStrength } from "../components/PasswordStrength";
 import { clearDeviceSession, getDeviceSession } from "../lib/deviceToken";
 import { useEffect } from "react";
 import {
@@ -77,10 +78,11 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
         setErr(null);
         setLoading(true);
         try {
-          const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/login", {
-            body: { email, password },
-          });
-          setSession(r.token, r.user);
+          const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
+            "/auth/parent/login",
+            { body: { email, password } },
+          );
+          setSession(r.token, r.user, r.refreshToken ?? null);
           const me = await api<{ settings: FamilySettings }>("/auth/me");
           setSettings(me.settings);
           nav("/parent");
@@ -176,17 +178,20 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
         }
         setLoading(true);
         try {
-          const r = await api<{ token: string; user: AuthUserDTO }>("/auth/parent/register", {
-            body: {
-              familyName,
-              parentName,
-              email,
-              password,
-              acceptedTermsVersion: CURRENT_TERMS_VERSION,
-              ...(turnstileToken && { "cf-turnstile-response": turnstileToken }),
+          const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
+            "/auth/parent/register",
+            {
+              body: {
+                familyName,
+                parentName,
+                email,
+                password,
+                acceptedTermsVersion: CURRENT_TERMS_VERSION,
+                ...(turnstileToken && { "cf-turnstile-response": turnstileToken }),
+              },
             },
-          });
-          setSession(r.token, r.user);
+          );
+          setSession(r.token, r.user, r.refreshToken ?? null);
           const me = await api<{ settings: FamilySettings }>("/auth/me");
           setSettings(me.settings);
           if (invitePartner && partnerEmail) {
@@ -247,6 +252,7 @@ function ParentSignup({ onCancel }: { onCancel: () => void }) {
           minLength={8}
         />
       </Field>
+      <PasswordStrength value={password} identifiers={[email, parentName, familyName]} />
       <Field label="Confirm password">
         <input
           className={inputCls}
@@ -539,13 +545,16 @@ function ChildLogin() {
             setErr(null);
             setLoading(true);
             try {
-              const r = await api<{ token: string; user: AuthUserDTO }>("/auth/child/login", {
-                body: {
-                  childId,
-                  ...(mode === "INDIVIDUAL" ? { pin } : { familyPassword }),
+              const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
+                "/auth/child/login",
+                {
+                  body: {
+                    childId,
+                    ...(mode === "INDIVIDUAL" ? { pin } : { familyPassword }),
+                  },
                 },
-              });
-              setSession(r.token, r.user);
+              );
+              setSession(r.token, r.user, r.refreshToken ?? null);
               const me = await api<{ settings: FamilySettings }>("/auth/me");
               setSettings(me.settings);
               nav("/me");

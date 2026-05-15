@@ -14,7 +14,7 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.header("authorization") ?? "";
   const [scheme, headerToken] = header.split(" ");
   // Allow ?token=... for GET-only flows like <img>/<a href> for proof images.
@@ -22,7 +22,21 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const token = scheme === "Bearer" && headerToken ? headerToken : queryToken;
   if (!token) return next(HttpError.unauthorized());
   try {
-    req.auth = verifyToken(token);
+    const payload = verifyToken(token);
+    // tokenVersion gate. Tokens minted before the user bumped it (logout-everywhere)
+    // are rejected immediately, before they can touch any handler. Skipped when the
+    // token predates the field (`tv === undefined`) and the user hasn't bumped yet.
+    if (payload.tv !== undefined) {
+      const user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { tokenVersion: true, isActive: true },
+      });
+      if (!user || !user.isActive) return next(HttpError.unauthorized("Session ended"));
+      if (user.tokenVersion !== payload.tv) {
+        return next(HttpError.unauthorized("Session ended"));
+      }
+    }
+    req.auth = payload;
     next();
   } catch {
     next(HttpError.unauthorized("Invalid or expired token"));

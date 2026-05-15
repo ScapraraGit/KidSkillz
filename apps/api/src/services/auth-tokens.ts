@@ -4,6 +4,7 @@ import { HttpError } from "../errors.js";
 import { generateRawToken, hashToken, tokenMatches } from "../lib/tokens.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
 import { hashPassword } from "../lib/auth.js";
+import { checkPassword } from "../lib/password-policy.js";
 
 const VERIFY_TTL_MS = 24 * 3600_000; // 24h
 const RESET_TTL_MS = 60 * 60_000; // 1h
@@ -91,6 +92,14 @@ export async function consumePasswordReset(raw: string, newPassword: string): Pr
     throw HttpError.badRequest("Invalid or expired reset link", "INVALID_TOKEN");
   }
   if (!tokenMatches(raw, rec.tokenHash)) throw HttpError.badRequest("Invalid token", "INVALID_TOKEN");
+
+  // Strength check needs the user's email/name to penalise self-derived passwords.
+  const target = await prisma.user.findUnique({
+    where: { id: rec.userId },
+    select: { email: true, name: true },
+  });
+  const pw = checkPassword(newPassword, [target?.email ?? "", target?.name ?? ""]);
+  if (!pw.ok) throw HttpError.badRequest(pw.reason ?? "Weak password", "WEAK_PASSWORD");
 
   const passwordHash = await hashPassword(newPassword);
   await prisma.$transaction([

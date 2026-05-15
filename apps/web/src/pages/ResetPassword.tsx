@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { Button, Card, Field, inputCls } from "../components/ui";
+import { PasswordStrength } from "../components/PasswordStrength";
 
 export function ResetPassword() {
   const [params] = useSearchParams();
@@ -64,6 +65,7 @@ export function ResetPassword() {
               minLength={8}
             />
           </Field>
+          <PasswordStrength value={password} />
           <Field label="Confirm new password">
             <input
               className={inputCls}

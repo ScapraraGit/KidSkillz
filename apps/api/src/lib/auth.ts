@@ -8,10 +8,15 @@ export interface JWTPayload {
   fid: string; // family id
   role: Role;
   adm?: boolean; // admin flag — gates /admin endpoints
+  tv?: number;   // tokenVersion at mint; rejected on mismatch (logout-everywhere)
 }
 
+// Access tokens are short-lived; refresh tokens carry the long horizon.
+// Override via JWT_ACCESS_TTL if the deployment needs different timing.
+const ACCESS_TTL = env.JWT_ACCESS_TTL;
+
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_TTL } as SignOptions);
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: ACCESS_TTL } as SignOptions);
 }
 
 export function verifyToken(token: string): JWTPayload {

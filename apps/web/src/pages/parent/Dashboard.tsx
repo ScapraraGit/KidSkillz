@@ -13,20 +13,11 @@ export function ParentDashboard() {
 
   if (isLoading || !data) return <div className="text-slate-500">Loading…</div>;
 
-  const totalPending =
-    data.pendingCompletions.length + data.pendingInitiative.length + data.pendingRedemptions.length;
+  const approvalsPending = data.pendingCompletions.length + data.pendingInitiative.length;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Family dashboard"
-        subtitle="What needs your attention today."
-        right={
-          <Link id="tile-pending-badge" to="/parent/approvals">
-            <Badge color={totalPending > 0 ? "amber" : "slate"}>{totalPending} pending</Badge>
-          </Link>
-        }
-      />
+      <PageHeader title="Family dashboard" subtitle="What needs your attention today." />
 
       <SetupChecklist />
 
@@ -86,7 +77,12 @@ export function ParentDashboard() {
             body: "Tasks the kids submitted plus their initiative suggestions. Approve to award the credits shown; reject to deny without penalty. 'Review all' takes you to the full queue with photos and notes.",
           }}
         >
-          <h3 className="font-semibold mb-3">Pending approvals</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Pending approvals</h3>
+            <Link id="tile-pending-badge" to="/parent/approvals">
+              <Badge color={approvalsPending > 0 ? "amber" : "slate"}>{approvalsPending} pending</Badge>
+            </Link>
+          </div>
           {data.pendingCompletions.length === 0 && data.pendingInitiative.length === 0 ? (
             <EmptyState title="All caught up!" />
           ) : (

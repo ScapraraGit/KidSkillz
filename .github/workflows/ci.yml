@@ -15,10 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    env:
-      # Bogus URL — Prisma validate parses but does not connect; safe in CI.
-      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,9 +34,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
+        env:
+          # Bogus URL — prisma generate parses but does not connect.
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
         run: pnpm --filter @chorechampz/api exec prisma generate
 
       - name: Validate Prisma schema
+        env:
+          # Bogus URL — prisma validate parses but does not connect.
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
         run: pnpm --filter @chorechampz/api exec prisma validate
 
       - name: Lint

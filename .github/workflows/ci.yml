@@ -55,4 +55,10 @@ jobs:
         run: pnpm typecheck
 
       - name: Test
+        env:
+          # Bogus URL — env.ts requires DATABASE_URL at module load. Prisma is
+          # lazy-connected so this is never dialed. DB-dependent tests are
+          # gated on RUN_DB_TESTS=1 (unset here) so dbIt skips them.
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+          JWT_SECRET: "ci-not-real-secret"
         run: pnpm test

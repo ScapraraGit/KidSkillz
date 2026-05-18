@@ -102,9 +102,11 @@ export async function makeTestFamily(): Promise<TestFamily> {
 }
 
 /**
- * vitest skip-guard. Returns `it` if a usable DATABASE_URL is configured,
- * otherwise `it.skip` so CI without a test DB doesn't fail the suite.
+ * vitest skip-guard. Returns `it` if a real test DB is available
+ * (RUN_DB_TESTS=1), otherwise `it.skip`. Gated on RUN_DB_TESTS rather than
+ * DATABASE_URL so CI can set a bogus DATABASE_URL just to satisfy env.ts
+ * module load without actually attempting Prisma connections.
  */
 export function dbIt(it: (typeof import("vitest"))["it"]): (typeof import("vitest"))["it"] {
-  return process.env.DATABASE_URL ? it : (it.skip as typeof it);
+  return process.env.RUN_DB_TESTS === "1" ? it : (it.skip as typeof it);
 }

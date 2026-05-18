@@ -31,7 +31,9 @@ redemptionsRouter.post("/", async (req, res) => {
 redemptionsRouter.get("/", async (req, res) => {
   const status = req.query.status as "PENDING" | "APPROVED" | "REJECTED" | undefined;
   const childId = req.auth!.role === "CHILD" ? req.auth!.sub : (req.query.childId as string | undefined);
-  const list = await listRedemptions(req.auth!.fid, { status, childId });
+  const limit = req.query.limit ? Number(req.query.limit) : undefined;
+  const offset = req.query.offset ? Number(req.query.offset) : undefined;
+  const list = await listRedemptions(req.auth!.fid, { status, childId, limit, offset });
   res.json({ redemptions: list.map(serializeRedemption) });
 });
 

@@ -44,8 +44,15 @@ export async function submitInitiative(familyId: string, input: SubmitInitiative
 
 export async function listInitiative(
   familyId: string,
-  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+  opts: {
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    childId?: string;
+    limit?: number;
+    offset?: number;
+  },
 ) {
+  const limit = Math.min(Math.max(1, Math.floor(opts.limit ?? 50)), 200);
+  const offset = Math.max(0, Math.floor(opts.offset ?? 0));
   return prisma.initiativeRequest.findMany({
     where: {
       familyId,
@@ -54,7 +61,8 @@ export async function listInitiative(
     },
     include: { child: { select: { id: true, name: true, avatarColor: true } } },
     orderBy: { submittedAt: "desc" },
-    take: 200,
+    take: limit,
+    skip: offset,
   });
 }
 
@@ -80,8 +88,9 @@ export async function approveInitiative(
   }
 
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.initiativeRequest.update({
-      where: { id },
+    // Atomic guard against double-approval: updateMany filtered on PENDING.
+    const guard = await tx.initiativeRequest.updateMany({
+      where: { id, status: "PENDING" },
       data: {
         status: "APPROVED",
         reviewedAt: new Date(),
@@ -89,6 +98,12 @@ export async function approveInitiative(
         creditAwarded: baseCredits,
         bonusApplied: bonus,
       },
+    });
+    if (guard.count === 0) {
+      throw HttpError.conflict("Already reviewed");
+    }
+    const updated = await tx.initiativeRequest.findUniqueOrThrow({
+      where: { id },
       include: { child: { select: { id: true, name: true, avatarColor: true } } },
     });
     if (baseCredits > 0) {

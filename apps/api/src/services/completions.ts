@@ -146,8 +146,15 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
 
 export async function listCompletions(
   familyId: string,
-  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+  opts: {
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    childId?: string;
+    limit?: number;
+    offset?: number;
+  },
 ) {
+  const limit = Math.min(Math.max(1, Math.floor(opts.limit ?? 50)), 200);
+  const offset = Math.max(0, Math.floor(opts.offset ?? 0));
   return prisma.taskCompletion.findMany({
     where: {
       task: { familyId },
@@ -156,7 +163,8 @@ export async function listCompletions(
     },
     include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },
     orderBy: { submittedAt: "desc" },
-    take: 200,
+    take: limit,
+    skip: offset,
   });
 }
 

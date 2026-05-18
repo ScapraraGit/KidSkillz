@@ -25,15 +25,20 @@ services:
     #      db:
     #        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://neondb_owner:npg_aNVhzjB8Jfu2@ep-raspy-sky-ap8vb4u3-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-      #postgresql://${POSTGRES_USER:-chorechampz}:${POSTGRES_PASSWORD:-chorechampz}@db:5432/${POSTGRES_DB:-chorechampz}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      # DATABASE_URL must come from .env or the deploy environment. Never hardcode
+      # credentials in this file — it's checked into git.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (32+ random chars)}
       JWT_TTL: ${JWT_TTL:-7d}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-7}
       UPLOAD_DIR: /data/uploads
       UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-5242880}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       PORT: 4000
       NODE_ENV: ${NODE_ENV:-development}
+      SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - "${API_PORT:-4000}:4000"
     volumes:

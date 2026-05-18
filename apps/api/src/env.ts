@@ -13,13 +13,31 @@ function req(name: string, fallback?: string): string {
 export const env = {
   PORT: Number(process.env.PORT ?? 4000),
   DATABASE_URL: req("DATABASE_URL"),
-  JWT_SECRET: req("JWT_SECRET", "dev-secret-change-me"),
+  // JWT_SECRET is required. No fallback — prod deploys must fail loudly if the
+  // secret is missing rather than silently boot with a weak key.
+  JWT_SECRET: (() => {
+    const v = process.env.JWT_SECRET;
+    if (!v || v.length < 32) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("JWT_SECRET must be set to a 32+ char random value in production");
+      }
+      // Dev/test: allow weak secret but warn loudly.
+      if (!v) console.warn("[env] JWT_SECRET unset; using insecure dev value");
+      return v ?? "dev-only-insecure-secret-do-not-use-in-prod";
+    }
+    return v;
+  })(),
   JWT_TTL: process.env.JWT_TTL ?? "7d",
   // Short-lived access token. 15 minutes is the common balance between user
   // friction and stolen-token window.
   JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL ?? "15m",
-  // Refresh token lifetime. Each use rotates and resets the clock client-side.
-  REFRESH_TOKEN_TTL_DAYS: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 30),
+  // Refresh token lifetime. Shortened from 30d → 7d to reduce the stolen-token
+  // window since refresh tokens live in localStorage (XSS-exposed) pending the
+  // httpOnly cookie migration.
+  REFRESH_TOKEN_TTL_DAYS: Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? 7),
+  // Run the idempotent seed at container startup. Off by default in prod — a
+  // buggy seed shouldn't crash a deploy. Flip on for first-deploy or local dev.
+  SEED_ON_STARTUP: (process.env.SEED_ON_STARTUP ?? "false").toLowerCase() === "true",
   UPLOAD_DIR: process.env.UPLOAD_DIR ?? "/data/uploads",
   UPLOAD_MAX_BYTES: Number(process.env.UPLOAD_MAX_BYTES ?? 5_242_880),
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",

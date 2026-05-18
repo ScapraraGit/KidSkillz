@@ -22,6 +22,9 @@ RUN pnpm prisma generate
 EXPOSE 4000
 # `migrate deploy` only applies committed migrations from prisma/migrations/. It
 # never drops columns or tables on its own — unlike `db push --accept-data-loss`,
-# which silently destructively syncs the DB to schema.prisma. Seed is idempotent
-# (checks for The Caprara Family) so re-running on every boot is safe.
-CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm seed && pnpm start"]
+# which silently destructively syncs the DB to schema.prisma.
+#
+# Seed is gated on SEED_ON_STARTUP (default false). Even though the seed is
+# idempotent, a buggy seed change shouldn't be able to crash a production deploy
+# loop — set SEED_ON_STARTUP=true explicitly for first-deploy or local-dev only.
+CMD ["sh", "-c", "pnpm prisma migrate deploy && { [ \"$SEED_ON_STARTUP\" = \"true\" ] && pnpm seed || echo '[startup] SEED_ON_STARTUP!=true, skipping seed'; } && pnpm start"]

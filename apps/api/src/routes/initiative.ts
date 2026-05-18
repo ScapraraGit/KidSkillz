@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import {
   approveInitiative,
   listInitiative,
@@ -33,7 +34,9 @@ initiativeRouter.post("/", async (req, res) => {
 initiativeRouter.get("/", async (req, res) => {
   const status = req.query.status as "PENDING" | "APPROVED" | "REJECTED" | undefined;
   const childId = req.auth!.role === "CHILD" ? req.auth!.sub : (req.query.childId as string | undefined);
-  const list = await listInitiative(req.auth!.fid, { status, childId });
+  const limit = req.query.limit ? Number(req.query.limit) : undefined;
+  const offset = req.query.offset ? Number(req.query.offset) : undefined;
+  const list = await listInitiative(req.auth!.fid, { status, childId, limit, offset });
   res.json({ initiative: list.map(serializeInitiative) });
 });
 
@@ -42,7 +45,7 @@ const reviewSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
-initiativeRouter.post("/:id/approve", requireRole("PARENT"), async (req, res) => {
+initiativeRouter.post("/:id/approve", requireRole("PARENT"), idempotency, async (req, res) => {
   const { creditOverride } = reviewSchema.parse(req.body ?? {});
   const ir = await approveInitiative(req.auth!.fid, req.params.id, req.auth!.sub, creditOverride);
   res.json({ initiative: serializeInitiative(ir) });

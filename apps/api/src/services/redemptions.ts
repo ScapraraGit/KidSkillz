@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { ensureChildCanRedeem, ensureChildInFamily } from "./children.js";
@@ -85,8 +86,15 @@ export async function requestRedemption(familyId: string, input: RequestRedempti
 
 export async function listRedemptions(
   familyId: string,
-  opts: { status?: "PENDING" | "APPROVED" | "REJECTED"; childId?: string },
+  opts: {
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    childId?: string;
+    limit?: number;
+    offset?: number;
+  },
 ) {
+  const limit = Math.min(Math.max(1, Math.floor(opts.limit ?? 50)), 200);
+  const offset = Math.max(0, Math.floor(opts.offset ?? 0));
   return prisma.redemption.findMany({
     where: {
       reward: { familyId },
@@ -95,7 +103,8 @@ export async function listRedemptions(
     },
     include: { reward: true, child: { select: { id: true, name: true, avatarColor: true } } },
     orderBy: { requestedAt: "desc" },
-    take: 200,
+    take: limit,
+    skip: offset,
   });
 }
 
@@ -107,28 +116,54 @@ export async function approveRedemption(familyId: string, id: string, parentUser
   if (!r) throw HttpError.notFound("Redemption not found");
   if (r.status !== "PENDING") throw HttpError.conflict("Already reviewed");
 
-  // Re-check earning pause / balance at approval time
+  // Re-check earning pause / redeem permission at approval time. Balance is
+  // re-checked INSIDE the transaction below so concurrent approvals cannot
+  // both see a stale "sufficient credits" snapshot and double-spend.
   await ensureChildCanRedeem(r.childId);
 
-  const updated = await prisma.$transaction(async (tx) => {
-    const upd = await tx.redemption.update({
-      where: { id },
-      data: { status: "APPROVED", reviewedAt: new Date(), reviewedById: parentUserId },
-      include: { reward: true, child: { select: { id: true, name: true, avatarColor: true } } },
-    });
-    await postLedger({
-      tx,
-      familyId,
-      childId: r.childId,
-      amount: -r.creditCost,
-      kind: "REDEMPTION",
-      reason: `Redeemed: ${r.reward.name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`,
-      sourceType: "REDEMPTION",
-      sourceId: id,
-      createdById: parentUserId,
-    });
-    return upd;
-  });
+  const updated = await prisma.$transaction(
+    async (tx) => {
+      // Atomic guard against double-approval: updateMany filtered on PENDING.
+      // If zero rows changed, another parent already approved/rejected.
+      const guard = await tx.redemption.updateMany({
+        where: { id, status: "PENDING" },
+        data: { status: "APPROVED", reviewedAt: new Date(), reviewedById: parentUserId },
+      });
+      if (guard.count === 0) {
+        throw HttpError.conflict("Already reviewed");
+      }
+      // Balance check inside TX so SERIALIZABLE isolation can detect concurrent
+      // overdraft. postLedger will also re-check when amount<0, but doing it
+      // explicitly here surfaces a clearer error before the ledger insert.
+      const sum = await tx.ledgerEntry.aggregate({
+        _sum: { amount: true },
+        where: { childId: r.childId },
+      });
+      const balance = sum._sum.amount ?? 0;
+      if (balance < r.creditCost) {
+        throw HttpError.unprocessable(
+          `Not enough credits (have ${balance}, need ${r.creditCost})`,
+          "INSUFFICIENT_CREDITS",
+        );
+      }
+      await postLedger({
+        tx,
+        familyId,
+        childId: r.childId,
+        amount: -r.creditCost,
+        kind: "REDEMPTION",
+        reason: `Redeemed: ${r.reward.name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`,
+        sourceType: "REDEMPTION",
+        sourceId: id,
+        createdById: parentUserId,
+      });
+      return tx.redemption.findUniqueOrThrow({
+        where: { id },
+        include: { reward: true, child: { select: { id: true, name: true, avatarColor: true } } },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
   await createNotification({
     familyId,
     userId: r.childId,

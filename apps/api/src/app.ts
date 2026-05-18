@@ -45,14 +45,25 @@ export function createApp(opts: CreateAppOptions = {}) {
   const cspDirectives: Record<string, string[]> = {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
+    // Tailwind ships utility classes at build time, but runtime style injections
+    // (e.g. some headless-ui transitions) still need 'unsafe-inline'. Revisit
+    // with a nonce/hashed-style strategy when bandwidth allows.
     styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", "data:", "blob:"],
     connectSrc: ["'self'", env.CORS_ORIGIN].filter(Boolean) as string[],
+    fontSrc: ["'self'", "data:"],
+    frameSrc: ["'none'"],
     frameAncestors: ["'none'"],
+    workerSrc: ["'self'", "blob:"],
+    manifestSrc: ["'self'"],
+    mediaSrc: ["'self'"],
     baseUri: ["'self'"],
     formAction: ["'self'"],
     objectSrc: ["'none'"],
   };
+  if (env.NODE_ENV === "production") {
+    cspDirectives.upgradeInsecureRequests = [];
+  }
   if (env.SENTRY_DSN) {
     try {
       const sentryHost = new URL(env.SENTRY_DSN).origin;

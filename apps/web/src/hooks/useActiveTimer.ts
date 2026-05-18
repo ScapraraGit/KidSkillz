@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ActiveTimer} from "../lib/activeTimer";
+import type { ActiveTimer } from "../lib/activeTimer";
 import { clearTimer, isExpired, loadTimer, saveTimer, timeLeftMs } from "../lib/activeTimer";
 import { playTick } from "../lib/celebrate";
 import { prefersReducedMotion } from "../lib/motion";

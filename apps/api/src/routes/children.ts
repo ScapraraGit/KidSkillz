@@ -8,7 +8,7 @@ import { HttpError } from "../errors.js";
 import { clientIpFrom, recordLegalAcceptance, userAgentFrom } from "../services/legal-acceptance.js";
 import { CURRENT_TERMS_VERSION } from "@chorechampz/shared";
 import { recordAudit } from "../services/audit.js";
-import { proofRequirementSchema } from "../lib/features.js";
+import { features, proofRequirementSchema } from "../lib/features.js";
 import { unlockChildPin } from "../services/child-auth.js";
 
 const stringArray = z.array(z.string().max(40)).max(40);
@@ -49,6 +49,10 @@ childrenRouter.get("/", async (req, res) => {
   res.json({ children: await listChildren(req.auth!.fid) });
 });
 
+// consentAcknowledged is accepted as a boolean. It is only *required* to be true
+// when ORG_CONSENT_REQUIRED is on (school/org deployments where staff create
+// profiles for kids whose legal guardian is a separate person). Personal family
+// deployments accept any value and skip the LegalAcceptance write.
 const createSchema = z.object({
   name: z.string().min(1).max(60),
   pin: z
@@ -57,16 +61,17 @@ const createSchema = z.object({
     .nullish(),
   avatarColor: z.string().optional(),
   avatarConfig: avatarConfigSchema.nullable().optional(),
-  consentAcknowledged: z.literal(true, {
-    errorMap: () => ({
-      message: "Guardian consent acknowledgement is required to create a child profile.",
-    }),
-  }),
+  consentAcknowledged: z.boolean().optional(),
 });
 
 childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
   const input = createSchema.parse(req.body);
-  const { consentAcknowledged: _ignored, ...childInput } = input;
+  const { consentAcknowledged, ...childInput } = input;
+  if (features.orgConsentRequired && consentAcknowledged !== true) {
+    throw HttpError.badRequest(
+      "Guardian consent acknowledgement is required to create a child profile.",
+    );
+  }
   const child = await createChild(req.auth!.fid, childInput);
   await recordAudit({
     familyId: req.auth!.fid,
@@ -76,16 +81,18 @@ childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
     targetId: child.id,
     payload: { name: child.name },
   });
-  await recordLegalAcceptance({
-    userId: req.auth!.sub,
-    familyId: req.auth!.fid,
-    kind: "CHILD_PROFILE_CONSENT",
-    version: CURRENT_TERMS_VERSION,
-    subjectChildId: child.id,
-    ipAddress: clientIpFrom(req),
-    userAgent: userAgentFrom(req),
-    context: "child-profile-create",
-  }).catch((e) => console.error("[legal:accept child-profile]", e));
+  if (features.orgConsentRequired) {
+    await recordLegalAcceptance({
+      userId: req.auth!.sub,
+      familyId: req.auth!.fid,
+      kind: "CHILD_PROFILE_CONSENT",
+      version: CURRENT_TERMS_VERSION,
+      subjectChildId: child.id,
+      ipAddress: clientIpFrom(req),
+      userAgent: userAgentFrom(req),
+      context: "child-profile-create",
+    }).catch((e) => console.error("[legal:accept child-profile]", e));
+  }
   res.status(201).json({ child });
 });
 

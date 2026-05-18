@@ -186,6 +186,8 @@ export interface FeatureFlagsDTO {
   photoProof: boolean;
   /** Whether device pairing is enabled. When true, kid login requires a paired device; familyCode/family-password flow is hidden. */
   devicePairing: boolean;
+  /** Whether guardian consent must be captured when creating a child profile. True for school/organization deployments where staff create profiles on behalf of guardians. False for personal family use. */
+  orgConsentRequired: boolean;
 }
 
 export interface MeResponseDTO {

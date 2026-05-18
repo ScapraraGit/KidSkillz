@@ -7,6 +7,7 @@ import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
+import { useFeatures } from "../../hooks/useFeatures";
 import { getPet, petStageForLevel, PET_STAGE_NAMES } from "../../lib/pets";
 import type {
   AvatarConfig,
@@ -289,6 +290,8 @@ function CreateChildModal({
   onCreated: (child: ChildDTO) => void;
 }) {
   const nav = useNavigate();
+  const features = useFeatures();
+  const consentRequired = features.orgConsentRequired;
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [avatarColor, setAvatarColor] = useState("#22c55e");
@@ -297,7 +300,13 @@ function CreateChildModal({
   const save = useMutation({
     mutationFn: () =>
       api<{ child: ChildDTO }>("/children", {
-        body: { name, pin: pin || null, avatarColor, avatarConfig, consentAcknowledged },
+        body: {
+          name,
+          pin: pin || null,
+          avatarColor,
+          avatarConfig,
+          ...(consentRequired && { consentAcknowledged }),
+        },
       }),
     onSuccess: (r) => {
       onCreated(r.child);
@@ -314,7 +323,10 @@ function CreateChildModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !name || !consentAcknowledged}>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !name || (consentRequired && !consentAcknowledged)}
+          >
             Save
           </Button>
         </>
@@ -353,30 +365,32 @@ function CreateChildModal({
             )}
           </div>
         </Field>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
-          <div className="font-semibold">Guardian consent</div>
-          <p>
-            Please use a nickname or first name only. Do <strong>not</strong> enter the child's full legal
-            name, school, address, or any government identifier.
-          </p>
-          <label className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              checked={consentAcknowledged}
-              onChange={(e) => setConsentAcknowledged(e.target.checked)}
-              title="Confirm guardian consent for this child profile"
-              className="mt-0.5"
-            />
-            <span>
-              I am the parent or legal guardian of this child and provide consent under the{" "}
-              <Link to="/privacy" target="_blank" className="underline">
-                Privacy Policy
-              </Link>{" "}
-              to create this profile. I am responsible for supervising this child's use of ChoreChampz and for
-              reviewing all content uploaded under this profile.
-            </span>
-          </label>
-        </div>
+        {consentRequired && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
+            <div className="font-semibold">Guardian consent</div>
+            <p>
+              Please use a nickname or first name only. Do <strong>not</strong> enter the child's full legal
+              name, school, address, or any government identifier.
+            </p>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={consentAcknowledged}
+                onChange={(e) => setConsentAcknowledged(e.target.checked)}
+                title="Confirm guardian consent for this child profile"
+                className="mt-0.5"
+              />
+              <span>
+                I am the parent or legal guardian of this child and provide consent under the{" "}
+                <Link to="/privacy" target="_blank" className="underline">
+                  Privacy Policy
+                </Link>{" "}
+                to create this profile. I am responsible for supervising this child's use of ChoreChampz and
+                for reviewing all content uploaded under this profile.
+              </span>
+            </label>
+          </div>
+        )}
       </div>
     </Modal>
   );

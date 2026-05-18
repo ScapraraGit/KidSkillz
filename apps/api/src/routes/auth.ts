@@ -429,7 +429,11 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     user: serializeUser(user),
     settings,
     needsOnboarding: user.onboardedAt == null,
-    features: { photoProof: features.photoProof, devicePairing: features.devicePairing },
+    features: {
+      photoProof: features.photoProof,
+      devicePairing: features.devicePairing,
+      orgConsentRequired: features.orgConsentRequired,
+    },
   });
 });
 

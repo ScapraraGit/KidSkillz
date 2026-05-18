@@ -36,4 +36,11 @@ export const env = {
   // Gates the device-pairing endpoints + middleware. Off by default until the
   // web /pair page + Settings devices card ship in the follow-up PR.
   DEVICE_PAIRING_ENABLED: (process.env.DEVICE_PAIRING_ENABLED ?? "false").toLowerCase() === "true",
+  // Guardian consent acknowledgement on child-profile creation. Off for personal
+  // family deployments. Flip on for school/organization deployments where staff
+  // (not the legal guardian) create profiles and a documented guardian consent
+  // record is required for each child. When true: the web modal shows the
+  // consent block and the API requires consentAcknowledged=true and writes a
+  // LegalAcceptance row tagged CHILD_PROFILE_CONSENT.
+  ORG_CONSENT_REQUIRED: (process.env.ORG_CONSENT_REQUIRED ?? "false").toLowerCase() === "true",
 };

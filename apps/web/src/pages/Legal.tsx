@@ -588,6 +588,19 @@ export function PrivacyPolicy() {
         Transparency and Android equivalents; no tracking will be initiated without the required
         platform-level consent.
       </p>
+      <p>
+        <strong>Device pairing tokens.</strong> Where a Family enables device pairing for shared kid or
+        caregiver devices, the Service stores an opaque, random device identifier in the browser's local
+        storage on the paired device. This identifier is essential for authentication: it lets the device
+        retrieve the Family's kid profile list and submit PIN attempts within that Family scope. It does not
+        identify any individual user, contains no personal information, and is bound to a single Family. The
+        Account Owner can rename or revoke any paired device at any time from Settings. Revoking a device
+        immediately invalidates the server-side reference; the local identifier is cleared on the device's
+        next request. Retention: the device record is retained until revoked or until the Family is deleted,
+        whichever is sooner. Pairing codes themselves are short-lived (ten minutes), single-use, and only ever
+        displayed inside the authenticated parent interface; we do not transmit pairing codes by email, SMS,
+        or to any third party.
+      </p>
 
       <h3>11. Third-Party Service Providers</h3>
       <p>

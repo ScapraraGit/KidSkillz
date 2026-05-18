@@ -79,9 +79,27 @@ test("parent → kid → task → submit → approve → balance", async ({ page
   expect(taskRes.ok()).toBe(true);
   const taskId = (await taskRes.json()).task.id as string;
 
-  // ---- 4. Kid submits the completion (API call from same context — UI submit
+  // ---- 4. Pair a device so kid login goes through the supported device-auth
+  // path. Under DEVICE_PAIRING_ENABLED=true, /auth/child/login requires an
+  // x-device-token whose family matches the kid. We exercise the full enroll
+  // -> redeem -> kid-login flow here. ----
+  const enroll = await request.post(`${API_BASE}/v1/family/devices/enroll`, {
+    headers,
+    data: { label: "E2E Tablet" },
+  });
+  expect(enroll.ok()).toBe(true);
+  const pairingCode = (await enroll.json()).pairingCode as string;
+
+  const redeem = await request.post(`${API_BASE}/v1/auth/devices/redeem`, {
+    data: { pairingCode },
+  });
+  expect(redeem.ok()).toBe(true);
+  const deviceToken = (await redeem.json()).deviceToken as string;
+
+  // ---- 5. Kid submits the completion (API call from same context — UI submit
   // path is unit-covered; E2E proves the wiring + idempotency end-to-end). ----
   const childLogin = await request.post(`${API_BASE}/v1/auth/child/login`, {
+    headers: { "x-device-token": deviceToken },
     data: { childId: kidId, pin: "1234" },
   });
   expect(childLogin.ok()).toBe(true);
@@ -94,7 +112,7 @@ test("parent → kid → task → submit → approve → balance", async ({ page
   expect(submit.ok()).toBe(true);
   const completionId = (await submit.json()).completion.id as string;
 
-  // ---- 5. Parent approves via UI. Visit approvals page and click the row. ----
+  // ---- 6. Parent approves via UI. Visit approvals page and click the row. ----
   await page.goto("/parent/approvals");
   const approveBtn = page.getByRole("button", { name: /approve/i }).first();
   await expect(approveBtn).toBeVisible({ timeout: 10_000 });
@@ -104,12 +122,12 @@ test("parent → kid → task → submit → approve → balance", async ({ page
     .toBeHidden({ timeout: 10_000 })
     .catch(() => {});
 
-  // ---- 6. Confirm the ledger by hitting the balance endpoint. ----
+  // ---- 7. Confirm the ledger by hitting the balance endpoint. ----
   const bal = await request.get(`${API_BASE}/v1/children/${kidId}/balance`, { headers });
   expect(bal.ok()).toBe(true);
   expect((await bal.json()).balance).toBe(7);
 
-  // ---- 7. Cleanup: delete the family. ----
+  // ---- 8. Cleanup: delete the family. ----
   await request.delete(`${API_BASE}/v1/family`, {
     headers,
     data: { confirmText: FAMILY_NAME },

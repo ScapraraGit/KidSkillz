@@ -190,19 +190,19 @@ JWT (existing user auth) stays orthogonal. Device token is a _family scope_ gate
 - Route integration (Tier supertest): enroll → redeem flow, expired pairing, double-redeem, revoke kills lookup, cross-family device token → 404.
 - Web Playwright (slot into plan 03 #14): parent pair → kid login on paired device golden path.
 
-### Docs — **S**
+### Docs — **S** — ✅ Done 2026-05-18
 
-- `docs/operations/device-pairing.md`: support runbook (lost device, parent reset flow).
-- Privacy policy update: deviceToken disclosure, retention on revoke.
+- `docs/operations/device-pairing.md`: support runbook (lost device, parent reset flow). ✅ Shipped at [docs/operations/device-pairing.md](../docs/operations/device-pairing.md).
+- Privacy policy update: deviceToken disclosure, retention on revoke. ✅ Section 10 of [Legal.tsx](../apps/web/src/pages/Legal.tsx) PrivacyPolicy. `CURRENT_PRIVACY_VERSION` bumped 2 → 3 to trigger re-acceptance.
 
 ---
 
 ## Sequencing
 
-Week 1: schema + service + tests + parent enroll/list/revoke routes.
-Week 2: kid + caregiver redemption + login refactor, web /pair page.
-Week 3: Settings UI, Playwright happy path, feature-flag flip in staging.
-Week 4: production flag-on, deprecate familyCode + Family.devicePasswordHash UI (keep DB columns one cycle).
+Week 1: schema + service + tests + parent enroll/list/revoke routes. ✅
+Week 2: kid + caregiver redemption + login refactor, web /pair page. ✅
+Week 3: Settings UI, Playwright happy path, feature-flag flip in staging. ✅ 2026-05-18 — `.env.example` default now `DEVICE_PAIRING_ENABLED=true`; golden-path E2E exercises enroll → redeem → kid-login.
+Week 4: production flag-on, deprecate familyCode + Family.devicePasswordHash UI (keep DB columns one cycle). ⏳ Pending one beta cycle after prod flag-on; legacy UI intentionally retained as escape hatch per plan.
 
 ## Dependencies
 

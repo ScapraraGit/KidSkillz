@@ -176,7 +176,7 @@ export interface AuthUserDTO {
 export const CURRENT_TERMS_VERSION = 2;
 
 /** Current Privacy Policy revision. Tracked alongside ToS via LegalAcceptance audit log. */
-export const CURRENT_PRIVACY_VERSION = 2;
+export const CURRENT_PRIVACY_VERSION = 3;
 
 /** Server-recorded legal-acceptance event kinds. Mirrors api LegalAcceptanceKind enum. */
 export type LegalAcceptanceKind = "TERMS" | "PRIVACY" | "CHILD_PROFILE_CONSENT" | "UPLOAD_ACK";

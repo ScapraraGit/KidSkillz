@@ -35,8 +35,16 @@ jobs:
     timeout-minutes: 20
 
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Use the dedicated prod secret so this job can never accidentally run
+      # against the shared dev/staging Neon DB. Pair with the hostname guard
+      # below (EXPECTED_DB_HOST_ALLOWLIST) for defense in depth.
+      DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      # Comma-separated hostname suffix allowlist enforced by
+      # apps/api/src/lib/assert-job-db.ts. Set this to the prod Neon project
+      # host (e.g. "ep-prod-xyz.us-east-2.aws.neon.tech"). If unset, the guard
+      # is a no-op — keep it set in this workflow.
+      EXPECTED_DB_HOST_ALLOWLIST: ${{ secrets.EXPECTED_DB_HOST_ALLOWLIST }}
 
     steps:
       - name: Checkout
@@ -52,6 +60,19 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+
+      - name: Verify required secrets
+        run: |
+          missing=0
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL_PROD secret is missing or empty. Set it in repo Settings → Secrets and variables → Actions."
+            missing=1
+          fi
+          if [ -z "$EXPECTED_DB_HOST_ALLOWLIST" ]; then
+            echo "::error::EXPECTED_DB_HOST_ALLOWLIST secret is missing. Set it to the prod Neon hostname suffix to enable the job DB guard."
+            missing=1
+          fi
+          [ "$missing" = "0" ]
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

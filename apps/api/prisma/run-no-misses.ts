@@ -5,9 +5,11 @@
  * Run: pnpm -C apps/api jobs:no-misses
  */
 import { prisma } from "../src/db.js";
+import { assertJobDatabaseHost } from "../src/lib/assert-job-db.js";
 import { resolveNoMisses } from "../src/services/challenges.js";
 
 async function main() {
+  assertJobDatabaseHost();
   const { resolved } = await resolveNoMisses();
   console.log(`[no-misses] resolved ${resolved} child-period rows`);
 }

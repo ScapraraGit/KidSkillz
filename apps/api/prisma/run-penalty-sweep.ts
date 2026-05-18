@@ -5,9 +5,11 @@
  * Run: pnpm -C apps/api jobs:penalty-sweep
  */
 import { prisma } from "../src/db.js";
+import { assertJobDatabaseHost } from "../src/lib/assert-job-db.js";
 import { sweepMissedTaskPenalties } from "../src/services/penalties.js";
 
 async function main() {
+  assertJobDatabaseHost();
   const r = await sweepMissedTaskPenalties();
   console.log(`[penalty-sweep] processed ${r.familiesProcessed} families, posted ${r.posted} penalties`);
 }

@@ -7,6 +7,7 @@
  * Run: pnpm -C apps/api jobs:ledger-recon
  */
 import { prisma } from "../src/db.js";
+import { assertJobDatabaseHost } from "../src/lib/assert-job-db.js";
 import { readSettings } from "../src/services/family.js";
 import { initSentry, Sentry } from "../src/lib/sentry.js";
 
@@ -18,6 +19,7 @@ interface Drift {
 }
 
 async function main() {
+  assertJobDatabaseHost();
   initSentry();
 
   const families = await prisma.family.findMany({ select: { id: true, settings: true } });

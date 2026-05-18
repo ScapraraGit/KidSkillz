@@ -4,9 +4,11 @@
  * Run: pnpm -C apps/api jobs:photo-purge
  */
 import { prisma } from "../src/db.js";
+import { assertJobDatabaseHost } from "../src/lib/assert-job-db.js";
 import { purgeExpiredPhotos } from "../src/services/photo-retention.js";
 
 async function main() {
+  assertJobDatabaseHost();
   const r = await purgeExpiredPhotos();
   console.log(`[photo-purge] processed ${r.familiesProcessed} families, deleted ${r.deleted} photos`);
 }

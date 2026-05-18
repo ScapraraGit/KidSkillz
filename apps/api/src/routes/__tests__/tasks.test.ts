@@ -24,16 +24,13 @@ describe("/v1/tasks", () => {
 
   test("parent can create a task", async () => {
     ctx = await makeTestFamily();
-    const res = await request(app)
-      .post("/v1/tasks")
-      .set("Authorization", `Bearer ${ctx.parent.token}`)
-      .send({
-        title: "Take out trash",
-        creditValue: 5,
-        kind: "ONE_TIME",
-        proofRequirement: "NOTES_OPTIONAL",
-        assignedToId: ctx.child.id,
-      });
+    const res = await request(app).post("/v1/tasks").set("Authorization", `Bearer ${ctx.parent.token}`).send({
+      title: "Take out trash",
+      creditValue: 5,
+      kind: "ONE_TIME",
+      proofRequirement: "NOTES_OPTIONAL",
+      assignedToId: ctx.child.id,
+    });
     if (res.status !== 201) {
       console.error("create-task response:", res.status, res.body);
     }

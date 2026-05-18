@@ -53,8 +53,7 @@ export function DevicesCard() {
   });
 
   const revoke = useMutation({
-    mutationFn: (id: string) =>
-      api(`/family/devices/${id}/revoke`, { method: "POST", body: {} }),
+    mutationFn: (id: string) => api(`/family/devices/${id}/revoke`, { method: "POST", body: {} }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["devices"] }),
   });
 
@@ -158,9 +157,7 @@ export function DevicesCard() {
                 />
               </Field>
               {enroll.error && (
-                <div className="text-sm text-rose-600">
-                  {(enroll.error as Error).message ?? "Failed"}
-                </div>
+                <div className="text-sm text-rose-600">{(enroll.error as Error).message ?? "Failed"}</div>
               )}
               <Button type="submit" className="w-full" disabled={enroll.isPending}>
                 {enroll.isPending ? "Generating…" : "Generate pairing code"}

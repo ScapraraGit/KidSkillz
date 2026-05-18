@@ -228,6 +228,10 @@ export interface TaskDTO {
   recurrence?: Recurrence | null;
   dueAt?: string | null;
   dueByTime?: string | null; // "HH:MM" family TZ — recurring tasks only
+  /** Times this RECURRING task must be done per day (1..10). ONE_TIME is always 1. */
+  timesPerDay: number;
+  /** Per-slot UI labels. Length 0 (use "#N" fallback) or equal to timesPerDay. */
+  slotLabels: string[];
   defaultDurationMinutes?: number | null; // optional kid-focus timer suggestion
   proofRequirement: ProofRequirement;
   isActive: boolean;
@@ -254,6 +258,7 @@ export interface TaskJoinDTO {
   taskId: string;
   childId: string;
   occurrenceDate: string | null;
+  slotIndex: number;
   createdAt: string;
 }
 
@@ -261,6 +266,7 @@ export interface MissedOpportunityDTO {
   id: string;
   taskId: string;
   occurrenceDate: string | null;
+  slotIndex: number;
   claimedByUserId: string;
   claimedByName?: string;
   taskTitle?: string;
@@ -279,6 +285,10 @@ export interface SuggestedAwardDTO {
 export interface TodayTaskOccurrenceDTO {
   task: TaskDTO;
   occurrenceDate: string; // YYYY-MM-DD in family TZ
+  /** 0-based slot within the occurrence day. 0 for ONE_TIME / single-slot RECURRING. */
+  slotIndex: number;
+  /** Resolved slot label (slotLabels[slotIndex] when set, otherwise "#N"). */
+  slotLabel: string;
   completionId?: string | null;
   completionStatus?: ApprovalStatus | null;
   /** TEAM mode only: whether this kid has joined the team for this occurrence. */
@@ -295,6 +305,7 @@ export interface TaskCompletionDTO {
   notes?: string | null;
   photoKey?: string | null;
   occurrenceDate?: string | null;
+  slotIndex: number;
   submittedAt: string;
   reviewedAt?: string | null;
   reviewedById?: string | null;

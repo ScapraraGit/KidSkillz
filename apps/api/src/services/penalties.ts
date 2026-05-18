@@ -59,76 +59,71 @@ export async function sweepMissedTaskPenalties(
       }
       if (candidateChildIds.length === 0) continue;
 
-      // Skip if any APPROVED completion exists for this occurrence. Scope by familyId
-      // through the task relation so this is explicit even though taskId is globally
-      // unique.
-      const approved = await prisma.taskCompletion.findFirst({
+      const slotCount = Math.max(1, t.timesPerDay);
+      // Fetch all APPROVED completions for this task+day so we can skip per-slot.
+      const approvedRows = await prisma.taskCompletion.findMany({
         where: {
           taskId: t.id,
           occurrenceDate: yesterday,
           status: "APPROVED",
           task: { familyId: fam.id },
         },
+        select: { slotIndex: true },
       });
-      if (approved) continue;
+      const approvedSlots = new Set(approvedRows.map((r) => r.slotIndex));
 
-      for (const childId of candidateChildIds) {
-        const profile = await prisma.childProfile.findUnique({
-          where: { userId: childId },
-          select: { penaltiesExempt: true },
-        });
-        if (profile?.penaltiesExempt) continue;
+      for (let slot = 0; slot < slotCount; slot++) {
+        if (approvedSlots.has(slot)) continue;
 
-        // Wrap idempotency check + ledger post + notification in one transaction so
-        // concurrent sweep invocations can't race past the existence check and
-        // double-post. Also makes the negative-balance guard inside postLedger atomic
-        // with the write.
-        try {
-          await prisma.$transaction(async (tx) => {
-            const existingPenalty = await tx.ledgerEntry.findFirst({
-              where: {
+        for (const childId of candidateChildIds) {
+          const profile = await prisma.childProfile.findUnique({
+            where: { userId: childId },
+            select: { penaltiesExempt: true },
+          });
+          if (profile?.penaltiesExempt) continue;
+
+          const slotSourceId = slotCount > 1 ? `${t.id}:${yesterday}:${slot}` : `${t.id}:${yesterday}`;
+          try {
+            await prisma.$transaction(async (tx) => {
+              const existingPenalty = await tx.ledgerEntry.findFirst({
+                where: {
+                  childId,
+                  kind: "PENALTY",
+                  sourceType: "TASK_MISSED",
+                  sourceId: slotSourceId,
+                },
+              });
+              if (existingPenalty) return;
+
+              await postLedger({
+                tx,
+                familyId: fam.id,
                 childId,
+                amount: -t.missedPenalty,
                 kind: "PENALTY",
+                reason: `Missed: ${t.title}`,
                 sourceType: "TASK_MISSED",
-                sourceId: `${t.id}:${yesterday}`,
-              },
+                sourceId: slotSourceId,
+                createdById: null,
+              });
+              posted++;
             });
-            if (existingPenalty) return;
 
-            await postLedger({
-              tx,
+            await createNotification({
               familyId: fam.id,
-              childId,
-              amount: -t.missedPenalty,
-              kind: "PENALTY",
-              reason: `Missed: ${t.title}`,
-              sourceType: "TASK_MISSED",
-              sourceId: `${t.id}:${yesterday}`,
-              // Null createdById = system-posted. LedgerEntry.createdById is nullable
-              // with onDelete:SetNull; UI renders null actors as "System" implicitly
-              // (no name lookup performed in ledger views). Avoiding a real sentinel
-              // user keeps auth, audit, and tenant-isolation models simpler.
-              createdById: null,
+              userId: childId,
+              kind: "COMPLETION_REJECTED",
+              title: `−${t.missedPenalty} 🪙 — missed "${t.title}"`,
+              body: "Try not to miss it again!",
+              payload: { taskId: t.id, occurrenceDate: yesterday, slotIndex: slot },
             });
-            posted++;
-          });
-
-          await createNotification({
-            familyId: fam.id,
-            userId: childId,
-            kind: "COMPLETION_REJECTED",
-            title: `−${t.missedPenalty} 🪙 — missed "${t.title}"`,
-            body: "Try not to miss it again!",
-            payload: { taskId: t.id, occurrenceDate: yesterday },
-          });
-        } catch (e: any) {
-          // INSUFFICIENT_CREDITS when allowNegativeBalance=false is expected and not
-          // fatal — the kid simply isn't penalized further this round. Log and continue.
-          if (e?.code === "INSUFFICIENT_CREDITS") {
-            console.warn(`[penalty-sweep] skipped ${childId} for ${t.id}: insufficient credits`);
-            continue;
+          } catch (e: any) {
+            if (e?.code === "INSUFFICIENT_CREDITS") {
+              console.warn(`[penalty-sweep] skipped ${childId} for ${t.id}: insufficient credits`);
+              continue;
+            }
+            throw e;
           }
-          throw e;
         }
       }
     }

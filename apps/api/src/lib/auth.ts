@@ -8,7 +8,7 @@ export interface JWTPayload {
   fid: string; // family id
   role: Role;
   adm?: boolean; // admin flag — gates /admin endpoints
-  tv?: number;   // tokenVersion at mint; rejected on mismatch (logout-everywhere)
+  tv?: number; // tokenVersion at mint; rejected on mismatch (logout-everywhere)
 }
 
 // Access tokens are short-lived; refresh tokens carry the long horizon.

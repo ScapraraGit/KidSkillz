@@ -50,14 +50,10 @@ describe("evaluatePinAttempt", () => {
 
 describe("isLocked", () => {
   it("true while pinLockedUntil > now", () => {
-    expect(isLocked({ failedPinAttempts: 5, pinLockedUntil: new Date(t0.getTime() + 1) }, t0)).toBe(
-      true,
-    );
+    expect(isLocked({ failedPinAttempts: 5, pinLockedUntil: new Date(t0.getTime() + 1) }, t0)).toBe(true);
   });
   it("false once expired", () => {
-    expect(isLocked({ failedPinAttempts: 5, pinLockedUntil: new Date(t0.getTime() - 1) }, t0)).toBe(
-      false,
-    );
+    expect(isLocked({ failedPinAttempts: 5, pinLockedUntil: new Date(t0.getTime() - 1) }, t0)).toBe(false);
   });
   it("false when null", () => {
     expect(isLocked({ failedPinAttempts: 0, pinLockedUntil: null }, t0)).toBe(false);

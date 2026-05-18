@@ -27,8 +27,7 @@ export const useAuth = create<AuthState>()(
         set((s) => ({ token, refreshToken: refreshToken ?? s.refreshToken })),
       setSettings: (settings) => set({ settings }),
       setUser: (user) => set({ user }),
-      logout: () =>
-        set({ token: null, refreshToken: null, user: null, settings: null }),
+      logout: () => set({ token: null, refreshToken: null, user: null, settings: null }),
     }),
     { name: "chorechampz-auth" },
   ),

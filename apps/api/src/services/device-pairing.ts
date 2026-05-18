@@ -62,11 +62,9 @@ export async function issueEnrollment(input: IssueEnrollmentInput): Promise<Issu
   // Random `jti` ensures the hash row remains unique even if a parent rapidly
   // re-issues a pairing.
   const jti = randomBytes(12).toString("hex");
-  const qrNonce = jwt.sign(
-    { kind: "device_pair", fid: input.familyId, jti },
-    env.JWT_SECRET,
-    { expiresIn: Math.floor(PAIRING_TTL_MS / 1000) },
-  );
+  const qrNonce = jwt.sign({ kind: "device_pair", fid: input.familyId, jti }, env.JWT_SECRET, {
+    expiresIn: Math.floor(PAIRING_TTL_MS / 1000),
+  });
   const nonceHash = sha256(qrNonce);
 
   const row = await prisma.deviceEnrollment.create({
@@ -100,9 +98,7 @@ export interface RedeemEnrollmentResult {
  * the raw deviceToken to the device — server stores only sha256. Caller is
  * expected to gate via rate limiter + Turnstile.
  */
-export async function redeemEnrollment(
-  input: RedeemEnrollmentInput,
-): Promise<RedeemEnrollmentResult> {
+export async function redeemEnrollment(input: RedeemEnrollmentInput): Promise<RedeemEnrollmentResult> {
   if (!input.pairingCode && !input.qrNonce) {
     throw HttpError.badRequest("Provide pairingCode or qrNonce");
   }
@@ -182,11 +178,7 @@ export async function listDevices(familyId: string): Promise<DeviceRecord[]> {
   }));
 }
 
-export async function revokeDevice(
-  familyId: string,
-  deviceId: string,
-  revokedById: string,
-): Promise<void> {
+export async function revokeDevice(familyId: string, deviceId: string, revokedById: string): Promise<void> {
   const row = await prisma.enrolledDevice.findFirst({ where: { id: deviceId, familyId } });
   if (!row) throw HttpError.notFound("Device not found");
   if (row.revokedAt) return; // idempotent
@@ -196,11 +188,7 @@ export async function revokeDevice(
   });
 }
 
-export async function renameDevice(
-  familyId: string,
-  deviceId: string,
-  label: string,
-): Promise<void> {
+export async function renameDevice(familyId: string, deviceId: string, label: string): Promise<void> {
   const trimmed = label.trim();
   if (trimmed.length < 1 || trimmed.length > 80) {
     throw HttpError.badRequest("Label must be 1-80 chars");

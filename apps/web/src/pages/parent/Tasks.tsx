@@ -279,6 +279,8 @@ export function TaskFormModal({
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [dueByTime, setDueByTime] = useState(initial?.dueByTime ?? "");
   const [dueAt, setDueAt] = useState(initial?.dueAt ? initial.dueAt.slice(0, 16) : "");
+  const [timesPerDay, setTimesPerDay] = useState<number>(initial?.timesPerDay ?? 1);
+  const [slotLabels, setSlotLabels] = useState<string[]>(initial?.slotLabels ?? []);
   const [defaultDurationMinutes, setDefaultDurationMinutes] = useState<string>(
     initial?.defaultDurationMinutes != null ? String(initial.defaultDurationMinutes) : "",
   );
@@ -308,10 +310,17 @@ export function TaskFormModal({
         };
         body.dueByTime = dueByTime || null;
         body.dueAt = null;
+        body.timesPerDay = Math.max(1, Math.min(10, timesPerDay || 1));
+        // Only send labels if every slot has text — otherwise let server fall back to "#N".
+        const trimmed = slotLabels.slice(0, body.timesPerDay).map((s) => s.trim());
+        body.slotLabels =
+          trimmed.every((s) => s.length > 0) && trimmed.length === body.timesPerDay ? trimmed : [];
       } else {
         body.recurrence = null;
         body.dueByTime = null;
         body.dueAt = dueAt ? new Date(dueAt).toISOString() : null;
+        body.timesPerDay = 1;
+        body.slotLabels = [];
       }
       if (initial) await api(`/tasks/${initial.id}`, { method: "PATCH", body });
       else await api("/tasks", { body });
@@ -538,6 +547,55 @@ export function TaskFormModal({
                 onChange={(e) => setDueByTime(e.target.value)}
               />
             </Field>
+            <Tooltip label="How many times per day this chore must be completed (e.g. 2 for brushing teeth morning + bedtime).">
+              <Field
+                label="Times per day"
+                hint="1–10. Each slot is approved separately and pays the full credit value."
+              >
+                <input
+                  className={inputCls}
+                  type="number"
+                  min={1}
+                  max={10}
+                  aria-label="Times per day"
+                  value={timesPerDay}
+                  onChange={(e) => {
+                    const n = Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                    setTimesPerDay(n);
+                    setSlotLabels((prev) => {
+                      const next = prev.slice(0, n);
+                      while (next.length < n) next.push("");
+                      return next;
+                    });
+                  }}
+                />
+              </Field>
+            </Tooltip>
+            {timesPerDay > 1 && (
+              <Field
+                label="Slot labels (optional)"
+                hint="Label each occurrence so kids see 'Morning' / 'Evening' instead of '#1' / '#2'. Leave blank to use defaults."
+              >
+                <div className="flex flex-col gap-2">
+                  {Array.from({ length: timesPerDay }).map((_, i) => (
+                    <input
+                      key={i}
+                      className={inputCls}
+                      placeholder={`Slot ${i + 1} label (e.g. ${i === 0 ? "Morning" : "Evening"})`}
+                      value={slotLabels[i] ?? ""}
+                      onChange={(e) => {
+                        setSlotLabels((prev) => {
+                          const next = [...prev];
+                          while (next.length < timesPerDay) next.push("");
+                          next[i] = e.target.value;
+                          return next;
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              </Field>
+            )}
           </>
         )}
         {kind === "ONE_TIME" && (

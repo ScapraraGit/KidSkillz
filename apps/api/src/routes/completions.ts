@@ -25,6 +25,7 @@ const submitSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  slotIndex: z.number().int().min(0).max(9).optional(),
 });
 
 completionsRouter.post("/", async (req, res) => {

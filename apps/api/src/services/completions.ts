@@ -37,6 +37,7 @@ export interface SubmitCompletionInput {
   notes?: string | null;
   photoKey?: string | null;
   occurrenceDate?: string | null;
+  slotIndex?: number | null;
 }
 
 export async function submitCompletion(familyId: string, input: SubmitCompletionInput) {
@@ -69,51 +70,61 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
       ? (input.occurrenceDate ?? todayInTz((await getFamilySettings(familyId)).timezone))
       : null;
 
-  // Reject duplicate active completion for this occurrence
+  // Resolve slotIndex. ONE_TIME tasks always slot 0; RECURRING tasks must be in [0, timesPerDay).
+  let slotIndex = 0;
+  if (task.kind === "RECURRING") {
+    const n = Math.max(1, task.timesPerDay);
+    slotIndex = Math.max(0, Math.floor(input.slotIndex ?? 0));
+    if (slotIndex >= n) {
+      throw HttpError.badRequest(`slotIndex ${slotIndex} out of range for task with ${n} slots`);
+    }
+  }
+
+  // Reject duplicate active completion for this occurrence + slot.
   const existing = await prisma.taskCompletion.findFirst({
     where: {
       taskId: task.id,
       childId: child.id,
       occurrenceDate,
+      slotIndex,
       status: { in: ["PENDING", "APPROVED"] },
     },
   });
   if (existing) throw HttpError.conflict("Already submitted for this occurrence");
 
-  // Block submission if a parent already self-claimed this occurrence (Missed Opportunity).
+  // Block submission if a parent already self-claimed this occurrence + slot (Missed Opportunity).
   const missed = await prisma.missedOpportunity.findFirst({
-    where: { taskId: task.id, occurrenceDate },
+    where: { taskId: task.id, occurrenceDate, slotIndex },
   });
   if (missed) throw HttpError.conflict("A grown-up already claimed this one!");
 
   if (task.assignmentMode === "UP_FOR_GRABS") {
-    // Pool tasks: first kid to submit claims it. Block if anyone else has a live claim.
     const claimed = await prisma.taskCompletion.findFirst({
       where: {
         taskId: task.id,
         occurrenceDate,
+        slotIndex,
         status: { in: ["PENDING", "APPROVED"] },
         NOT: { childId: child.id },
       },
     });
     if (claimed) throw HttpError.conflict("Another kid already grabbed this one");
   } else if (task.assignmentMode === "TEAM") {
-    // Team: only one submission per occurrence (whoever submits represents the team).
-    // Auto-join submitter so they appear on the roster at approval time.
     const otherSubmission = await prisma.taskCompletion.findFirst({
       where: {
         taskId: task.id,
         occurrenceDate,
+        slotIndex,
         status: { in: ["PENDING", "APPROVED"] },
       },
     });
     if (otherSubmission) throw HttpError.conflict("Team already submitted for this occurrence");
     const existingJoin = await prisma.taskJoin.findFirst({
-      where: { taskId: task.id, childId: child.id, occurrenceDate },
+      where: { taskId: task.id, childId: child.id, occurrenceDate, slotIndex },
     });
     if (!existingJoin) {
       await prisma.taskJoin.create({
-        data: { familyId, taskId: task.id, childId: child.id, occurrenceDate },
+        data: { familyId, taskId: task.id, childId: child.id, occurrenceDate, slotIndex },
       });
     }
   } else if (task.assignedToId !== child.id) {
@@ -127,6 +138,7 @@ export async function submitCompletion(familyId: string, input: SubmitCompletion
       notes: input.notes ?? null,
       photoKey: features.photoProof ? (input.photoKey ?? null) : null,
       occurrenceDate,
+      slotIndex,
     },
     include: { task: true, child: { select: { id: true, name: true, avatarColor: true } } },
   });
@@ -218,6 +230,7 @@ export async function approveCompletion(
           where: {
             taskId: c.taskId,
             occurrenceDate: c.occurrenceDate,
+            slotIndex: c.slotIndex,
             createdAt: { lte: c.submittedAt },
           },
           select: { childId: true },
@@ -315,6 +328,7 @@ export function serializeCompletion(c: any, suggested?: SuggestedAwardDTO | null
     notes: c.notes,
     photoKey: c.photoKey,
     occurrenceDate: c.occurrenceDate,
+    slotIndex: c.slotIndex ?? 0,
     submittedAt: c.submittedAt.toISOString(),
     reviewedAt: c.reviewedAt?.toISOString() ?? null,
     reviewedById: c.reviewedById ?? null,

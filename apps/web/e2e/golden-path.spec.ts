@@ -100,7 +100,9 @@ test("parent → kid → task → submit → approve → balance", async ({ page
   await expect(approveBtn).toBeVisible({ timeout: 10_000 });
   await approveBtn.click();
   // Wait for the row to disappear or status to flip.
-  await expect(page.getByText(/E2E sweep/)).toBeHidden({ timeout: 10_000 }).catch(() => {});
+  await expect(page.getByText(/E2E sweep/))
+    .toBeHidden({ timeout: 10_000 })
+    .catch(() => {});
 
   // ---- 6. Confirm the ledger by hitting the balance endpoint. ----
   const bal = await request.get(`${API_BASE}/v1/children/${kidId}/balance`, { headers });

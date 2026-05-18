@@ -8,15 +8,12 @@ const app = createApp({ forTests: true });
 const test = dbIt(it);
 
 async function seedReward(token: string, creditCost = 5) {
-  const r = await request(app)
-    .post("/v1/rewards")
-    .set("Authorization", `Bearer ${token}`)
-    .send({
-      name: "Ice cream",
-      creditCost,
-      type: "TREAT",
-      requiresApproval: true,
-    });
+  const r = await request(app).post("/v1/rewards").set("Authorization", `Bearer ${token}`).send({
+    name: "Ice cream",
+    creditCost,
+    type: "TREAT",
+    requiresApproval: true,
+  });
   if (r.status !== 201) throw new Error(`reward ${r.status} ${JSON.stringify(r.body)}`);
   return r.body.reward.id as string;
 }

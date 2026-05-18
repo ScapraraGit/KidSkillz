@@ -26,11 +26,7 @@ export function backoffMs(attempts: number): number | null {
  * Pure-function reducer. Given current lockout state and the outcome of a PIN
  * check, returns the next state. `now` injected for testability.
  */
-export function evaluatePinAttempt(
-  state: PinAttemptState,
-  ok: boolean,
-  now: Date,
-): PinAttemptResult {
+export function evaluatePinAttempt(state: PinAttemptState, ok: boolean, now: Date): PinAttemptResult {
   if (ok) {
     return { failedPinAttempts: 0, pinLockedUntil: null, locked: false };
   }

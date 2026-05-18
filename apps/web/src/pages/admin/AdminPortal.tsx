@@ -199,11 +199,7 @@ function FamilyDetail({ familyId, onClose }: { familyId: string; onClose: () => 
       <div className="mb-6">
         <label className="block text-sm font-medium mb-1">Family name</label>
         <div className="flex gap-2">
-          <input
-            className={inputCls + " flex-1"}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <input className={inputCls + " flex-1"} value={name} onChange={(e) => setName(e.target.value)} />
           <Tooltip label="Save new family name (typo/divorce/etc.)" side="left">
             <Button
               onClick={() => renameM.mutate(name)}
@@ -259,8 +255,7 @@ function FamilyDetail({ familyId, onClose }: { familyId: string; onClose: () => 
         {resetUserId && (
           <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
             <p className="text-sm mb-2">
-              New password for{" "}
-              <strong>{family.members.find((m) => m.id === resetUserId)?.email}</strong>
+              New password for <strong>{family.members.find((m) => m.id === resetUserId)?.email}</strong>
             </p>
             <div className="flex gap-2">
               <input
@@ -305,8 +300,7 @@ function AdminTasksSection({ familyId }: { familyId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "family-tasks", familyId] }),
   });
   const delM = useMutation({
-    mutationFn: (id: string) =>
-      api(`/admin/families/${familyId}/tasks/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => api(`/admin/families/${familyId}/tasks/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "family-tasks", familyId] }),
   });
 
@@ -315,11 +309,7 @@ function AdminTasksSection({ familyId }: { familyId: string }) {
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold">Tasks ({tasksQ.data?.tasks.length ?? 0})</h3>
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={editEnabled}
-            onChange={(e) => setEditEnabled(e.target.checked)}
-          />
+          <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} />
           Enable edit (act on parent's behalf)
         </label>
       </div>
@@ -429,8 +419,7 @@ function AdminRewardsSection({ familyId }: { familyId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "family-rewards", familyId] }),
   });
   const delM = useMutation({
-    mutationFn: (id: string) =>
-      api(`/admin/families/${familyId}/rewards/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => api(`/admin/families/${familyId}/rewards/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "family-rewards", familyId] }),
   });
 
@@ -439,11 +428,7 @@ function AdminRewardsSection({ familyId }: { familyId: string }) {
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold">Rewards ({rewardsQ.data?.rewards.length ?? 0})</h3>
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={editEnabled}
-            onChange={(e) => setEditEnabled(e.target.checked)}
-          />
+          <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} />
           Enable edit (act on parent's behalf)
         </label>
       </div>

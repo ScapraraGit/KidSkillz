@@ -325,6 +325,13 @@ model Task {
   recurrence       Json?            // { frequency, daysOfWeek, expiresAt }
   dueAt            DateTime?
   dueByTime        String?          // HH:MM in family TZ; only meaningful for RECURRING tasks
+  // Number of times this RECURRING task must be done per day (1..10). ONE_TIME tasks
+  // are always 1. Each completion of a multi-slot task is independent — brushing
+  // teeth at slot 0 (morning) and slot 1 (bedtime) are two separate completions.
+  timesPerDay      Int              @default(1)
+  // Optional UI labels for each slot. Must be length 0 (use "#N" fallback) or equal
+  // to timesPerDay. Example: ["Morning","Evening"].
+  slotLabels       String[]         @default([])
   defaultDurationMinutes Int?       // optional kid-focus timer default; 1..240
   proofRequirement ProofRequirement @default(NOTES_OPTIONAL)
   isActive         Boolean          @default(true)
@@ -371,13 +378,14 @@ model TaskJoin {
   task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   childId        String
   occurrenceDate String?  // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  // 0-based slot within the occurrence day for multi-per-day RECURRING tasks. 0 for ONE_TIME.
+  slotIndex      Int      @default(0)
   createdAt      DateTime @default(now())
 
-  // Uniqueness on (taskId, childId, occurrenceDate) is enforced via two partial
-  // indexes in the 20260513210000_taskjoin_partial_unique migration: one WHERE
-  // occurrenceDate IS NOT NULL and one WHERE occurrenceDate IS NULL. The default
-  // Postgres NULLS DISTINCT semantics would otherwise let two ONE_TIME rows for the
-  // same (taskId, childId, NULL) coexist.
+  // Uniqueness on (taskId, childId, occurrenceDate, slotIndex) is enforced via
+  // two partial indexes (see 20260515200000_task_multi_slot migration): one WHERE
+  // occurrenceDate IS NOT NULL and one WHERE occurrenceDate IS NULL. NULLs are
+  // distinct under a normal UNIQUE, so partial indexes give per-(slot) coverage.
   @@index([familyId])
   @@index([taskId, occurrenceDate])
 }
@@ -389,10 +397,12 @@ model MissedOpportunity {
   taskId           String
   task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   occurrenceDate   String?  // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  // 0-based slot within the occurrence day. 0 for ONE_TIME / single-slot RECURRING.
+  slotIndex        Int      @default(0)
   claimedByUserId  String   // parent or caregiver who self-claimed
   createdAt        DateTime @default(now())
 
-  @@unique([taskId, occurrenceDate])
+  @@unique([taskId, occurrenceDate, slotIndex])
   @@index([familyId, createdAt])
 }
 
@@ -421,6 +431,8 @@ model TaskCompletion {
   notes           String?
   photoKey        String?
   occurrenceDate  String?        // YYYY-MM-DD for RECURRING; null for ONE_TIME
+  // 0-based slot for multi-per-day RECURRING tasks. 0 for ONE_TIME / single-slot.
+  slotIndex       Int            @default(0)
   submittedAt     DateTime       @default(now())
   reviewedAt      DateTime?
   reviewedById    String?
@@ -428,7 +440,7 @@ model TaskCompletion {
   creditAwarded   Int?
   parentNote      String?        // optional kudos message from parent on approve
 
-  @@unique([taskId, childId, occurrenceDate])
+  @@unique([taskId, childId, occurrenceDate, slotIndex])
   @@index([childId])
   @@index([status])
 }

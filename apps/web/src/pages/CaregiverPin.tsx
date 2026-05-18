@@ -70,10 +70,9 @@ export function CaregiverPin() {
         setSession(r.token, r.user, r.refreshToken ?? null);
       } else {
         if (!familyId) throw new Error("Find the family first");
-        const r = await api<{ token: string; user: AuthUserDTO }>(
-          "/invitations/pin-login",
-          { body: { familyId, pin, name: name || undefined } },
-        );
+        const r = await api<{ token: string; user: AuthUserDTO }>("/invitations/pin-login", {
+          body: { familyId, pin, name: name || undefined },
+        });
         setSession(r.token, r.user);
       }
       const me = await api<{ settings: FamilySettings }>("/auth/me");
@@ -160,11 +159,7 @@ export function CaregiverPin() {
               {err && <div className="text-sm text-rose-600">{err}</div>}
               <div className="text-center text-xs text-slate-500 pt-1">
                 On a tablet the parent already paired?{" "}
-                <button
-                  type="button"
-                  className="text-brand-600 hover:underline"
-                  onClick={() => nav("/pair")}
-                >
+                <button type="button" className="text-brand-600 hover:underline" onClick={() => nav("/pair")}>
                   Pair this device
                 </button>
               </div>

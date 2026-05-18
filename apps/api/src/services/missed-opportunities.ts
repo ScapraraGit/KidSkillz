@@ -8,6 +8,7 @@ export async function claimMissedOpportunity(
   taskId: string,
   claimedByUserId: string,
   occurrenceDate: string | null,
+  slotIndex: number = 0,
 ): Promise<MissedOpportunityDTO> {
   const task = await prisma.task.findFirst({
     where: { id: taskId, familyId, isActive: true },
@@ -19,16 +20,22 @@ export async function claimMissedOpportunity(
   }
 
   const occ = task.kind === "RECURRING" ? occurrenceDate : null;
+  let slot = 0;
+  if (task.kind === "RECURRING") {
+    const n = Math.max(1, task.timesPerDay);
+    slot = Math.max(0, Math.floor(slotIndex));
+    if (slot >= n) throw HttpError.badRequest(`slotIndex ${slot} out of range for task with ${n} slots`);
+  }
 
-  // Block if a kid has already submitted (or had it approved) for this occurrence.
+  // Block if a kid has already submitted (or had it approved) for this occurrence + slot.
   const existingCompletion = await prisma.taskCompletion.findFirst({
-    where: { taskId, occurrenceDate: occ, status: { in: ["PENDING", "APPROVED"] } },
+    where: { taskId, occurrenceDate: occ, slotIndex: slot, status: { in: ["PENDING", "APPROVED"] } },
   });
   if (existingCompletion) throw HttpError.conflict("A kid already submitted this one");
 
   try {
     const row = await prisma.missedOpportunity.create({
-      data: { familyId, taskId, claimedByUserId, occurrenceDate: occ },
+      data: { familyId, taskId, claimedByUserId, occurrenceDate: occ, slotIndex: slot },
     });
     return serializeMO(row, { taskTitle: task.title });
   } catch (e: any) {
@@ -62,13 +69,21 @@ export async function listRecentMissedOpportunities(
 }
 
 function serializeMO(
-  r: { id: string; taskId: string; occurrenceDate: string | null; claimedByUserId: string; createdAt: Date },
+  r: {
+    id: string;
+    taskId: string;
+    occurrenceDate: string | null;
+    slotIndex?: number;
+    claimedByUserId: string;
+    createdAt: Date;
+  },
   extras: { taskTitle?: string; claimedByName?: string } = {},
 ): MissedOpportunityDTO {
   return {
     id: r.id,
     taskId: r.taskId,
     occurrenceDate: r.occurrenceDate,
+    slotIndex: r.slotIndex ?? 0,
     claimedByUserId: r.claimedByUserId,
     claimedByName: extras.claimedByName,
     taskTitle: extras.taskTitle,

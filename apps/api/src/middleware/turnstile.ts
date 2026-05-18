@@ -14,11 +14,7 @@ interface SiteverifyResponse {
  * body. Fails open when TURNSTILE_SECRET is unset so local dev / tests aren't
  * gated behind a third-party call.
  */
-export async function requireTurnstile(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function requireTurnstile(req: Request, _res: Response, next: NextFunction): Promise<void> {
   if (!env.TURNSTILE_SECRET) return next();
   const token = (req.body?.["cf-turnstile-response"] as string | undefined) ?? "";
   if (!token) return next(HttpError.badRequest("Missing CAPTCHA token", "CAPTCHA_REQUIRED"));

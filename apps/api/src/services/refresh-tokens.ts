@@ -56,7 +56,9 @@ export async function rotateRefreshToken(
   const row = await prisma.refreshToken.findUnique({
     where: { tokenHash },
     include: {
-      user: { select: { id: true, familyId: true, role: true, isAdmin: true, tokenVersion: true, isActive: true } },
+      user: {
+        select: { id: true, familyId: true, role: true, isAdmin: true, tokenVersion: true, isActive: true },
+      },
     },
   });
   if (!row || !row.user) throw HttpError.unauthorized("Refresh token not found");
@@ -139,6 +141,9 @@ export async function bumpTokenVersionAndRevokeAll(userId: string): Promise<void
   ]);
 }
 
-export function clientIpFromReq(req: { ip?: string; header: (n: string) => string | undefined }): string | null {
+export function clientIpFromReq(req: {
+  ip?: string;
+  header: (n: string) => string | undefined;
+}): string | null {
   return req.header("cf-connecting-ip") ?? req.ip ?? null;
 }

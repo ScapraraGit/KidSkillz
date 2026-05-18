@@ -61,7 +61,10 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const baseLinks = role === "CHILD" ? childLinks : isCaregiver ? caregiverLinks : parentLinks;
   const links =
     role === "PARENT" && !isCaregiver && user?.isAdmin
-      ? [...baseLinks, { to: "/parent/admin", label: "Admin", tip: "Customer support portal — manage any family" }]
+      ? [
+          ...baseLinks,
+          { to: "/parent/admin", label: "Admin", tip: "Customer support portal — manage any family" },
+        ]
       : baseLinks;
 
   const me = useQuery({
@@ -144,7 +147,12 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                     onClick={() => setMenuOpen((v) => !v)}
                     className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
                   >
-                    <KidAvatar name={user.name} color={user.avatarColor} config={user.avatarConfig} size={32} />
+                    <KidAvatar
+                      name={user.name}
+                      color={user.avatarColor}
+                      config={user.avatarConfig}
+                      size={32}
+                    />
                     <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
                     <span className="hidden sm:inline text-xs text-slate-400">▾</span>
                   </button>

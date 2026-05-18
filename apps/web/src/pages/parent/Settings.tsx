@@ -17,9 +17,7 @@ export function ParentSettings() {
   const familyQ = useQuery({
     queryKey: ["family"],
     queryFn: () =>
-      api<{ id: string; name: string; familyCode: string | null; settings: FamilySettings }>(
-        "/family",
-      ),
+      api<{ id: string; name: string; familyCode: string | null; settings: FamilySettings }>("/family"),
   });
 
   const [devicePassword, setDevicePassword] = useState("");

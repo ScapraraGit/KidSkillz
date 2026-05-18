@@ -50,7 +50,8 @@ export function checkPassword(password: string, identifiers: string[] = []): Pas
   }
   const r = zxcvbn(password, identifiers.filter(Boolean));
   if (r.score < MIN_SCORE) {
-    const hint = r.feedback.warning || r.feedback.suggestions[0] || "Try a longer or less predictable password";
+    const hint =
+      r.feedback.warning || r.feedback.suggestions[0] || "Try a longer or less predictable password";
     return { ok: false, score: r.score, reason: hint };
   }
   return { ok: true, score: r.score };

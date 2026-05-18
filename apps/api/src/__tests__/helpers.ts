@@ -105,6 +105,6 @@ export async function makeTestFamily(): Promise<TestFamily> {
  * vitest skip-guard. Returns `it` if a usable DATABASE_URL is configured,
  * otherwise `it.skip` so CI without a test DB doesn't fail the suite.
  */
-export function dbIt(it: typeof import("vitest")["it"]): typeof import("vitest")["it"] {
+export function dbIt(it: (typeof import("vitest"))["it"]): (typeof import("vitest"))["it"] {
   return process.env.DATABASE_URL ? it : (it.skip as typeof it);
 }

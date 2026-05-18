@@ -32,9 +32,7 @@ export const httpRequestTotal = new client.Counter({
 export function metricsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const start = process.hrtime.bigint();
   res.on("finish", () => {
-    const route = req.route?.path
-      ? `${req.baseUrl ?? ""}${req.route.path}`
-      : req.baseUrl || "unknown";
+    const route = req.route?.path ? `${req.baseUrl ?? ""}${req.route.path}` : req.baseUrl || "unknown";
     const seconds = Number(process.hrtime.bigint() - start) / 1e9;
     const labels = {
       method: req.method,

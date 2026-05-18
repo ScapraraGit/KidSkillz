@@ -202,9 +202,7 @@ authRouter.post("/child/login", async (req, res) => {
     const next = await recordPinAttempt(child.id, ok);
     if (!ok) {
       if (next.locked) {
-        const seconds = Math.ceil(
-          ((next.pinLockedUntil?.getTime() ?? 0) - Date.now()) / 1000,
-        );
+        const seconds = Math.ceil(((next.pinLockedUntil?.getTime() ?? 0) - Date.now()) / 1000);
         throw HttpError.unauthorized(`Too many attempts. Locked for ${seconds}s.`);
       }
       throw HttpError.unauthorized("Invalid PIN");
@@ -350,30 +348,25 @@ const redeemSchema = z
   });
 
 // Unauth — rate-limited + Turnstile-gated. Returns the raw deviceToken once.
-authRouter.post(
-  "/devices/redeem",
-  lookupRateLimiter,
-  requireTurnstile,
-  async (req, res) => {
-    if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
-    const input = redeemSchema.parse(req.body);
-    const r = await redeemEnrollment(input);
-    await recordAudit({
-      familyId: r.familyId,
-      actorId: null,
-      kind: "DEVICE_REDEEMED",
-      targetType: "EnrolledDevice",
-      targetId: r.deviceId,
-      payload: { label: r.label },
-    });
-    res.json({
-      deviceToken: r.deviceToken,
-      deviceId: r.deviceId,
-      familyId: r.familyId,
-      label: r.label,
-    });
-  },
-);
+authRouter.post("/devices/redeem", lookupRateLimiter, requireTurnstile, async (req, res) => {
+  if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
+  const input = redeemSchema.parse(req.body);
+  const r = await redeemEnrollment(input);
+  await recordAudit({
+    familyId: r.familyId,
+    actorId: null,
+    kind: "DEVICE_REDEEMED",
+    targetType: "EnrolledDevice",
+    targetId: r.deviceId,
+    payload: { label: r.label },
+  });
+  res.json({
+    deviceToken: r.deviceToken,
+    deviceId: r.deviceId,
+    familyId: r.familyId,
+    label: r.label,
+  });
+});
 
 // Device-scoped: lists kid profiles for the device's family. No JWT needed —
 // the device token IS the family-scope credential.

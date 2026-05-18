@@ -21,11 +21,7 @@ const HEADER = "x-device-token";
  * Pure family-scope check — does NOT identify a user. Pair with PIN check or
  * requireAuth when user identity matters.
  */
-export async function requireDeviceToken(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function requireDeviceToken(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const raw = req.header(HEADER)?.trim();
   if (!raw) return next(HttpError.unauthorized("Device not paired"));
   const device = await findActiveDeviceByToken(raw);

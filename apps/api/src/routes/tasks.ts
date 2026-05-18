@@ -40,6 +40,8 @@ const createTaskSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24h)")
     .nullable()
     .optional(),
+  timesPerDay: z.number().int().min(1).max(10).optional(),
+  slotLabels: z.array(z.string().max(40)).max(10).optional(),
   defaultDurationMinutes: z.number().int().min(1).max(240).nullable().optional(),
   proofRequirement: proofRequirementSchema.optional(),
   isActive: z.boolean().optional(),
@@ -103,19 +105,26 @@ const joinSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  slotIndex: z.number().int().min(0).max(9).optional(),
 });
 
 tasksRouter.post("/:id/join", async (req, res) => {
   if (req.auth!.role !== "CHILD") return res.status(403).json({ error: "FORBIDDEN" });
-  const { occurrenceDate } = joinSchema.parse(req.body ?? {});
-  const roster = await joinTeam(req.auth!.fid, req.params.id, req.auth!.sub, occurrenceDate ?? null);
+  const { occurrenceDate, slotIndex } = joinSchema.parse(req.body ?? {});
+  const roster = await joinTeam(
+    req.auth!.fid,
+    req.params.id,
+    req.auth!.sub,
+    occurrenceDate ?? null,
+    slotIndex ?? 0,
+  );
   res.json({ joinerIds: roster.map((r) => r.childId) });
 });
 
 tasksRouter.post("/:id/leave", async (req, res) => {
   if (req.auth!.role !== "CHILD") return res.status(403).json({ error: "FORBIDDEN" });
-  const { occurrenceDate } = joinSchema.parse(req.body ?? {});
-  await leaveTeam(req.auth!.fid, req.params.id, req.auth!.sub, occurrenceDate ?? null);
+  const { occurrenceDate, slotIndex } = joinSchema.parse(req.body ?? {});
+  await leaveTeam(req.auth!.fid, req.params.id, req.auth!.sub, occurrenceDate ?? null, slotIndex ?? 0);
   res.status(204).end();
 });
 
@@ -125,15 +134,17 @@ const parentClaimSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  slotIndex: z.number().int().min(0).max(9).optional(),
 });
 
 tasksRouter.post("/:id/parent-claim", requireRole("PARENT", "CAREGIVER"), async (req, res) => {
-  const { occurrenceDate } = parentClaimSchema.parse(req.body ?? {});
+  const { occurrenceDate, slotIndex } = parentClaimSchema.parse(req.body ?? {});
   const mo = await claimMissedOpportunity(
     req.auth!.fid,
     req.params.id,
     req.auth!.sub,
     occurrenceDate ?? null,
+    slotIndex ?? 0,
   );
   res.status(201).json({ missedOpportunity: mo });
 });

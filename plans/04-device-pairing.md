@@ -67,17 +67,18 @@ Both tables tenant-scoped by familyId per project rule.
 ### Token model
 
 Two kinds of credentials:
+
 1. **Enrollment code/nonce** — short-lived (10 min), single-use. Displayed as 8-char pairing code + QR. Consumed by `/auth/devices/redeem` to mint a device token.
 2. **Device token** — long-lived (e.g. 1 yr sliding), opaque base64 (32 random bytes). Stored hashed on `EnrolledDevice.deviceTokenHash`. Sent by kid device on every request as `x-device-token: <token>`. Revocable. Family-scoped only — does NOT authenticate any user.
 
-JWT (existing user auth) stays orthogonal. Device token is a *family scope* gate; user auth (parent / kid / caregiver) layers on top:
+JWT (existing user auth) stays orthogonal. Device token is a _family scope_ gate; user auth (parent / kid / caregiver) layers on top:
 
-| Request | Headers | Auth result |
-|---|---|---|
-| `GET /auth/device/profiles` | `x-device-token` | Returns kid profile list for that family |
-| `POST /auth/child/login` | `x-device-token` + body `{childId, pin}` | PIN verified within device's family |
-| `POST /auth/caregiver/pin-login` | `x-device-token` + body `{pin, name}` | Caregiver PIN verified within device's family |
-| Anything else | `Authorization: Bearer <jwt>` | Existing user auth |
+| Request                          | Headers                                  | Auth result                                   |
+| -------------------------------- | ---------------------------------------- | --------------------------------------------- |
+| `GET /auth/device/profiles`      | `x-device-token`                         | Returns kid profile list for that family      |
+| `POST /auth/child/login`         | `x-device-token` + body `{childId, pin}` | PIN verified within device's family           |
+| `POST /auth/caregiver/pin-login` | `x-device-token` + body `{pin, name}`    | Caregiver PIN verified within device's family |
+| Anything else                    | `Authorization: Bearer <jwt>`            | Existing user auth                            |
 
 ### Middleware
 
@@ -132,13 +133,13 @@ JWT (existing user auth) stays orthogonal. Device token is a *family scope* gate
 
 ## Threats addressed
 
-| Threat | Mitigation |
-|---|---|
-| Family-name enumeration | Endpoint removed for kid login path (only fresh-device pairing needs anything tenant-discoverable, and pairing requires parent-issued code) |
-| 4-digit PIN brute force across unknown families | Device token scopes PIN attempts to one family. Combined with existing lockout (plan 03 #1) |
-| Token theft via localStorage XSS | Device token rotates on revoke. Per-device label lets parent revoke the suspicious one without affecting siblings |
-| Phished pairing code | 10-min TTL, single-use, displayed only inside authenticated parent UI (not emailed/SMSed) |
-| Stolen tablet | Parent revokes from Settings; next request 401 → device returns to /pair |
+| Threat                                          | Mitigation                                                                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Family-name enumeration                         | Endpoint removed for kid login path (only fresh-device pairing needs anything tenant-discoverable, and pairing requires parent-issued code) |
+| 4-digit PIN brute force across unknown families | Device token scopes PIN attempts to one family. Combined with existing lockout (plan 03 #1)                                                 |
+| Token theft via localStorage XSS                | Device token rotates on revoke. Per-device label lets parent revoke the suspicious one without affecting siblings                           |
+| Phished pairing code                            | 10-min TTL, single-use, displayed only inside authenticated parent UI (not emailed/SMSed)                                                   |
+| Stolen tablet                                   | Parent revokes from Settings; next request 401 → device returns to /pair                                                                    |
 
 ## Threats NOT addressed (acknowledged)
 

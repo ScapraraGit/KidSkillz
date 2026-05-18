@@ -8,16 +8,13 @@ const app = createApp({ forTests: true });
 const test = dbIt(it);
 
 async function createTask(token: string, childId: string) {
-  const r = await request(app)
-    .post("/v1/tasks")
-    .set("Authorization", `Bearer ${token}`)
-    .send({
-      title: "Sweep",
-      creditValue: 4,
-      kind: "ONE_TIME",
-      proofRequirement: "NONE",
-      assignedToId: childId,
-    });
+  const r = await request(app).post("/v1/tasks").set("Authorization", `Bearer ${token}`).send({
+    title: "Sweep",
+    creditValue: 4,
+    kind: "ONE_TIME",
+    proofRequirement: "NONE",
+    assignedToId: childId,
+  });
   if (r.status !== 201) throw new Error(`create task ${r.status} ${JSON.stringify(r.body)}`);
   return r.body.task.id as string;
 }

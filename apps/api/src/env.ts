@@ -35,6 +35,5 @@ export const env = {
   TURNSTILE_SECRET: process.env.TURNSTILE_SECRET ?? "",
   // Gates the device-pairing endpoints + middleware. Off by default until the
   // web /pair page + Settings devices card ship in the follow-up PR.
-  DEVICE_PAIRING_ENABLED:
-    (process.env.DEVICE_PAIRING_ENABLED ?? "false").toLowerCase() === "true",
+  DEVICE_PAIRING_ENABLED: (process.env.DEVICE_PAIRING_ENABLED ?? "false").toLowerCase() === "true",
 };

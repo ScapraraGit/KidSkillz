@@ -26,8 +26,7 @@ familyRouter.get("/", async (req, res) => {
   const settings = await getFamilySettings(fam.id);
   // Lazily backfill familyCode for parents so the Settings page always has one
   // to show. Children/caregivers never see the code, so only auto-allocate for parents.
-  const familyCode =
-    req.auth!.role === "PARENT" ? await ensureFamilyCode(fam.id) : fam.familyCode;
+  const familyCode = req.auth!.role === "PARENT" ? await ensureFamilyCode(fam.id) : fam.familyCode;
   res.json({ id: fam.id, name: fam.name, familyCode: familyCode ?? null, settings });
 });
 

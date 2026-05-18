@@ -48,9 +48,7 @@ describe("/v1/auth", () => {
 
   test("/me returns the caller", async () => {
     ctx = await makeTestFamily();
-    const res = await request(app)
-      .get("/v1/auth/me")
-      .set("Authorization", `Bearer ${ctx.parent.token}`);
+    const res = await request(app).get("/v1/auth/me").set("Authorization", `Bearer ${ctx.parent.token}`);
     expect(res.status).toBe(200);
     expect(res.body.user.id).toBe(ctx.parent.id);
   });

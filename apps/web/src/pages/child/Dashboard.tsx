@@ -353,11 +353,16 @@ export function ChildDashboard() {
           <ul className="divide-y divide-slate-100">
             {d.todayTasks.map((occ) => (
               <li
-                key={`${occ.task.id}-${occ.occurrenceDate}`}
+                key={`${occ.task.id}-${occ.occurrenceDate}-${occ.slotIndex}`}
                 className="py-3 flex flex-wrap items-center gap-3"
               >
                 <div className="flex-1 min-w-[150px]">
-                  <div className="font-medium">{occ.task.title}</div>
+                  <div className="font-medium">
+                    {occ.task.title}
+                    {occ.slotLabel && (
+                      <span className="ml-2 text-xs text-slate-500 font-normal">· {occ.slotLabel}</span>
+                    )}
+                  </div>
                   {occ.task.description && (
                     <div className="text-xs text-slate-500">{occ.task.description}</div>
                   )}
@@ -536,6 +541,7 @@ function CompleteModal({
           notes: notes || null,
           photoKey: key,
           occurrenceDate: occurrence.occurrenceDate,
+          slotIndex: occurrence.slotIndex,
         },
       });
       if (photo && !hasPriorAck) {
@@ -705,7 +711,10 @@ function TeamJoinButton({ occ }: { occ: TodayTaskOccurrenceDTO }) {
   const join = useMutation({
     mutationFn: () =>
       api(`/tasks/${occ.task.id}/join`, {
-        body: { occurrenceDate: occ.task.kind === "RECURRING" ? occ.occurrenceDate : null },
+        body: {
+          occurrenceDate: occ.task.kind === "RECURRING" ? occ.occurrenceDate : null,
+          slotIndex: occ.slotIndex,
+        },
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard"] }),
   });

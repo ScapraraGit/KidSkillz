@@ -504,11 +504,7 @@ function ChildLogin() {
           <Turnstile onVerify={setLookupTurnstile} />
           <div className="text-center text-xs text-slate-500 pt-1">
             Have a pairing code from a parent?{" "}
-            <button
-              type="button"
-              className="text-brand-600 hover:underline"
-              onClick={() => nav("/pair")}
-            >
+            <button type="button" className="text-brand-600 hover:underline" onClick={() => nav("/pair")}>
               Pair this device
             </button>
           </div>

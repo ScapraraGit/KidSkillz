@@ -16,6 +16,8 @@ export interface CreateTaskInput {
   recurrence?: Recurrence | null;
   dueAt?: string | null;
   dueByTime?: string | null;
+  timesPerDay?: number;
+  slotLabels?: string[];
   defaultDurationMinutes?: number | null;
   proofRequirement?: import("@prisma/client").ProofRequirement;
   isActive?: boolean;
@@ -23,6 +25,20 @@ export interface CreateTaskInput {
   teamSplit?: "EVEN" | "FULL";
   missedPenalty?: number;
   assignedToId?: string | null;
+}
+
+function normalizeSlotConfig(
+  kind: "ONE_TIME" | "RECURRING",
+  timesPerDay: number | undefined,
+  slotLabels: string[] | undefined,
+): { timesPerDay: number; slotLabels: string[] } {
+  if (kind === "ONE_TIME") return { timesPerDay: 1, slotLabels: [] };
+  const n = Math.max(1, Math.min(10, Math.floor(timesPerDay ?? 1)));
+  const labels = slotLabels ?? [];
+  if (labels.length !== 0 && labels.length !== n) {
+    throw HttpError.badRequest("slotLabels length must be 0 or equal to timesPerDay");
+  }
+  return { timesPerDay: n, slotLabels: labels.map((s) => s.slice(0, 40)) };
 }
 
 export async function listTasks(familyId: string, opts?: { activeOnly?: boolean; assignedTo?: string }) {
@@ -51,6 +67,7 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
     throw HttpError.badRequest("Assigned tasks require an assignee");
   }
   const poolMode = assignmentMode === "UP_FOR_GRABS" || assignmentMode === "TEAM";
+  const slotCfg = normalizeSlotConfig(input.kind, input.timesPerDay, input.slotLabels);
   return prisma.task.create({
     data: {
       familyId,
@@ -63,6 +80,8 @@ export async function createTask(familyId: string, input: CreateTaskInput) {
       recurrence: input.recurrence ? (input.recurrence as object) : undefined,
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
       dueByTime: input.dueByTime ?? null,
+      timesPerDay: slotCfg.timesPerDay,
+      slotLabels: slotCfg.slotLabels,
       defaultDurationMinutes: input.defaultDurationMinutes ?? null,
       proofRequirement: input.proofRequirement ?? "NOTES_OPTIONAL",
       isActive: input.isActive ?? true,
@@ -109,6 +128,8 @@ export async function duplicateAcrossKids(familyId: string, taskId: string) {
           recurrence: (source.recurrence as object | null) ?? undefined,
           dueAt: source.dueAt,
           dueByTime: source.dueByTime,
+          timesPerDay: source.timesPerDay,
+          slotLabels: source.slotLabels,
           defaultDurationMinutes: source.defaultDurationMinutes,
           proofRequirement: source.proofRequirement,
           isActive: source.isActive,
@@ -127,9 +148,20 @@ export async function updateTask(familyId: string, taskId: string, input: Partia
   if (nextMode === "ASSIGNED" && !nextAssignee) {
     throw HttpError.badRequest("Assigned tasks require an assignee");
   }
+  const nextKind = input.kind ?? current.kind;
+  const slotChanged =
+    input.timesPerDay !== undefined || input.slotLabels !== undefined || input.kind !== undefined;
+  const slotCfg = slotChanged
+    ? normalizeSlotConfig(
+        nextKind,
+        input.timesPerDay ?? current.timesPerDay,
+        input.slotLabels ?? current.slotLabels,
+      )
+    : null;
   return prisma.task.update({
     where: { id: taskId },
     data: {
+      ...(slotCfg && { timesPerDay: slotCfg.timesPerDay, slotLabels: slotCfg.slotLabels }),
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.creditValue !== undefined && { creditValue: input.creditValue }),
@@ -202,7 +234,7 @@ export async function listTodayForChild(
       : [];
   const teamByOcc = new Map<string, typeof teamJoins>();
   for (const j of teamJoins) {
-    const k = `${j.taskId}|${j.occurrenceDate ?? "ONE"}`;
+    const k = `${j.taskId}|${j.occurrenceDate ?? "ONE"}|${j.slotIndex}`;
     const arr = teamByOcc.get(k) ?? [];
     arr.push(j);
     teamByOcc.set(k, arr);
@@ -220,12 +252,12 @@ export async function listTodayForChild(
     },
   });
 
-  // Per-(taskId, childId) lookup for this child's own row.
+  // Per-(taskId, childId, slotIndex) lookup for this child's own row.
   const ownByKey = new Map<string, (typeof completions)[number]>();
-  // Per-(taskId, occurrenceDate) "claimed by anyone" lookup for pool tasks.
+  // Per-(taskId, occurrenceDate, slotIndex) "claimed by anyone" lookup for pool tasks.
   const claimedByOcc = new Map<string, (typeof completions)[number]>();
   for (const c of completions) {
-    const occKey = `${c.taskId}|${c.occurrenceDate ?? "ONE"}`;
+    const occKey = `${c.taskId}|${c.occurrenceDate ?? "ONE"}|${c.slotIndex}`;
     if (c.childId === childId) ownByKey.set(occKey, c);
     if (c.status === "PENDING" || c.status === "APPROVED") {
       const prior = claimedByOcc.get(occKey);
@@ -237,7 +269,6 @@ export async function listTodayForChild(
   const out: TodayTaskOccurrenceDTO[] = [];
   for (const t of tasks) {
     const occDate = t.kind === "RECURRING" ? today : null;
-    const occKey = `${t.id}|${occDate ?? "ONE"}`;
     const isPool = t.assignmentMode === "UP_FOR_GRABS";
 
     if (t.kind === "RECURRING" && t.recurrence) {
@@ -247,58 +278,72 @@ export async function listTodayForChild(
       continue;
     }
 
-    if (t.assignmentMode === "TEAM") {
-      // Team tasks are visible to every kid until submitted-and-approved-or-pending.
-      // After submission, every joiner sees the pending/approved row.
-      const submission = claimedByOcc.get(occKey);
-      const roster = teamByOcc.get(occKey) ?? [];
-      out.push({
-        task: serializeTask(t),
-        occurrenceDate: today,
-        completionId: submission?.id ?? null,
-        completionStatus: submission?.status ?? null,
-        joined: roster.some((j) => j.childId === childId),
-        teamJoinerIds: roster.map((j) => j.childId),
-      });
-      continue;
-    }
+    const slotCount = t.kind === "RECURRING" ? Math.max(1, t.timesPerDay) : 1;
+    for (let slot = 0; slot < slotCount; slot++) {
+      const occKey = `${t.id}|${occDate ?? "ONE"}|${slot}`;
+      const slotLabel = resolveSlotLabel(t, slot);
 
-    if (isPool) {
-      const claim = claimedByOcc.get(occKey);
-      if (claim && claim.childId !== childId) continue; // someone else grabbed it
-      out.push({
-        task: serializeTask(t),
-        occurrenceDate: today,
-        completionId: claim?.id ?? null,
-        completionStatus: claim?.status ?? null,
-      });
-      continue;
-    }
-
-    const c = ownByKey.get(occKey);
-    if (t.kind === "ONE_TIME") {
-      if (c && c.status !== "REJECTED") {
+      if (t.assignmentMode === "TEAM") {
+        const submission = claimedByOcc.get(occKey);
+        const roster = teamByOcc.get(occKey) ?? [];
         out.push({
           task: serializeTask(t),
           occurrenceDate: today,
-          completionId: c.id,
-          completionStatus: c.status,
+          slotIndex: slot,
+          slotLabel,
+          completionId: submission?.id ?? null,
+          completionStatus: submission?.status ?? null,
+          joined: roster.some((j) => j.childId === childId),
+          teamJoinerIds: roster.map((j) => j.childId),
         });
+        continue;
+      }
+
+      if (isPool) {
+        const claim = claimedByOcc.get(occKey);
+        if (claim && claim.childId !== childId) continue; // someone else grabbed it
+        out.push({
+          task: serializeTask(t),
+          occurrenceDate: today,
+          slotIndex: slot,
+          slotLabel,
+          completionId: claim?.id ?? null,
+          completionStatus: claim?.status ?? null,
+        });
+        continue;
+      }
+
+      const c = ownByKey.get(occKey);
+      if (t.kind === "ONE_TIME") {
+        if (c && c.status !== "REJECTED") {
+          out.push({
+            task: serializeTask(t),
+            occurrenceDate: today,
+            slotIndex: slot,
+            slotLabel,
+            completionId: c.id,
+            completionStatus: c.status,
+          });
+        } else {
+          out.push({
+            task: serializeTask(t),
+            occurrenceDate: today,
+            slotIndex: slot,
+            slotLabel,
+            completionId: null,
+            completionStatus: null,
+          });
+        }
       } else {
         out.push({
           task: serializeTask(t),
           occurrenceDate: today,
-          completionId: null,
-          completionStatus: null,
+          slotIndex: slot,
+          slotLabel,
+          completionId: c?.id ?? null,
+          completionStatus: c?.status ?? null,
         });
       }
-    } else {
-      out.push({
-        task: serializeTask(t),
-        occurrenceDate: today,
-        completionId: c?.id ?? null,
-        completionStatus: c?.status ?? null,
-      });
     }
   }
   return out;
@@ -317,6 +362,8 @@ export function serializeTask(t: import("@prisma/client").Task) {
     recurrence: (t.recurrence as Recurrence | null) ?? null,
     dueAt: t.dueAt?.toISOString() ?? null,
     dueByTime: t.dueByTime ?? null,
+    timesPerDay: t.timesPerDay,
+    slotLabels: t.slotLabels,
     defaultDurationMinutes: t.defaultDurationMinutes ?? null,
     proofRequirement: effectiveProofRequirement(t.proofRequirement),
     isActive: t.isActive,
@@ -327,31 +374,55 @@ export function serializeTask(t: import("@prisma/client").Task) {
   };
 }
 
+export function resolveSlotLabel(
+  t: { slotLabels: string[]; timesPerDay: number },
+  slotIndex: number,
+): string {
+  if (t.slotLabels.length === t.timesPerDay) {
+    const lbl = t.slotLabels[slotIndex]?.trim();
+    if (lbl) return lbl;
+  }
+  return t.timesPerDay > 1 ? `#${slotIndex + 1}` : "";
+}
+
+function clampSlot(
+  task: { timesPerDay: number; kind: string },
+  slotIndex: number | null | undefined,
+): number {
+  if (task.kind !== "RECURRING") return 0;
+  const n = Math.max(1, task.timesPerDay);
+  const s = Math.max(0, Math.floor(slotIndex ?? 0));
+  if (s >= n) throw HttpError.badRequest(`slotIndex ${s} out of range for task with ${n} slots`);
+  return s;
+}
+
 export async function joinTeam(
   familyId: string,
   taskId: string,
   childId: string,
   occurrenceDate: string | null,
+  slotIndex: number = 0,
 ) {
   const task = await prisma.task.findFirst({ where: { id: taskId, familyId, isActive: true } });
   if (!task) throw HttpError.notFound("Task not found");
   if (task.assignmentMode !== "TEAM") throw HttpError.badRequest("Task is not a team task");
   const occ = task.kind === "RECURRING" ? occurrenceDate : null;
+  const slot = clampSlot(task, slotIndex);
   // Block joining after team submission already pending/approved.
   const existingSubmission = await prisma.taskCompletion.findFirst({
-    where: { taskId, occurrenceDate: occ, status: { in: ["PENDING", "APPROVED"] } },
+    where: { taskId, occurrenceDate: occ, slotIndex: slot, status: { in: ["PENDING", "APPROVED"] } },
   });
   if (existingSubmission) throw HttpError.conflict("Team already submitted for this occurrence");
   const existing = await prisma.taskJoin.findFirst({
-    where: { taskId, childId, occurrenceDate: occ },
+    where: { taskId, childId, occurrenceDate: occ, slotIndex: slot },
   });
   if (!existing) {
     await prisma.taskJoin.create({
-      data: { familyId, taskId, childId, occurrenceDate: occ },
+      data: { familyId, taskId, childId, occurrenceDate: occ, slotIndex: slot },
     });
   }
   return prisma.taskJoin.findMany({
-    where: { taskId, occurrenceDate: occ },
+    where: { taskId, occurrenceDate: occ, slotIndex: slot },
     orderBy: { createdAt: "asc" },
   });
 }
@@ -361,13 +432,15 @@ export async function leaveTeam(
   taskId: string,
   childId: string,
   occurrenceDate: string | null,
+  slotIndex: number = 0,
 ) {
   const task = await prisma.task.findFirst({ where: { id: taskId, familyId } });
   if (!task) throw HttpError.notFound("Task not found");
   const occ = task.kind === "RECURRING" ? occurrenceDate : null;
+  const slot = clampSlot(task, slotIndex);
   const submission = await prisma.taskCompletion.findFirst({
-    where: { taskId, occurrenceDate: occ, status: { in: ["PENDING", "APPROVED"] } },
+    where: { taskId, occurrenceDate: occ, slotIndex: slot, status: { in: ["PENDING", "APPROVED"] } },
   });
   if (submission) throw HttpError.conflict("Cannot leave after team submitted");
-  await prisma.taskJoin.deleteMany({ where: { taskId, childId, occurrenceDate: occ } });
+  await prisma.taskJoin.deleteMany({ where: { taskId, childId, occurrenceDate: occ, slotIndex: slot } });
 }

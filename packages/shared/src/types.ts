@@ -111,7 +111,7 @@ export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
 
 export interface Recurrence {
   frequency: RecurrenceFrequency;
-  daysOfWeek?: number[]; // 0..6 when CUSTOM/WEEKLY
+  daysOfWeek?: number[]; // 0..6. Required for WEEKLY/CUSTOM. Optional on DAILY — when set (e.g. [1,2,3,4,5]) DAILY runs only on those days ("weekdays only"). Omit/empty on DAILY = every day.
   expiresAt?: string | null;
 }
 

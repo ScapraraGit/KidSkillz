@@ -193,7 +193,15 @@ export async function deleteTask(familyId: string, taskId: string) {
 
 function recurrenceMatchesDate(rec: Recurrence, dateStr: string, dow: number): boolean {
   if (rec.expiresAt && new Date(dateStr) > new Date(rec.expiresAt)) return false;
-  if (rec.frequency === "DAILY") return true;
+  if (rec.frequency === "DAILY") {
+    // DAILY accepts an optional daysOfWeek subset to support "weekdays only"
+    // (Mon–Fri) without inventing a new frequency value. Empty/missing array
+    // preserves the original every-day behavior.
+    if (Array.isArray(rec.daysOfWeek) && rec.daysOfWeek.length > 0) {
+      return rec.daysOfWeek.includes(dow);
+    }
+    return true;
+  }
   if (rec.frequency === "WEEKLY" || rec.frequency === "CUSTOM") {
     return Array.isArray(rec.daysOfWeek) && rec.daysOfWeek.includes(dow);
   }

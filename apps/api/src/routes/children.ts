@@ -68,9 +68,7 @@ childrenRouter.post("/", requireRole("PARENT"), async (req, res) => {
   const input = createSchema.parse(req.body);
   const { consentAcknowledged, ...childInput } = input;
   if (features.orgConsentRequired && consentAcknowledged !== true) {
-    throw HttpError.badRequest(
-      "Guardian consent acknowledgement is required to create a child profile.",
-    );
+    throw HttpError.badRequest("Guardian consent acknowledgement is required to create a child profile.");
   }
   const child = await createChild(req.auth!.fid, childInput);
   await recordAudit({

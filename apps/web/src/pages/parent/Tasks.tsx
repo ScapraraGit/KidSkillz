@@ -164,9 +164,12 @@ export function ParentTasks() {
                         ) : (
                           <div className="flex gap-1 flex-wrap">
                             <Badge color="brand">{t.recurrence?.frequency}</Badge>
-                            {t.recurrence?.daysOfWeek && (
+                            {t.recurrence?.daysOfWeek && t.recurrence.daysOfWeek.length > 0 && (
                               <span className="text-xs text-slate-500">
-                                {t.recurrence.daysOfWeek.map((d) => DOW[d]).join(", ")}
+                                {t.recurrence.frequency === "DAILY" &&
+                                t.recurrence.daysOfWeek.slice().sort().join(",") === "1,2,3,4,5"
+                                  ? "Weekdays"
+                                  : t.recurrence.daysOfWeek.map((d) => DOW[d]).join(", ")}
                               </span>
                             )}
                           </div>
@@ -260,6 +263,15 @@ export function TaskFormModal({
   const [kind, setKind] = useState<"ONE_TIME" | "RECURRING">(initial?.kind ?? "RECURRING");
   const [frequency, setFrequency] = useState(initial?.recurrence?.frequency ?? "DAILY");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(initial?.recurrence?.daysOfWeek ?? []);
+  // Sub-mode for DAILY: every day vs weekdays only (Mon–Fri). Persists via the
+  // optional daysOfWeek=[1..5] on a DAILY recurrence. Detected from initial so
+  // edits reopen in the right mode.
+  const initialDaysSorted = (initial?.recurrence?.daysOfWeek ?? []).slice().sort().join(",");
+  const [dailyMode, setDailyMode] = useState<"EVERY_DAY" | "WEEKDAYS">(
+    initial?.recurrence?.frequency === "DAILY" && initialDaysSorted === "1,2,3,4,5"
+      ? "WEEKDAYS"
+      : "EVERY_DAY",
+  );
   const [proofRequirement, setProofRequirement] = useState(initial?.proofRequirement ?? "NOTES_OPTIONAL");
   const [assignmentMode, setAssignmentMode] = useState<"ASSIGNED" | "UP_FOR_GRABS" | "TEAM">(
     (initial?.assignmentMode as "ASSIGNED" | "UP_FOR_GRABS" | "TEAM" | undefined) ?? "ASSIGNED",
@@ -306,6 +318,7 @@ export function TaskFormModal({
       if (kind === "RECURRING") {
         body.recurrence = {
           frequency,
+          ...(frequency === "DAILY" && dailyMode === "WEEKDAYS" && { daysOfWeek: [1, 2, 3, 4, 5] }),
           ...(frequency !== "DAILY" && { daysOfWeek }),
         };
         body.dueByTime = dueByTime || null;
@@ -512,6 +525,33 @@ export function TaskFormModal({
                 <option value="CUSTOM">Custom days</option>
               </select>
             </Field>
+            {frequency === "DAILY" && (
+              <Field
+                label="Which days"
+                hint="Weekdays-only skips Saturday and Sunday (e.g. packing snacks, making the bed before school)."
+              >
+                <div className="flex gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="dailyMode"
+                      checked={dailyMode === "EVERY_DAY"}
+                      onChange={() => setDailyMode("EVERY_DAY")}
+                    />
+                    Every day
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="dailyMode"
+                      checked={dailyMode === "WEEKDAYS"}
+                      onChange={() => setDailyMode("WEEKDAYS")}
+                    />
+                    Weekdays only (Mon–Fri)
+                  </label>
+                </div>
+              </Field>
+            )}
             {(frequency === "WEEKLY" || frequency === "CUSTOM") && (
               <Field label="Days">
                 <div className="flex gap-1">

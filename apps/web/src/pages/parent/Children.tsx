@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
@@ -289,7 +289,6 @@ function CreateChildModal({
   onClose: () => void;
   onCreated: (child: ChildDTO) => void;
 }) {
-  const nav = useNavigate();
   const features = useFeatures();
   const consentRequired = features.orgConsentRequired;
   const [name, setName] = useState("");
@@ -310,7 +309,6 @@ function CreateChildModal({
       }),
     onSuccess: (r) => {
       onCreated(r.child);
-      nav(`/parent/tasks?childId=${r.child.id}`);
     },
   });
   return (

@@ -40,11 +40,12 @@ export async function sweepMissedTaskPenalties(
     for (const t of tasks) {
       const rec = t.recurrence as unknown as Recurrence | null;
       if (!rec) continue;
+      const hasDayList = Array.isArray(rec.daysOfWeek) && rec.daysOfWeek.length > 0;
       const matches =
-        rec.frequency === "DAILY" ||
+        (rec.frequency === "DAILY" && (!hasDayList || rec.daysOfWeek!.includes(dow))) ||
         ((rec.frequency === "WEEKLY" || rec.frequency === "CUSTOM") &&
-          Array.isArray(rec.daysOfWeek) &&
-          rec.daysOfWeek.includes(dow));
+          hasDayList &&
+          rec.daysOfWeek!.includes(dow));
       if (!matches) continue;
       if (rec.expiresAt && new Date(yesterday) > new Date(rec.expiresAt)) continue;
 

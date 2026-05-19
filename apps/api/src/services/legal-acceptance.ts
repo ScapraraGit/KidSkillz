@@ -1,7 +1,13 @@
 import type { Request } from "express";
 import { prisma } from "../db.js";
 
-export type LegalAcceptanceKind = "TERMS" | "PRIVACY" | "CHILD_PROFILE_CONSENT" | "UPLOAD_ACK";
+export type LegalAcceptanceKind =
+  | "TERMS"
+  | "PRIVACY"
+  | "CHILD_PROFILE_CONSENT"
+  | "UPLOAD_ACK"
+  | "HOUSEHOLD_TOOL_ACK"
+  | "NO_CASH_VALUE_ACK";
 
 export interface RecordAcceptanceInput {
   userId: string;

@@ -429,6 +429,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     user: serializeUser(user),
     settings,
     needsOnboarding: user.onboardedAt == null,
+    needsHouseholdAck: user.role === "PARENT" && user.householdAckAt == null,
     features: {
       photoProof: features.photoProof,
       devicePairing: features.devicePairing,
@@ -441,6 +442,38 @@ authRouter.post("/onboarded", requireAuth, async (req, res) => {
   const user = await prisma.user.update({
     where: { id: req.auth!.sub },
     data: { onboardedAt: new Date() },
+  });
+  res.json({ user: serializeUser(user) });
+});
+
+authRouter.post("/household-ack", requireAuth, async (req, res) => {
+  const userId = req.auth!.sub;
+  const existing = await prisma.user.findUnique({ where: { id: userId } });
+  if (!existing) throw HttpError.unauthorized();
+  if (existing.role !== "PARENT") throw HttpError.forbidden("Parents only");
+  const ip = clientIpFrom(req);
+  const ua = userAgentFrom(req);
+  await recordLegalAcceptance({
+    userId,
+    familyId: existing.familyId,
+    kind: "HOUSEHOLD_TOOL_ACK",
+    version: 1,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "post-signup-modal",
+  }).catch((e) => console.error("[legal:household-tool-ack]", e));
+  await recordLegalAcceptance({
+    userId,
+    familyId: existing.familyId,
+    kind: "NO_CASH_VALUE_ACK",
+    version: 1,
+    ipAddress: ip,
+    userAgent: ua,
+    context: "post-signup-modal",
+  }).catch((e) => console.error("[legal:no-cash-value-ack]", e));
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { householdAckAt: new Date() },
   });
   res.json({ user: serializeUser(user) });
 });

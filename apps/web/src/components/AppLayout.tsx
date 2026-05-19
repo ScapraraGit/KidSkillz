@@ -12,6 +12,7 @@ import { NotificationBell } from "./NotificationBell";
 import { Popover } from "./Popover";
 import { EmailVerifyBanner } from "./EmailVerifyBanner";
 import { TermsGate } from "./TermsGate";
+import { HouseholdAckModal } from "./HouseholdAckModal";
 import { LegalFooter } from "./LegalFooter";
 import { childTour, parentTour } from "../lib/tours";
 import clsx from "clsx";
@@ -99,6 +100,14 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   return (
     <div className="min-h-full flex flex-col">
       {user && <TermsGate user={user} />}
+      {user?.role === "PARENT" && me.data?.needsHouseholdAck && (
+        <HouseholdAckModal
+          open
+          onAcknowledged={() => {
+            me.refetch();
+          }}
+        />
+      )}
       {isCaregiver && (
         <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
           Caregiver session

@@ -227,6 +227,7 @@ model User {
   avatarConfig Json?
   isActive     Boolean  @default(true)
   onboardedAt  DateTime?
+  householdAckAt DateTime?
   emailVerifiedAt        DateTime?
   isAdmin                Boolean   @default(false)
   acceptedTermsVersion   Int?
@@ -620,6 +621,8 @@ enum LegalAcceptanceKind {
   PRIVACY
   CHILD_PROFILE_CONSENT
   UPLOAD_ACK
+  HOUSEHOLD_TOOL_ACK
+  NO_CASH_VALUE_ACK
 }
 
 // Long-lived refresh token issued at login. Rotated on every use: consuming a

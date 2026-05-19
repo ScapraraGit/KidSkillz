@@ -42,6 +42,13 @@ export function createApp(opts: CreateAppOptions = {}) {
   const app = express();
   app.set("trust proxy", 1);
 
+  // CORS_ORIGIN accepts a single origin or a comma-separated list so the apex,
+  // www subdomain, and Railway preview URL can all be allowed against the same
+  // API deploy. Empty entries are dropped.
+  const corsOrigins = env.CORS_ORIGIN.split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
   const cspDirectives: Record<string, string[]> = {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
@@ -50,7 +57,7 @@ export function createApp(opts: CreateAppOptions = {}) {
     // with a nonce/hashed-style strategy when bandwidth allows.
     styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", "data:", "blob:"],
-    connectSrc: ["'self'", env.CORS_ORIGIN].filter(Boolean) as string[],
+    connectSrc: ["'self'", ...corsOrigins].filter(Boolean) as string[],
     fontSrc: ["'self'", "data:"],
     frameSrc: ["'none'"],
     frameAncestors: ["'none'"],
@@ -81,7 +88,7 @@ export function createApp(opts: CreateAppOptions = {}) {
       referrerPolicy: { policy: "no-referrer" },
     }),
   );
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: false }));
+  app.use(cors({ origin: corsOrigins, credentials: false }));
   app.use(express.json({ limit: "1mb" }));
 
   if (!opts.forTests) {

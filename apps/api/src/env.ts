@@ -61,4 +61,12 @@ export const env = {
   // consent block and the API requires consentAcknowledged=true and writes a
   // LegalAcceptance row tagged CHILD_PROFILE_CONSENT.
   ORG_CONSENT_REQUIRED: (process.env.ORG_CONSENT_REQUIRED ?? "false").toLowerCase() === "true",
+  // Resend transactional email. EMAIL_ENABLED is the kill-switch: when false
+  // (default) the provider factory returns a ConsoleProvider so dev/local does
+  // not hit the network and verification/reset flows still log a usable URL.
+  // Flip true only once the sending domain is verified in Resend.
+  RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
+  EMAIL_FROM: process.env.EMAIL_FROM ?? "ChoreChampz <no-reply@chorechampz.com>",
+  EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO ?? "",
+  EMAIL_ENABLED: (process.env.EMAIL_ENABLED ?? "false").toLowerCase() === "true",
 };

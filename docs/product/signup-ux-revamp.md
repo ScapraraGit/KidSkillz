@@ -1,8 +1,9 @@
 # Signup UX Revamp Plan
 
-**Status:** Proposed
+**Status:** Phase 1 complete · Phases 2-5 proposed
 **Owner:** TBD
 **Created:** 2026-05-19
+**Last updated:** 2026-05-19
 
 ## Problem
 
@@ -24,19 +25,36 @@ Current parent signup ([apps/web/src/pages/Login.tsx:133](../../apps/web/src/pag
 
 ## Phased rollout
 
-### Phase 1 — Quick wins (1-2 days)
+### Phase 1 — Quick wins (1-2 days) ✅ COMPLETE (2026-05-19)
 
-Low risk. Ship without backend changes.
+Low risk. Shipped with one migration.
 
-- **Reframe disclaimer copy** in [Login.tsx:301-373](../../apps/web/src/pages/Login.tsx#L301-L373):
-  - "Not childcare/therapy/..." → "You stay in control. Parents approve every task and reward."
-  - "No cash value..." → "Credits are your family's currency — you decide what they're worth."
-- **Consolidate 4 checkboxes → 1**: "I agree to the Terms, Privacy, Acceptable Use, and Child Safety policies." Links open inline drawer/modal with full text.
-- **Move household disclaimers** (#3, #4) out of checkboxes into a post-signup "How ChoreChampz works" modal (one-time, dismiss with "Got it"). Record acceptance via existing [recordLegalAcceptance()](../../apps/api/src/services/legal-acceptance.ts#L17) using new event types `HOUSEHOLD_TOOL_ACK` and `NO_CASH_VALUE_ACK`.
-- **CTA copy**: "Create family" → "Start free →".
-- **Trust strip above form**: "Free. No credit card. Cancel anytime." + (when available) family-count counter.
+- [x] **Reframed disclaimer copy** — moved from inline checkboxes to friendly bullets in the post-signup modal. Old defensive phrasing ("not childcare/therapy/medical...") replaced with "You stay in control", "Credits are your family's currency", "Household tool, not a service".
+- [x] **Consolidated 4 checkboxes → 1** at [Login.tsx](../../apps/web/src/pages/Login.tsx) — single combined consent line covering Terms, Privacy, Acceptable Use, Child Safety + guardian affirmation.
+- [x] **Post-signup "How ChoreChampz works" modal** at [HouseholdAckModal.tsx](../../apps/web/src/components/HouseholdAckModal.tsx). Mounted in [AppLayout.tsx](../../apps/web/src/components/AppLayout.tsx), gated by `MeResponseDTO.needsHouseholdAck`.
+- [x] **New `LegalAcceptanceKind` events** `HOUSEHOLD_TOOL_ACK` and `NO_CASH_VALUE_ACK` (version 1) recorded via `POST /auth/household-ack` in [auth.ts](../../apps/api/src/routes/auth.ts). Audit trail preserves IP + UA per existing [recordLegalAcceptance()](../../apps/api/src/services/legal-acceptance.ts#L17) contract.
+- [x] **CTA copy**: "Create family" → "Start free →".
+- [x] **Trust strip**: "Free. No credit card. Cancel anytime." below the submit button.
+- [x] **Schema migration** [20260519120000_household_ack](../../apps/api/prisma/migrations/20260519120000_household_ack/migration.sql) — non-destructive `ALTER TYPE ADD VALUE` plus `User.householdAckAt` column.
 
-**Files touched:** Login.tsx, legal-acceptance.ts (add enum values), schema.prisma (extend `LegalEventType` enum + migration).
+**Files touched:**
+
+- `apps/api/prisma/schema.prisma` (+ migration)
+- `apps/api/src/services/legal-acceptance.ts`
+- `apps/api/src/routes/auth.ts`
+- `packages/shared/src/types.ts`
+- `apps/web/src/pages/Login.tsx`
+- `apps/web/src/components/HouseholdAckModal.tsx` (new)
+- `apps/web/src/components/AppLayout.tsx`
+
+**Verification:** `pnpm typecheck` clean; `pnpm lint` 0 errors (16 pre-existing warnings unchanged).
+
+**Follow-ups / not done in Phase 1:**
+
+- Inline drawer/modal for policy text on the signup form — links still navigate to `/terms` etc. in a new tab. Drawer is a polish item for Phase 5.
+- Live family-count counter on trust strip — needs data source; deferred.
+- Backfill `User.householdAckAt` for existing parents (otherwise the new modal pops for every pre-existing user). Decision needed: grandfather or re-prompt.
+- Counsel sign-off on consolidated copy still outstanding.
 
 ### Phase 2 — Split account from family (3-5 days)
 

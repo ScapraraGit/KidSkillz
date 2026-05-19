@@ -4,5 +4,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173 },
-  preview: { port: 5173 },
+  preview: {
+    port: 5173,
+    allowedHosts: ["chorechampz.com", "www.chorechampz.com", ".up.railway.app"],
+  },
 });

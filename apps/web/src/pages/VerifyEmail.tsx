@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { Card } from "../components/ui";
+import { useAuth } from "../store/auth";
+import type { AuthUserDTO } from "@chorechampz/shared";
 
 type Status = "pending" | "ok" | "fail" | "missing";
 
@@ -10,6 +12,8 @@ export function VerifyEmail() {
   const token = params.get("token") ?? "";
   const [status, setStatus] = useState<Status>(token ? "pending" : "missing");
   const [err, setErr] = useState<string | null>(null);
+  const setUser = useAuth((s) => s.setUser);
+  const sessionToken = useAuth((s) => s.token);
 
   useEffect(() => {
     if (!token) return;
@@ -17,6 +21,20 @@ export function VerifyEmail() {
     (async () => {
       try {
         await api("/auth/verify-email", { body: { token } });
+        // DB now has emailVerifiedAt set, but the cached user in localStorage
+        // still has null — without this refresh the "Verify your email" banner
+        // keeps showing on the dashboard until the next full reload/login.
+        // Only refresh if the user is currently signed in; an anonymous click
+        // through the email link (e.g. on a different device) won't have a
+        // session to update.
+        if (sessionToken) {
+          try {
+            const me = await api<{ user: AuthUserDTO }>("/auth/me");
+            if (!cancelled) setUser(me.user);
+          } catch {
+            /* non-fatal — banner self-corrects on next reload */
+          }
+        }
         if (!cancelled) setStatus("ok");
       } catch (e: any) {
         if (!cancelled) {
@@ -28,7 +46,7 @@ export function VerifyEmail() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, sessionToken, setUser]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4">

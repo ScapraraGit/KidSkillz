@@ -32,12 +32,14 @@ export function PageHeader({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 mb-6">
-      <div>
+    // Stack vertically on small screens so the action group below the title
+    // gets full width — at sm+ it returns to the desktop side-by-side layout.
+    <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+      <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="text-slate-500 mt-1">{subtitle}</p>}
       </div>
-      {right}
+      {right && <div className="shrink-0">{right}</div>}
     </div>
   );
 }

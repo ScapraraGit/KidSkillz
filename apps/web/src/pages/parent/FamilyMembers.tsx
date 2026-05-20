@@ -64,7 +64,7 @@ export function FamilyMembers() {
         subtitle="Invite a co-parent, or give a grandparent or sitter scoped access for a few days."
         right={
           mode === "NONE" ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Tooltip label="Invite a co-parent with full access (email link)">
                 <Button
                   variant="secondary"

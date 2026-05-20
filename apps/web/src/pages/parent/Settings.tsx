@@ -1,10 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { api, API_URL } from "../../lib/api";
 import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
+import { EmojiPicker } from "../../components/EmojiPicker";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechampz/shared";
 import { useFeatures } from "../../hooks/useFeatures";
@@ -443,76 +453,277 @@ function TaskCategoriesCard() {
     queryKey: ["task-categories"],
     queryFn: () => api<{ categories: TaskCategoryDTO[] }>("/task-categories"),
   });
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("⭐");
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("⭐");
+  const [deleteTarget, setDeleteTarget] = useState<TaskCategoryDTO | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Source-of-truth ordering: server response sorted by position. Local mirror
+  // lets us reorder optimistically during drag without waiting for the round-
+  // trip, then PATCH each affected row's position on drop.
+  const serverCats = q.data?.categories ?? [];
+  const [orderedCats, setOrderedCats] = useState<TaskCategoryDTO[]>([]);
+  useEffect(() => {
+    setOrderedCats(serverCats);
+  }, [serverCats]);
 
   const create = useMutation({
-    mutationFn: () =>
-      api("/task-categories", { body: { name: name.trim(), icon: icon.trim(), position: 99 } }),
+    mutationFn: (body: { name: string; icon: string; position: number }) => api("/task-categories", { body }),
     onSuccess: () => {
-      setName("");
-      setIcon("⭐");
+      setNewName("");
+      setNewIcon("⭐");
+      setCreateError(null);
       qc.invalidateQueries({ queryKey: ["task-categories"] });
     },
+    onError: (e: any) => setCreateError(e?.message ?? "Could not create category"),
   });
+
   const update = useMutation({
     mutationFn: (v: { id: string; patch: Partial<TaskCategoryDTO> }) =>
       api(`/task-categories/${v.id}`, { method: "PATCH", body: v.patch }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["task-categories"] }),
   });
+
   const del = useMutation({
     mutationFn: (id: string) => api(`/task-categories/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["task-categories"] }),
+    onSuccess: () => {
+      setDeleteTarget(null);
+      qc.invalidateQueries({ queryKey: ["task-categories"] });
+    },
   });
 
+  function nameClash(candidate: string, exceptId?: string): boolean {
+    const norm = candidate.trim().toLowerCase();
+    return orderedCats.some((c) => c.id !== exceptId && c.name.trim().toLowerCase() === norm);
+  }
+
+  function handleCreate() {
+    const name = newName.trim();
+    if (!name) {
+      setCreateError("Name is required.");
+      return;
+    }
+    if (nameClash(name)) {
+      setCreateError("A category with this name already exists.");
+      return;
+    }
+    const nextPos = orderedCats.length > 0 ? Math.max(...orderedCats.map((c) => c.position)) + 1 : 0;
+    create.mutate({ name, icon: newIcon, position: nextPos });
+  }
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedCats.findIndex((c) => c.id === active.id);
+    const newIndex = orderedCats.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(orderedCats, oldIndex, newIndex);
+    setOrderedCats(reordered);
+    // PATCH only the rows whose position actually changed. Server-side schema
+    // accepts position 0..999; we re-number from 0 to keep gaps small.
+    reordered.forEach((c, i) => {
+      if (c.position !== i) {
+        update.mutate({ id: c.id, patch: { position: i } });
+      }
+    });
+  }
+
   return (
-    <Card className="space-y-4">
-      <h3 className="font-semibold">Task categories</h3>
-      <p className="text-sm text-slate-500">
-        Categories group tasks on the kid dashboard. Defaults are seeded for new families. Rename, swap icons,
-        or delete unused ones.
-      </p>
-      <ul className="divide-y divide-slate-100">
-        {(q.data?.categories ?? []).map((c) => (
-          <li key={c.id} className="flex items-center gap-2 py-2">
-            <input
-              className={`${inputCls} w-16 text-center`}
-              value={c.icon}
-              onChange={(e) => update.mutate({ id: c.id, patch: { icon: e.target.value.slice(0, 4) } })}
-            />
-            <input
-              className={`${inputCls} flex-1`}
-              value={c.name}
-              onChange={(e) => update.mutate({ id: c.id, patch: { name: e.target.value } })}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => confirm(`Delete category "${c.name}"?`) && del.mutate(c.id)}
-            >
-              Delete
+    <>
+      <Card className="space-y-4">
+        <div>
+          <h3 className="font-semibold">Task categories</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Categories group tasks on the kid dashboard. Drag to reorder, click the icon to change it, or
+            rename inline. Changes save when you tab away.
+          </p>
+        </div>
+
+        {orderedCats.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+            No categories yet. Add your first one below.
+          </div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-[24px_56px_1fr_88px] items-center gap-2 px-1 pb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span aria-hidden="true" />
+              <span>Icon</span>
+              <span>Name</span>
+              <span className="text-right pr-1">Actions</span>
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={orderedCats.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+                  {orderedCats.map((c) => (
+                    <CategoryRow
+                      key={c.id}
+                      category={c}
+                      onRename={(name) => {
+                        if (!name.trim()) return; // ignore blanks; row reverts on blur
+                        if (nameClash(name, c.id)) return;
+                        if (name === c.name) return;
+                        update.mutate({ id: c.id, patch: { name: name.trim() } });
+                      }}
+                      onIconChange={(icon) => {
+                        if (!icon || icon === c.icon) return;
+                        update.mutate({ id: c.id, patch: { icon } });
+                      }}
+                      onDelete={() => setDeleteTarget(c)}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-100">
+          <div className="text-sm font-medium text-slate-700 mb-2">Add category</div>
+          <div className="flex items-start gap-2">
+            <EmojiPicker value={newIcon} onChange={setNewIcon} label="Pick an icon for the new category" />
+            <div className="flex-1">
+              <input
+                className={inputCls}
+                value={newName}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  if (createError) setCreateError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreate();
+                  }
+                }}
+                placeholder="e.g. Chores, Homework"
+                maxLength={40}
+              />
+              {createError && <div className="mt-1 text-xs text-rose-600">{createError}</div>}
+            </div>
+            <Tooltip label="Add a new task category">
+              <Button onClick={handleCreate} disabled={!newName.trim() || create.isPending}>
+                Add
+              </Button>
+            </Tooltip>
+          </div>
+        </div>
+      </Card>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete category?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+              Cancel
             </Button>
-          </li>
-        ))}
-      </ul>
-      <div className="flex gap-2 pt-2 border-t border-slate-100">
-        <input
-          className={`${inputCls} w-16 text-center`}
-          value={icon}
-          onChange={(e) => setIcon(e.target.value.slice(0, 4))}
-          placeholder="🌟"
-        />
-        <input
-          className={`${inputCls} flex-1`}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New category name"
-        />
-        <Button onClick={() => create.mutate()} disabled={!name.trim() || create.isPending}>
-          Add
-        </Button>
+            <Button
+              variant="danger"
+              onClick={() => deleteTarget && del.mutate(deleteTarget.id)}
+              disabled={del.isPending}
+            >
+              {del.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">
+          Delete{" "}
+          <strong>
+            {deleteTarget?.icon} {deleteTarget?.name}
+          </strong>
+          ? Tasks using this category will become uncategorized — they won&rsquo;t be deleted.
+        </p>
+      </Modal>
+    </>
+  );
+}
+
+interface CategoryRowProps {
+  category: TaskCategoryDTO;
+  onRename: (name: string) => void;
+  onIconChange: (icon: string) => void;
+  onDelete: () => void;
+}
+
+function CategoryRow({ category, onRename, onIconChange, onDelete }: CategoryRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: category.id,
+  });
+  // Local mirror of the name so each keystroke doesn't fire a PATCH. Commit on
+  // blur or Enter. Reset to server value if the user clears it to empty so the
+  // row can never end up nameless (server would reject the PATCH anyway, but
+  // the UI shouldn't allow visibly-bad state).
+  const [draft, setDraft] = useState(category.name);
+  useEffect(() => {
+    setDraft(category.name);
+  }, [category.name]);
+
+  // dnd-kit returns drag transforms via JS — inline style is the supported API
+  // surface, so the no-inline-styles rule doesn't apply here.
+  // eslint-disable-next-line react/forbid-dom-props
+  const style: React.CSSProperties = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  function commit() {
+    const next = draft.trim();
+    if (!next) {
+      setDraft(category.name);
+      return;
+    }
+    onRename(next);
+  }
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="grid grid-cols-[24px_56px_1fr_88px] items-center gap-2 px-2 py-2 bg-white"
+    >
+      <Tooltip label="Drag to reorder">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder"
+          className="h-8 w-6 cursor-grab text-slate-400 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 rounded"
+        >
+          ⋮⋮
+        </button>
+      </Tooltip>
+      <EmojiPicker value={category.icon} onChange={onIconChange} label={`Change icon for ${category.name}`} />
+      <input
+        className={inputCls}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+          if (e.key === "Escape") {
+            setDraft(category.name);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        maxLength={40}
+        aria-label={`Rename ${category.name}`}
+      />
+      <div className="flex justify-end">
+        <Tooltip label={`Delete category "${category.name}"`}>
+          <Button variant="ghost" size="sm" onClick={onDelete}>
+            Delete
+          </Button>
+        </Tooltip>
       </div>
-    </Card>
+    </li>
   );
 }
 

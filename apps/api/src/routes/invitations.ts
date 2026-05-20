@@ -63,10 +63,13 @@ const createSchema = z.discriminatedUnion("kind", [
   createCaregiverPinSchema,
 ]);
 
-invitationsRouter.use(requireAuth);
+// Auth is applied per-route below. The /by-token/* and /pin-login routes are
+// intentionally public — the invite token (or PIN) in the URL/body is the
+// credential. A router-wide `requireAuth` here would 401 the invite-accept
+// flow because the invitee hasn't logged in yet.
 
 // List pending invitations for the family.
-invitationsRouter.get("/", requireRole("PARENT"), async (req, res) => {
+invitationsRouter.get("/", requireAuth, requireRole("PARENT"), async (req, res) => {
   const rows = await prisma.invitation.findMany({
     where: { familyId: req.auth!.fid },
     orderBy: { createdAt: "desc" },
@@ -76,7 +79,7 @@ invitationsRouter.get("/", requireRole("PARENT"), async (req, res) => {
 });
 
 // Create invitation. Parent only.
-invitationsRouter.post("/", requireRole("PARENT"), async (req, res) => {
+invitationsRouter.post("/", requireAuth, requireRole("PARENT"), async (req, res) => {
   const body = createSchema.parse(req.body);
   const familyId = req.auth!.fid;
   const createdById = req.auth!.sub;
@@ -233,7 +236,7 @@ invitationsRouter.post("/pin-login", async (req, res) => {
 });
 
 // Revoke pending invitation.
-invitationsRouter.delete("/:id", requireRole("PARENT"), async (req, res) => {
+invitationsRouter.delete("/:id", requireAuth, requireRole("PARENT"), async (req, res) => {
   const inv = await prisma.invitation.findUnique({ where: { id: req.params.id } });
   if (!inv || inv.familyId !== req.auth!.fid) throw HttpError.notFound("Invitation");
   if (inv.status !== "PENDING") throw HttpError.badRequest("Invitation no longer pending");

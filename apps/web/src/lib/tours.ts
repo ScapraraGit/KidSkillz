@@ -63,9 +63,12 @@ export const parentTour: TourStep[] = [
     placement: "bottom",
   },
   {
-    targetId: "nav-settings",
+    // Anchored to the always-visible account-menu button rather than the
+    // Settings link (which only renders when the menu popover is open and
+    // doesn't exist in the mobile bottom nav at all).
+    targetId: "account-menu",
     title: "Family settings",
-    body: "Set your timezone (used for streaks and weekly windows), child login mode, and initiative bonuses here.",
+    body: "Open this menu to reach Family settings — timezone (used for streaks and weekly windows), child login mode, initiative bonuses, and your task categories.",
     placement: "bottom",
   },
 ];

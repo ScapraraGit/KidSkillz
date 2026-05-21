@@ -130,6 +130,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                       to={l.to}
                       end={l.end}
                       id={l.id}
+                      data-tour={l.id}
                       className={({ isActive }) =>
                         clsx(
                           "px-3 py-1.5 rounded-lg text-sm font-medium transition",
@@ -153,6 +154,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                   <button
                     ref={menuBtnRef}
                     type="button"
+                    data-tour="account-menu"
                     onClick={() => setMenuOpen((v) => !v)}
                     className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
                   >
@@ -188,6 +190,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                       <Link
                         to="/parent/settings"
                         id="nav-settings"
+                        data-tour="nav-settings"
                         onClick={() => setMenuOpen(false)}
                         className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
                       >
@@ -228,6 +231,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
               key={l.to}
               to={l.to}
               end={l.end}
+              data-tour={l.id}
               className={({ isActive }) =>
                 clsx(
                   "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium",

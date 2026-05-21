@@ -76,7 +76,15 @@ export function OnboardingTour({ steps, onDone }: OnboardingTourProps) {
 
     const tryFind = () => {
       if (cancelled) return;
-      const el = document.getElementById(step.targetId);
+      // Prefer the first VISIBLE element marked with data-tour, so layouts
+      // that render both a mobile and a desktop nav can carry the same hook
+      // without ID collisions. `offsetParent === null` is true for any
+      // ancestor with `display: none` (Tailwind `hidden`), so we use it as
+      // a cheap visibility check. Falls back to getElementById for legacy
+      // call sites that still use plain `id`.
+      const candidates = document.querySelectorAll<HTMLElement>(`[data-tour="${step.targetId}"]`);
+      const visible = Array.from(candidates).find((el) => el.offsetParent !== null);
+      const el = visible ?? document.getElementById(step.targetId);
       if (el) {
         attach(el);
         return;

@@ -131,6 +131,7 @@ export const NotificationKind = {
   CHALLENGE_COMPLETED: "CHALLENGE_COMPLETED",
   LEVEL_UP: "LEVEL_UP",
   KUDOS: "KUDOS",
+  BETA_FEEDBACK_RECEIVED: "BETA_FEEDBACK_RECEIVED",
 } as const;
 export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind];
 

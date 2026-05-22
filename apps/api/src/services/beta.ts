@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
+import { createNotification } from "./notifications.js";
 
 // Survey shape lives in the service so the route stays thin. The payload column
 // is JSONB — questions can evolve without a migration. Add new optional fields
@@ -130,7 +131,75 @@ export async function submitFeedback(
     update: { submittedAt: new Date() },
   });
 
+  // Fire-and-forget admin alert. Doesn't block the submitter's response — if
+  // notifying admins fails, the feedback is already persisted and the user
+  // shouldn't see a partial failure for an internal-side-effect.
+  setImmediate(() => {
+    void notifyAdminsOfFeedback({
+      feedbackId: created.id,
+      submitterUserId: userId,
+      submitterFamilyId: familyId,
+      overallRating: input.payload.ratings.overall,
+      recommend: input.payload.recommend,
+      tags,
+    }).catch((e) => console.error("[beta:notifyAdmins]", e));
+  });
+
   return { id: created.id, tags };
+}
+
+interface AdminAlertOpts {
+  feedbackId: string;
+  submitterUserId: string;
+  submitterFamilyId: string;
+  overallRating: number;
+  recommend: "YES" | "NO" | "MAYBE";
+  tags: string[];
+}
+
+async function notifyAdminsOfFeedback(opts: AdminAlertOpts): Promise<void> {
+  const [admins, submitter, submitterFamily] = await Promise.all([
+    prisma.user.findMany({
+      where: { isAdmin: true, isActive: true },
+      select: { id: true, familyId: true },
+    }),
+    prisma.user.findUnique({ where: { id: opts.submitterUserId }, select: { name: true } }),
+    prisma.family.findUnique({ where: { id: opts.submitterFamilyId }, select: { name: true } }),
+  ]);
+  if (admins.length === 0) return;
+
+  const stars = "★".repeat(opts.overallRating) + "☆".repeat(5 - opts.overallRating);
+  const tagSuffix = opts.tags.length > 0 ? ` · ${opts.tags.join(", ")}` : "";
+  const title = `New beta feedback: ${stars} (${opts.recommend.toLowerCase()})`;
+  const body = `From ${submitter?.name ?? "unknown"} · ${submitterFamily?.name ?? "unknown family"}${tagSuffix}`;
+
+  await Promise.all(
+    admins.map(async (admin) => {
+      try {
+        // In-app bell row scoped to the admin's own familyId (Notification has
+        // a familyId NOT NULL). createNotification also fire-and-forget mirrors
+        // to email when the admin's family.settings.emailNotifications is on —
+        // so a single call delivers both channels.
+        await createNotification({
+          familyId: admin.familyId,
+          userId: admin.id,
+          kind: "BETA_FEEDBACK_RECEIVED",
+          title,
+          body,
+          payload: {
+            feedbackId: opts.feedbackId,
+            submitterUserId: opts.submitterUserId,
+            submitterFamilyId: opts.submitterFamilyId,
+            overallRating: opts.overallRating,
+            recommend: opts.recommend,
+            tags: opts.tags,
+          },
+        });
+      } catch (e) {
+        console.error("[beta:notifyAdmin]", admin.id, e);
+      }
+    }),
+  );
 }
 
 const checklistKeySchema = z.enum(checklistKeys);

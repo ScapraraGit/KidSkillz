@@ -157,6 +157,8 @@ function glyphFor(kind: NotificationDTO["kind"]): string {
       return "⭐";
     case "KUDOS":
       return "💬";
+    case "BETA_FEEDBACK_RECEIVED":
+      return "💜";
     default:
       return "🔔";
   }

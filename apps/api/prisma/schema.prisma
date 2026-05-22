@@ -118,6 +118,7 @@ enum NotificationKind {
   CHALLENGE_COMPLETED
   LEVEL_UP
   KUDOS
+  BETA_FEEDBACK_RECEIVED
 }
 
 model Family {

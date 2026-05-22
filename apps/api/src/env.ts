@@ -69,4 +69,16 @@ export const env = {
   EMAIL_FROM: process.env.EMAIL_FROM ?? "ChoreChampz <no-reply@chorechampz.com>",
   EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO ?? "",
   EMAIL_ENABLED: (process.env.EMAIL_ENABLED ?? "false").toLowerCase() === "true",
+  // --- Billing (Stripe) ---
+  // BILLING_ENABLED is the server-side master kill-switch. When false:
+  //   - /billing/* routes 404
+  //   - requirePaidEntitlement middleware short-circuits to allow
+  //   - admin override endpoints remain available (so comps can be staged)
+  // Default false during beta; flip true post-launch.
+  BILLING_ENABLED: (process.env.BILLING_ENABLED ?? "false").toLowerCase() === "true",
+  BILLING_TRIAL_DAYS: Number(process.env.BILLING_TRIAL_DAYS ?? 10),
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  STRIPE_PRICE_BASIC_MONTHLY: process.env.STRIPE_PRICE_BASIC_MONTHLY ?? "",
+  STRIPE_PRICE_PREMIUM_MONTHLY: process.env.STRIPE_PRICE_PREMIUM_MONTHLY ?? "",
 };

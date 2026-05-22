@@ -20,6 +20,7 @@ import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechampz/shared";
 import { useFeatures } from "../../hooks/useFeatures";
 import { DevicesCard } from "../../components/DevicesCard";
+import { BillingSection } from "../../components/BillingSection";
 
 export function ParentSettings() {
   const qc = useQueryClient();
@@ -75,6 +76,8 @@ export function ParentSettings() {
   return (
     <div className="space-y-6">
       <PageHeader title="Family settings" subtitle={familyQ.data?.name} />
+
+      <BillingSection />
 
       <Card className="space-y-4">
         <h3 className="font-semibold">Authentication</h3>

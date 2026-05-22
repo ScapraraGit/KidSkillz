@@ -326,9 +326,217 @@ function FamilyDetail({ familyId, onClose }: { familyId: string; onClose: () => 
         {resetMsg && <p className="mt-2 text-sm text-slate-700">{resetMsg}</p>}
       </div>
 
+      <AdminBillingSection familyId={familyId} />
       <AdminTasksSection familyId={familyId} />
       <AdminRewardsSection familyId={familyId} />
     </Card>
+  );
+}
+
+type OverrideType = "NONE" | "FREE_FOREVER" | "FREE_UNTIL" | "COMPED_PREMIUM";
+interface AdminEntitlement {
+  status: string;
+  plan: "BASIC" | "PREMIUM";
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  isPaid: boolean;
+  isPremium: boolean;
+  source: "STRIPE" | "TRIAL" | "OVERRIDE";
+  override: OverrideType;
+  overrideReason: string | null;
+  overrideUntil: string | null;
+}
+interface OverrideLogRow {
+  id: string;
+  action: "SET" | "CLEAR";
+  prevType: OverrideType;
+  newType: OverrideType;
+  reason: string | null;
+  until: string | null;
+  createdAt: string;
+  adminId: string;
+}
+
+function AdminBillingSection({ familyId }: { familyId: string }) {
+  const qc = useQueryClient();
+  const billingQ = useQuery({
+    queryKey: ["admin", "family-billing", familyId],
+    queryFn: () => api<{ entitlement: AdminEntitlement }>(`/admin/families/${familyId}/billing`),
+  });
+  const logQ = useQuery({
+    queryKey: ["admin", "family-billing-log", familyId],
+    queryFn: () => api<{ log: OverrideLogRow[] }>(`/admin/families/${familyId}/billing-override/log`),
+  });
+
+  const [type, setType] = useState<Exclude<OverrideType, "NONE">>("FREE_FOREVER");
+  const [reason, setReason] = useState("");
+  const [until, setUntil] = useState("");
+
+  const setM = useMutation({
+    mutationFn: () =>
+      api<{ entitlement: AdminEntitlement }>(`/admin/families/${familyId}/billing-override`, {
+        method: "POST",
+        body: {
+          type,
+          reason,
+          until: type === "FREE_UNTIL" && until ? new Date(until).toISOString() : undefined,
+        },
+      }),
+    onSuccess: () => {
+      setReason("");
+      setUntil("");
+      qc.invalidateQueries({ queryKey: ["admin", "family-billing", familyId] });
+      qc.invalidateQueries({ queryKey: ["admin", "family-billing-log", familyId] });
+    },
+  });
+  const clearM = useMutation({
+    mutationFn: (r: string) =>
+      api<{ entitlement: AdminEntitlement }>(`/admin/families/${familyId}/billing-override`, {
+        method: "DELETE",
+        body: { reason: r },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "family-billing", familyId] });
+      qc.invalidateQueries({ queryKey: ["admin", "family-billing-log", familyId] });
+    },
+  });
+
+  const ent = billingQ.data?.entitlement;
+
+  return (
+    <div className="mb-6">
+      <h3 className="font-semibold mb-2">Billing</h3>
+      {billingQ.isLoading || !ent ? (
+        <div className="text-sm text-slate-500">Loading…</div>
+      ) : (
+        <div className="rounded-lg border border-slate-200 p-3 space-y-2 text-sm">
+          <div>
+            <span className="text-slate-500">Status: </span>
+            <strong>{ent.status}</strong>
+            <span className="ml-3 text-slate-500">Plan: </span>
+            <strong>{ent.plan}</strong>
+            <span className="ml-3 text-slate-500">Source: </span>
+            <strong>{ent.source}</strong>
+            {ent.isPaid && (
+              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">paid</span>
+            )}
+          </div>
+          {ent.trialEndsAt && (
+            <div className="text-slate-600">Trial ends: {new Date(ent.trialEndsAt).toLocaleString()}</div>
+          )}
+          {ent.currentPeriodEnd && (
+            <div className="text-slate-600">
+              Period ends: {new Date(ent.currentPeriodEnd).toLocaleString()}
+              {ent.cancelAtPeriodEnd && " (cancels at period end)"}
+            </div>
+          )}
+          <div>
+            <span className="text-slate-500">Override: </span>
+            <strong>{ent.override}</strong>
+            {ent.overrideReason && <span className="ml-2 text-slate-600">— {ent.overrideReason}</span>}
+            {ent.overrideUntil && (
+              <span className="ml-2 text-slate-600">
+                until {new Date(ent.overrideUntil).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          {ent.override !== "NONE" && (
+            <Tooltip label="Clear admin override and restore Stripe-derived entitlement" side="left">
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  const r = window.prompt("Reason for clearing override?");
+                  if (r && r.trim()) clearM.mutate(r.trim());
+                }}
+                disabled={clearM.isPending}
+              >
+                {clearM.isPending ? "Clearing…" : "Clear override"}
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 rounded-lg border border-slate-200 p-3 space-y-2">
+        <div className="text-sm font-medium text-slate-800">Set override</div>
+        <div className="text-xs text-slate-500">
+          Mark this family as Free (forever or until a date) or as comped Premium. Stripe state is preserved
+          underneath — clearing the override restores it.
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            aria-label="Override type"
+            title="Override type"
+            className={inputCls + " w-48"}
+            value={type}
+            onChange={(e) => setType(e.target.value as Exclude<OverrideType, "NONE">)}
+          >
+            <option value="FREE_FOREVER">Free forever (BASIC)</option>
+            <option value="FREE_UNTIL">Free until date</option>
+            <option value="COMPED_PREMIUM">Comped PREMIUM</option>
+          </select>
+          {type === "FREE_UNTIL" && (
+            <input
+              type="date"
+              aria-label="Override expires on"
+              title="Override expires on"
+              placeholder="Until date"
+              className={inputCls + " w-40"}
+              value={until}
+              onChange={(e) => setUntil(e.target.value)}
+            />
+          )}
+          <input
+            className={inputCls + " flex-1 min-w-[16rem]"}
+            placeholder="Reason (logged) — e.g. friends & family, beta loyalty, hardship"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <Tooltip label="Apply override and append audit log entry" side="left">
+            <Button
+              size="sm"
+              disabled={setM.isPending || reason.trim().length < 1 || (type === "FREE_UNTIL" && !until)}
+              onClick={() => setM.mutate()}
+            >
+              {setM.isPending ? "Applying…" : "Apply"}
+            </Button>
+          </Tooltip>
+        </div>
+        {setM.error && <div className="text-sm text-rose-600">{(setM.error as Error).message}</div>}
+      </div>
+
+      {logQ.data && logQ.data.log.length > 0 && (
+        <div className="mt-3">
+          <div className="text-xs font-medium text-slate-600 mb-1">Override history</div>
+          <table className="w-full text-xs">
+            <thead className="text-left text-slate-500 border-b">
+              <tr>
+                <th className="py-1">When</th>
+                <th className="py-1">Action</th>
+                <th className="py-1">From</th>
+                <th className="py-1">To</th>
+                <th className="py-1">Reason</th>
+                <th className="py-1">Admin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logQ.data.log.map((r) => (
+                <tr key={r.id} className="border-b last:border-0">
+                  <td className="py-1 text-slate-500">{new Date(r.createdAt).toLocaleString()}</td>
+                  <td className="py-1">{r.action}</td>
+                  <td className="py-1">{r.prevType}</td>
+                  <td className="py-1">{r.newType}</td>
+                  <td className="py-1">{r.reason ?? "—"}</td>
+                  <td className="py-1 text-slate-500">{r.adminId.slice(0, 8)}…</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 

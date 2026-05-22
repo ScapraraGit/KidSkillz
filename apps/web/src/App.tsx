@@ -80,6 +80,8 @@ export default function App() {
           <Route path="/parent/settings" element={<ParentSettings />} />
           <Route path="/parent/members" element={<FamilyMembers />} />
           <Route path="/parent/challenges" element={<ParentChallenges />} />
+          {/* Back-compat: old standalone Billing route now redirects into Settings. */}
+          <Route path="/parent/billing" element={<Navigate to="/parent/settings#billing" replace />} />
           <Route path="/beta" element={<BetaWelcome />} />
           <Route path="/beta/checklist" element={<BetaChecklist />} />
           <Route path="/beta/feedback" element={<BetaFeedback />} />

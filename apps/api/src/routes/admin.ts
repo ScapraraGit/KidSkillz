@@ -20,6 +20,12 @@ import {
 import { proofRequirementSchema } from "../lib/features.js";
 import { sendBetaInviteEmail } from "../lib/email.js";
 import { env } from "../env.js";
+import {
+  clearBillingOverride,
+  getEntitlement,
+  listOverrideLog,
+  setBillingOverride,
+} from "../services/billing.js";
 
 export const adminRouter = Router();
 
@@ -215,6 +221,64 @@ adminRouter.delete("/families/:familyId/rewards/:rewardId", async (req, res) => 
     targetId: req.params.rewardId,
   });
   res.status(204).end();
+});
+
+// --- Billing override (admin "mark as Free") ---
+
+adminRouter.get("/families/:familyId/billing", async (req, res) => {
+  const entitlement = await getEntitlement(req.params.familyId);
+  res.json({ entitlement });
+});
+
+const setOverrideSchema = z
+  .object({
+    type: z.enum(["FREE_FOREVER", "FREE_UNTIL", "COMPED_PREMIUM"]),
+    reason: z.string().trim().min(1).max(500),
+    until: z.string().datetime().optional(),
+  })
+  .refine((v) => (v.type === "FREE_UNTIL" ? !!v.until : !v.until), {
+    message: "FREE_UNTIL requires `until`; other types must omit it",
+  });
+
+adminRouter.post("/families/:familyId/billing-override", async (req, res) => {
+  const input = setOverrideSchema.parse(req.body);
+  await setBillingOverride(req.params.familyId, req.auth!.sub, {
+    type: input.type,
+    reason: input.reason,
+    until: input.until ? new Date(input.until) : null,
+  });
+  await recordAudit({
+    familyId: req.params.familyId,
+    actorId: req.auth!.sub,
+    kind: "ADMIN_BILLING_OVERRIDE_SET",
+    targetType: "Family",
+    targetId: req.params.familyId,
+    payload: { type: input.type, until: input.until, reason: input.reason },
+  });
+  const entitlement = await getEntitlement(req.params.familyId);
+  res.json({ entitlement });
+});
+
+const clearOverrideSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+
+adminRouter.delete("/families/:familyId/billing-override", async (req, res) => {
+  const { reason } = clearOverrideSchema.parse(req.body);
+  await clearBillingOverride(req.params.familyId, req.auth!.sub, reason);
+  await recordAudit({
+    familyId: req.params.familyId,
+    actorId: req.auth!.sub,
+    kind: "ADMIN_BILLING_OVERRIDE_CLEARED",
+    targetType: "Family",
+    targetId: req.params.familyId,
+    payload: { reason },
+  });
+  const entitlement = await getEntitlement(req.params.familyId);
+  res.json({ entitlement });
+});
+
+adminRouter.get("/families/:familyId/billing-override/log", async (req, res) => {
+  const log = await listOverrideLog(req.params.familyId);
+  res.json({ log });
 });
 
 // Beta invite blast. Admin-only. Sends the beta-invite template to each address.

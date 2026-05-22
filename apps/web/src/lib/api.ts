@@ -95,6 +95,16 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
   if (!res.ok) {
     if (res.status === 401) useAuth.getState().logout();
     const err = json && typeof json === "object" ? (json as any) : {};
+    // 402 = billing gate. Surface via a window event so an UpgradePrompt
+    // component (mounted in AppLayout) can show a modal regardless of which
+    // page made the call.
+    if (res.status === 402 && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("billing:required", {
+          detail: { code: err.error ?? "BILLING_REQUIRED", message: err.message ?? "Payment required" },
+        }),
+      );
+    }
     throw new ApiError(res.status, err.error ?? "ERROR", err.message ?? res.statusText, err);
   }
   return json as T;

@@ -40,6 +40,7 @@ import {
   type AvatarConfig,
 } from "@chorechampz/shared";
 import { clientIpFrom, recordLegalAcceptance, userAgentFrom } from "../services/legal-acceptance.js";
+import { startTrial } from "../services/billing.js";
 
 export const authRouter = Router();
 
@@ -69,6 +70,9 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
       settings: { ...DEFAULT_FAMILY_SETTINGS } as object,
     },
   });
+  // Initialize trial window. No Stripe API call — customer created lazily on
+  // first checkout. Safe to run unconditionally; respects BILLING_TRIAL_DAYS.
+  await startTrial(family.id).catch((e) => console.error("[billing:startTrial]", e));
   await seedDefaultChallenges(family.id);
   await seedDefaultCategories(family.id);
   // Starter tasks reference category IDs, so they must run after categories seed.

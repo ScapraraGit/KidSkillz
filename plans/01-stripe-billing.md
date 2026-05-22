@@ -16,12 +16,30 @@ stripeSubscriptionId  String?  @unique
 currentPlan           PlanTier @default(BASIC)
 currentPeriodEnd      DateTime?
 cancelAtPeriodEnd     Boolean  @default(false)
+
+billingOverride       BillingOverride @default(NONE)
+billingOverrideReason String?
+billingOverrideBy     String?     // PlatformAdmin.id
+billingOverrideAt     DateTime?
+billingOverrideUntil  DateTime?   // null = no expiry (used with FREE_UNTIL)
 ```
 
 New enums:
 
 - `SubscriptionStatus` — TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE, UNPAID
 - `PlanTier` — BASIC, PREMIUM
+- `BillingOverride` — NONE, FREE_FOREVER, FREE_UNTIL, COMPED_PREMIUM
+
+New model `PlatformAdmin` (platform-scoped, not family-scoped):
+
+- `id`, `email @unique`, `passwordHash`, `name`, `createdAt`, `lastLoginAt?`
+- Separate from `User` so family `Role` enum stays unchanged and JWT `fid` assumption holds.
+- Seeded via env-driven bootstrap script, not self-registration.
+
+New model `BillingOverrideLog`:
+
+- `id`, `familyId`, `adminId`, `action` (SET/CLEAR), `prevType`, `newType`, `reason`, `until?`, `createdAt`.
+- Append-only audit trail for comped accounts.
 
 New model `StripeEvent`:
 
@@ -39,6 +57,9 @@ STRIPE_PRICE_BASIC_MONTHLY
 STRIPE_PRICE_PREMIUM_MONTHLY
 BILLING_ENABLED=false        # master kill-switch (server)
 BILLING_TRIAL_DAYS=10
+PLATFORM_ADMIN_JWT_SECRET    # separate from family JWT secret
+PLATFORM_ADMIN_BOOTSTRAP_EMAIL    # initial super-admin seeded on first boot
+PLATFORM_ADMIN_BOOTSTRAP_PASSWORD
 ```
 
 Web (apps/web):
@@ -59,7 +80,13 @@ Functions, all `familyId`-scoped:
 - `createPortalSession(familyId)` — Stripe customer portal for self-service.
 - `cancelSubscription(familyId, atPeriodEnd: boolean)`.
 - `handleWebhook(event)` — switch on `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_failed`. Idempotent via `StripeEvent`.
-- `getEntitlement(familyId): { status, plan, trialEndsAt, isPaid, isPremium }`.
+- `getEntitlement(familyId): { status, plan, trialEndsAt, isPaid, isPremium, source }` — `source` ∈ `STRIPE | TRIAL | OVERRIDE`. **Override check runs first.**
+  - `FREE_FOREVER` → `{status: ACTIVE, plan: BASIC, isPaid: true, source: OVERRIDE}`.
+  - `COMPED_PREMIUM` → `{status: ACTIVE, plan: PREMIUM, isPaid: true, isPremium: true, source: OVERRIDE}`.
+  - `FREE_UNTIL` + `billingOverrideUntil > now` → ACTIVE/OVERRIDE; expired falls through to Stripe state.
+  - `NONE` → existing Stripe/trial logic.
+- `setBillingOverride(familyId, adminId, {type, reason, until?})` — writes Family fields + `BillingOverrideLog` row.
+- `clearBillingOverride(familyId, adminId, reason)` — resets to NONE, logs.
 
 ## Routes (apps/api/src/routes/billing.ts — new)
 
@@ -84,7 +111,27 @@ New `requirePaidEntitlement` in `apps/api/src/middleware/billing.ts`:
 
 Mount globally in `index.ts` after `requireAuth`. Whitelist exceptions explicit.
 
-Premium gate: `requirePremium` for premium-only endpoints.
+Premium gate: `requirePremium` for premium-only endpoints. `COMPED_PREMIUM` override satisfies this.
+
+Webhook keeps updating Stripe fields on the Family even while override active — so removing override later restores correct Stripe state without manual reconciliation. Middleware ignores Stripe state while override active.
+
+## Admin override surface
+
+New middleware `requireSuperAdmin` in `apps/api/src/middleware/platform-admin.ts`:
+
+- Separate JWT shape `{sub: adminId, kind: "platform"}`. Different signing key (`PLATFORM_ADMIN_JWT_SECRET`) so family tokens can never escalate.
+- Reject if `kind !== "platform"` or admin row missing.
+
+New routes under `apps/api/src/routes/admin/billing.ts` (mounted at `/admin`):
+
+- `POST /admin/auth/login` — email + password, returns platform JWT.
+- `GET /admin/families?override=<type>&q=<search>` — list families, filterable by override type.
+- `GET /admin/families/:id` — family detail incl. current entitlement + Stripe state + override.
+- `POST /admin/families/:id/billing-override` — body `{type: BillingOverride, reason: string, until?: ISO}`. Writes Family fields, appends `BillingOverrideLog`.
+- `DELETE /admin/families/:id/billing-override` — body `{reason}`. Resets to NONE, logs.
+- `GET /admin/families/:id/billing-override/log` — audit trail.
+
+All `requireSuperAdmin`. Not gated by `BILLING_ENABLED` — admins need access even before billing flips on (to pre-comp beta loyalists).
 
 ## Premium-tier candidate features (upcharge)
 
@@ -115,6 +162,20 @@ New files:
 Wire in `App.tsx`: conditional `<Route path="/parent/billing">`. Hide from nav (`AppLayout.tsx`) when flag off.
 `lib/api.ts`: intercept 402 → dispatch `UpgradePrompt`.
 
+When `getEntitlement().source === "OVERRIDE"`, `Billing.tsx` replaces plan picker with comped notice:
+
+- "Account comped by ChoreChampz" + reason + expiry (if FREE_UNTIL).
+- Hide Checkout / Manage buttons.
+- `TrialBanner` suppressed.
+
+New admin web app surface (separate route tree `/admin/*`, separate auth store):
+
+- `apps/web/src/pages/admin/Login.tsx`
+- `apps/web/src/pages/admin/Families.tsx` — search + filter by override.
+- `apps/web/src/pages/admin/FamilyDetail.tsx` — entitlement, Stripe state, set/clear override modal, audit log.
+
+Admin pages gated by platform JWT in localStorage under separate key (`platformAdminToken`). Never share with family token.
+
 ## Webhook security
 
 - Raw body via `express.raw({type: 'application/json'})` on that single route.
@@ -124,7 +185,10 @@ Wire in `App.tsx`: conditional `<Route path="/parent/billing">`. Hide from nav (
 ## Tests
 
 - `services/__tests__/billing.test.ts` — entitlement matrix (trialing-active, trialing-expired, active, past_due, canceled), idempotency on duplicate webhook event id.
-- Middleware test — bypass list, flag-off short-circuit.
+- Override matrix — FREE_FOREVER beats CANCELED Stripe, COMPED_PREMIUM passes `requirePremium`, expired FREE_UNTIL falls through to Stripe state, clearing override restores Stripe-derived entitlement.
+- `BillingOverrideLog` append-only — each set/clear appends row, never mutates prior.
+- Middleware test — bypass list, flag-off short-circuit, override bypasses 402.
+- Platform-admin auth — family JWT rejected by `requireSuperAdmin`, platform JWT rejected by `requireAuth`.
 - No real Stripe in tests — mock SDK.
 
 ## Rollout
@@ -139,3 +203,6 @@ Wire in `App.tsx`: conditional `<Route path="/parent/billing">`. Hide from nav (
 - Webhook ordering — always trust DB row state, not local timestamps.
 - Trial-end race — recheck entitlement on each gated request, don't cache.
 - Currency/tax — start US-only, Stripe Tax later.
+- Override abuse — only super-admin role can set. Every change audited in `BillingOverrideLog`. No self-comp possible (admin acts on `:familyId`, not own).
+- Token confusion — platform JWT and family JWT use distinct secrets + `kind` claim. Cross-acceptance impossible.
+- Bootstrap admin — `PLATFORM_ADMIN_BOOTSTRAP_*` envs create initial admin only if zero admins exist. Idempotent; safe to leave set.

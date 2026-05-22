@@ -108,6 +108,28 @@ enum ChildViewMode {
   OLDER
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  UNPAID
+}
+
+enum PlanTier {
+  BASIC
+  PREMIUM
+}
+
+// Admin-applied entitlement override. Wins over Stripe-derived state.
+enum BillingOverride {
+  NONE
+  FREE_FOREVER
+  FREE_UNTIL
+  COMPED_PREMIUM
+}
+
 enum NotificationKind {
   COMPLETION_APPROVED
   COMPLETION_REJECTED
@@ -134,6 +156,23 @@ model Family {
   // Family-level beta-program flag. When true, /beta routes are accessible and
   // the dashboard beta banner shows for parents. Toggled by admins.
   isBeta              Boolean  @default(false)
+
+  // --- Billing / subscriptions ---
+  // Source of truth = Stripe webhooks updating these fields, BUT billingOverride
+  // (when not NONE) wins over Stripe state at entitlement-resolution time.
+  subscriptionStatus    SubscriptionStatus @default(TRIALING)
+  trialEndsAt           DateTime?
+  stripeCustomerId      String?            @unique
+  stripeSubscriptionId  String?            @unique
+  currentPlan           PlanTier           @default(BASIC)
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  billingOverride       BillingOverride    @default(NONE)
+  billingOverrideReason String?
+  billingOverrideBy     String?            // admin User.id who set the override
+  billingOverrideAt     DateTime?
+  billingOverrideUntil  DateTime?          // null = no expiry (used with FREE_UNTIL)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -155,6 +194,39 @@ model Family {
   auditEvents      AuditEvent[]
   enrolledDevices    EnrolledDevice[]
   deviceEnrollments  DeviceEnrollment[]
+  stripeEvents       StripeEvent[]
+  billingOverrideLogs BillingOverrideLog[]
+}
+
+// Webhook event idempotency cache. Insert keyed by Stripe event id; duplicate
+// inserts are no-ops so replayed deliveries don't double-process.
+model StripeEvent {
+  id          String    @id // Stripe event id
+  type        String
+  payload     Json
+  processedAt DateTime  @default(now())
+  familyId    String?
+  family      Family?   @relation(fields: [familyId], references: [id], onDelete: SetNull)
+
+  @@index([familyId])
+  @@index([type])
+}
+
+// Append-only audit trail for admin overrides on family billing.
+model BillingOverrideLog {
+  id        String           @id @default(uuid())
+  familyId  String
+  family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  adminId   String           // User.id of acting admin
+  action    String           // "SET" | "CLEAR"
+  prevType  BillingOverride
+  newType   BillingOverride
+  reason    String?
+  until     DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([familyId, createdAt])
+  @@index([adminId])
 }
 
 // Long-lived family-scoped credential held by a paired kid/caregiver device.

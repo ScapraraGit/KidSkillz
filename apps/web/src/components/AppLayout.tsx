@@ -11,6 +11,8 @@ import { SoundToggle } from "./SoundToggle";
 import { NotificationBell } from "./NotificationBell";
 import { Popover } from "./Popover";
 import { EmailVerifyBanner } from "./EmailVerifyBanner";
+import { TrialBanner } from "./TrialBanner";
+import { UpgradePrompt } from "./UpgradePrompt";
 import { TermsGate } from "./TermsGate";
 import { HouseholdAckModal } from "./HouseholdAckModal";
 import { LegalFooter } from "./LegalFooter";
@@ -25,6 +27,8 @@ interface NavLinkDef {
   id?: string;
   tip?: string;
 }
+
+const BILLING_UI = (import.meta.env.VITE_BILLING_ENABLED as string) === "true";
 
 const parentLinks: NavLinkDef[] = [
   { to: "/parent", label: "Dashboard", end: true, tip: "Family overview, balances, recent activity" },
@@ -60,13 +64,28 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const loc = useLocation();
   const isCaregiver = user?.role === "CAREGIVER";
   const baseLinks = role === "CHILD" ? childLinks : isCaregiver ? caregiverLinks : parentLinks;
-  const links =
-    role === "PARENT" && !isCaregiver && user?.isAdmin
-      ? [
-          ...baseLinks,
-          { to: "/parent/admin", label: "Admin", tip: "Customer support portal — manage any family" },
-        ]
-      : baseLinks;
+
+  // Conditional "Upgrade" CTA: only shown during an active TRIAL on the parent
+  // role. Shares the cached billing query with TrialBanner so no extra fetch.
+  const billingQ = useQuery({
+    queryKey: ["billing", "status"],
+    queryFn: () => api<{ entitlement: { source: string; isPaid: boolean } }>("/billing/status"),
+    enabled: BILLING_UI && role === "PARENT" && !isCaregiver,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const showUpgrade =
+    BILLING_UI && role === "PARENT" && !isCaregiver && billingQ.data?.entitlement.source === "TRIAL";
+
+  const links = [
+    ...baseLinks,
+    ...(showUpgrade
+      ? [{ to: "/parent/settings#billing", label: "Upgrade", tip: "Choose a plan before your trial ends" }]
+      : []),
+    ...(role === "PARENT" && !isCaregiver && user?.isAdmin
+      ? [{ to: "/parent/admin", label: "Admin", tip: "Customer support portal — manage any family" }]
+      : []),
+  ];
 
   const me = useQuery({
     queryKey: ["me"],
@@ -117,6 +136,8 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       {role === "PARENT" && !isCaregiver && user && !user.emailVerifiedAt && (
         <EmailVerifyBanner email={user.email} />
       )}
+      {role === "PARENT" && !isCaregiver && <TrialBanner />}
+      <UpgradePrompt />
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">

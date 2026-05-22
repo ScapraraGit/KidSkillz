@@ -13,6 +13,7 @@ export const HttpError = {
   unauthorized: (msg = "Unauthorized") => new AppError(401, "UNAUTHORIZED", msg),
   forbidden: (msg = "Forbidden") => new AppError(403, "FORBIDDEN", msg),
   notFound: (msg = "Not found") => new AppError(404, "NOT_FOUND", msg),
+  paymentRequired: (msg = "Payment required", code = "BILLING_REQUIRED") => new AppError(402, code, msg),
   conflict: (msg: string, code = "CONFLICT") => new AppError(409, code, msg),
   unprocessable: (msg: string, code = "UNPROCESSABLE") => new AppError(422, code, msg),
   serviceUnavailable: (msg = "Service unavailable", code = "SERVICE_UNAVAILABLE") =>

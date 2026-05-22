@@ -30,6 +30,7 @@ import { missedOpportunitiesRouter } from "./routes/missed-opportunities.js";
 import { auditRouter } from "./routes/audit.js";
 import { adminRouter } from "./routes/admin.js";
 import { betaRouter } from "./routes/beta.js";
+import { billingRouter, billingWebhookHandler } from "./routes/billing.js";
 
 export interface CreateAppOptions {
   /**
@@ -90,6 +91,12 @@ export function createApp(opts: CreateAppOptions = {}) {
     }),
   );
   app.use(cors({ origin: corsOrigins, credentials: false }));
+
+  // Stripe webhook MUST receive raw bytes for signature verification, so its
+  // handler is mounted before the global JSON parser. Path is intentionally
+  // matched on the full /v1/billing/webhook URL.
+  app.post("/v1/billing/webhook", ...billingWebhookHandler);
+
   app.use(express.json({ limit: "1mb" }));
 
   if (!opts.forTests) {
@@ -176,6 +183,7 @@ export function createApp(opts: CreateAppOptions = {}) {
   v1.use("/audit", auditRouter);
   v1.use("/admin", adminRouter);
   v1.use("/beta", betaRouter);
+  v1.use("/billing", billingRouter);
   v1.use("/uploads", uploadsRouter);
   app.use("/v1", v1);
 

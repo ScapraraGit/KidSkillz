@@ -197,6 +197,15 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                         Settings
                       </Link>
                     )}
+                    {role === "PARENT" && !isCaregiver && me.data?.isBeta && (
+                      <Link
+                        to="/beta"
+                        onClick={() => setMenuOpen(false)}
+                        className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                      >
+                        Beta tester 💜
+                      </Link>
+                    )}
                     <div className="my-1 h-px bg-slate-100" />
                     <button
                       type="button"

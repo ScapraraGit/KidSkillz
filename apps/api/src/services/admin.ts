@@ -55,6 +55,7 @@ export async function getFamilyDetail(familyId: string) {
   return {
     id: family.id,
     name: family.name,
+    isBeta: family.isBeta,
     createdAt: family.createdAt.toISOString(),
     members: family.users.map((u) => ({
       id: u.id,
@@ -71,6 +72,12 @@ export async function renameFamily(familyId: string, name: string) {
   const family = await prisma.family.findUnique({ where: { id: familyId } });
   if (!family) throw HttpError.notFound("Family not found");
   return prisma.family.update({ where: { id: familyId }, data: { name } });
+}
+
+export async function setFamilyBeta(familyId: string, isBeta: boolean) {
+  const family = await prisma.family.findUnique({ where: { id: familyId } });
+  if (!family) throw HttpError.notFound("Family not found");
+  return prisma.family.update({ where: { id: familyId }, data: { isBeta } });
 }
 
 export async function adminResetPassword(userId: string, newPassword: string) {

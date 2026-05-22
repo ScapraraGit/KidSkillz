@@ -3,6 +3,7 @@ import { env } from "../env.js";
 import { HttpError } from "../errors.js";
 import { generateRawToken, hashToken, tokenMatches } from "../lib/tokens.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
+import { safelySendEmail } from "../lib/safe-send-email.js";
 import { hashPassword } from "../lib/auth.js";
 import { checkPassword } from "../lib/password-policy.js";
 
@@ -79,16 +80,11 @@ export async function issuePasswordReset(email: string): Promise<void> {
   });
 
   const resetUrl = `${env.APP_URL}/reset-password?token=${encodeURIComponent(raw)}`;
-  // Swallow send errors. Caller always responds 200 to prevent account
-  // enumeration; a 500 from the email provider would leak the existence of
-  // a matching account vs. the silent no-op above for unknown emails. Log
-  // loudly so prod failures are still investigable.
-  try {
-    await sendPasswordResetEmail({ to: user.email!, resetUrl });
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error("[auth:forgot-password] email send failed", { userId: user.id, err: e });
-  }
+  await safelySendEmail(() => sendPasswordResetEmail({ to: user.email!, resetUrl }), {
+    label: "auth:forgot-password",
+    userId: user.id,
+    to: user.email ?? undefined,
+  });
 }
 
 export async function consumePasswordReset(raw: string, newPassword: string): Promise<{ userId: string }> {

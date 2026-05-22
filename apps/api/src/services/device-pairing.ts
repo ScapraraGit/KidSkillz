@@ -17,8 +17,22 @@ export {
   sha256,
 } from "../lib/pairing-code.js";
 
-const PAIRING_TTL_MS = 10 * 60 * 1000;
+export const PAIRING_TTL_MS = 10 * 60 * 1000;
+// Hard cap on pairing-code lifetime. Beta-tester ("long-lived") codes still
+// expire — they just last days instead of minutes so testers can swap test
+// devices without the parent having to mint a fresh code every few minutes.
+// 7 days is long enough to span a normal test cycle, short enough that a
+// leaked code can't outlive the beta itself.
+export const PAIRING_TTL_MAX_MS = 7 * 24 * 60 * 60 * 1000;
 const CODE_LEN = PAIRING_CODE_LEN;
+
+// Clamp a requested pairing TTL into [PAIRING_TTL_MS, PAIRING_TTL_MAX_MS].
+// Anything below the default floor rounds up; anything above the max rounds
+// down. Exported so the clamp math is unit-testable without DB or JWT.
+export function clampPairingTtl(requestedMs: number | undefined): number {
+  const requested = requestedMs ?? PAIRING_TTL_MS;
+  return Math.min(Math.max(requested, PAIRING_TTL_MS), PAIRING_TTL_MAX_MS);
+}
 
 // Long device token: 32 random bytes, base64url. Opaque to client.
 const DEVICE_TOKEN_BYTES = 32;
@@ -27,6 +41,9 @@ export interface IssueEnrollmentInput {
   familyId: string;
   createdById: string;
   label?: string;
+  // Optional pairing-code TTL override. Clamped to PAIRING_TTL_MAX_MS server-
+  // side so a bad client value can't issue a code that lives forever.
+  ttlMs?: number;
 }
 
 export interface IssueEnrollmentResult {
@@ -41,7 +58,8 @@ export interface IssueEnrollmentResult {
  * are returned to the parent UI exactly once.
  */
 export async function issueEnrollment(input: IssueEnrollmentInput): Promise<IssueEnrollmentResult> {
-  const expiresAt = new Date(Date.now() + PAIRING_TTL_MS);
+  const ttlMs = clampPairingTtl(input.ttlMs);
+  const expiresAt = new Date(Date.now() + ttlMs);
 
   // Retry on the very rare code collision.
   let code: string | null = null;
@@ -63,7 +81,7 @@ export async function issueEnrollment(input: IssueEnrollmentInput): Promise<Issu
   // re-issues a pairing.
   const jti = randomBytes(12).toString("hex");
   const qrNonce = jwt.sign({ kind: "device_pair", fid: input.familyId, jti }, env.JWT_SECRET, {
-    expiresIn: Math.floor(PAIRING_TTL_MS / 1000),
+    expiresIn: Math.floor(ttlMs / 1000),
   });
   const nonceHash = sha256(qrNonce);
 

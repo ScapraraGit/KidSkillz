@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Avatar, Badge, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
 import { SetupChecklist } from "../../components/SetupChecklist";
+import { BetaBanner } from "../../components/BetaBanner";
 import type { ParentDashboardDTO } from "@chorechampz/shared";
 
 export function ParentDashboard() {
@@ -18,6 +19,8 @@ export function ParentDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader title="Family dashboard" subtitle="What needs your attention today." />
+
+      <BetaBanner />
 
       <SetupChecklist />
 

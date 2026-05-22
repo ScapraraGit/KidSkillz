@@ -424,12 +424,16 @@ authRouter.post("/families/lookup", lookupRateLimiter, requireTurnstile, async (
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });
   if (!user) throw HttpError.unauthorized();
-  const settings = await getFamilySettings(user.familyId);
+  const [settings, family] = await Promise.all([
+    getFamilySettings(user.familyId),
+    prisma.family.findUnique({ where: { id: user.familyId }, select: { isBeta: true } }),
+  ]);
   res.json({
     user: serializeUser(user),
     settings,
     needsOnboarding: user.onboardedAt == null,
     needsHouseholdAck: user.role === "PARENT" && user.householdAckAt == null,
+    isBeta: family?.isBeta ?? false,
     features: {
       photoProof: features.photoProof,
       devicePairing: features.devicePairing,

@@ -15,6 +15,7 @@ import { Button, Card, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { EmojiPicker } from "../../components/EmojiPicker";
+import { QrCode } from "../../components/QrCode";
 import { useAuth } from "../../store/auth";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } from "@chorechampz/shared";
 import { useFeatures } from "../../hooks/useFeatures";
@@ -88,15 +89,7 @@ export function ParentSettings() {
           </select>
         </Field>
         {familyQ.data?.familyCode && (
-          <Field label="Family code (share with kids on shared devices)">
-            <input
-              className={inputCls}
-              placeholder="Family code"
-              value={familyQ.data.familyCode}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-            />
-          </Field>
+          <FamilyCodeBlock code={familyQ.data.familyCode} familyName={familyQ.data.name} />
         )}
         {s.childAuthMode === "SHARED_DEVICE" && (
           <Field label="Shared-device password (separate from parent passwords)">
@@ -447,6 +440,71 @@ export function ParentSettings() {
   );
 }
 
+interface FamilyCodeBlockProps {
+  code: string;
+  familyName: string;
+}
+
+// Family code + QR display. Parent shares verbally OR shows the QR for a kid
+// tablet to scan — the QR encodes a deep link to the kid sign-in page with
+// the code pre-filled, eliminating type-by-hand entry on a shared device.
+function FamilyCodeBlock({ code, familyName }: FamilyCodeBlockProps) {
+  const [showQr, setShowQr] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // Build the kid sign-in deep link against the CURRENT origin so dev
+  // (localhost) and prod (chorechampz.com) both produce a link that opens this
+  // exact build. The /child path is the kid-side login mode.
+  const kidLinkUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/child?fc=${encodeURIComponent(code)}&fn=${encodeURIComponent(familyName)}`;
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked in iframe / insecure context — silently ignore */
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Family code</div>
+      <div className="mt-2 flex items-center gap-3">
+        <div
+          className="select-all rounded-lg bg-white px-3 py-2 font-mono text-2xl tracking-[0.3em] text-slate-900 border border-slate-300"
+          aria-label="Family code"
+        >
+          {code}
+        </div>
+        <Tooltip label="Copy code to clipboard">
+          <Button variant="secondary" size="sm" onClick={copyCode}>
+            {copied ? "Copied!" : "Copy"}
+          </Button>
+        </Tooltip>
+        <Tooltip label="Show QR code for kid devices to scan">
+          <Button variant="ghost" size="sm" onClick={() => setShowQr((v) => !v)}>
+            {showQr ? "Hide QR" : "Show QR"}
+          </Button>
+        </Tooltip>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Share with kids on shared devices. They&rsquo;ll also need the family name (
+        <strong>{familyName}</strong>) and the family password.
+      </p>
+      {showQr && (
+        <div className="mt-3 flex flex-col items-center gap-2 rounded-lg bg-white p-4 border border-slate-200">
+          <QrCode value={kidLinkUrl} size={200} />
+          <p className="text-xs text-slate-500 text-center max-w-xs">
+            Kid scans this on their device camera — opens the sign-in page with the family code already filled
+            in.
+          </p>
+          <code className="text-[10px] text-slate-400 break-all">{kidLinkUrl}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TaskCategoriesCard() {
   const qc = useQueryClient();
   const q = useQuery({
@@ -664,7 +722,7 @@ function CategoryRow({ category, onRename, onIconChange, onDelete }: CategoryRow
 
   // dnd-kit returns drag transforms via JS — inline style is the supported API
   // surface, so the no-inline-styles rule doesn't apply here.
-  // eslint-disable-next-line react/forbid-dom-props
+
   const style: React.CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,

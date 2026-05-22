@@ -16,6 +16,7 @@ interface AdminFamily {
 interface AdminFamilyDetail {
   id: string;
   name: string;
+  isBeta: boolean;
   createdAt: string;
   members: {
     id: string;
@@ -66,6 +67,9 @@ export function AdminPortal() {
         title="Admin Portal"
         subtitle="Customer support tools — act on any family. All actions are logged in audit."
       />
+
+      <BetaInviteCard />
+
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-slate-800">Families</h2>
@@ -163,6 +167,17 @@ function FamilyDetail({ familyId, onClose }: { familyId: string; onClose: () => 
     },
   });
 
+  const betaM = useMutation({
+    mutationFn: (isBeta: boolean) =>
+      api<{ family: { id: string; isBeta: boolean } }>(`/admin/families/${familyId}/beta`, {
+        method: "PATCH",
+        body: { isBeta },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "family", familyId] });
+    },
+  });
+
   const resetM = useMutation({
     mutationFn: (args: { userId: string; password: string }) =>
       api<{ ok: true }>(`/admin/users/${args.userId}/reset-password`, {
@@ -209,6 +224,36 @@ function FamilyDetail({ familyId, onClose }: { familyId: string; onClose: () => 
             </Button>
           </Tooltip>
         </div>
+      </div>
+
+      {/* Beta enrollment */}
+      <div className="mb-6 rounded-lg border border-slate-200 p-3 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-slate-800">Beta program</div>
+          <div className="text-xs text-slate-500">
+            When enabled, parents in this family see the dashboard beta banner and can access the feedback
+            form. Caregivers + kids are unaffected.
+          </div>
+        </div>
+        <Tooltip
+          label={
+            family.isBeta
+              ? "Turn off beta surfaces for this family"
+              : "Enroll this family in the beta program"
+          }
+          side="left"
+        >
+          <span className="inline-flex">
+            <Button
+              size="sm"
+              variant={family.isBeta ? "secondary" : "primary"}
+              onClick={() => betaM.mutate(!family.isBeta)}
+              disabled={betaM.isPending}
+            >
+              {betaM.isPending ? "Saving…" : family.isBeta ? "Disable beta" : "Enroll in beta"}
+            </Button>
+          </span>
+        </Tooltip>
       </div>
 
       {/* Members + password reset */}
@@ -520,5 +565,109 @@ function RewardRow({
         </td>
       )}
     </tr>
+  );
+}
+
+function BetaInviteCard() {
+  const [emailsText, setEmailsText] = useState("");
+  const [name, setName] = useState("");
+  const [result, setResult] = useState<{ sent: number; failed: { to: string; error?: string }[] } | null>(
+    null,
+  );
+  const [err, setErr] = useState<string | null>(null);
+
+  const send = useMutation({
+    mutationFn: (payload: { emails: string[]; recipientName?: string }) =>
+      api<{ sent: number; failed: { to: string; error?: string }[] }>("/admin/beta/invite", {
+        method: "POST",
+        body: payload,
+      }),
+    onSuccess: (data) => {
+      setResult(data);
+      setErr(null);
+      setEmailsText("");
+    },
+    onError: (e: any) => setErr(e?.message ?? "Failed"),
+  });
+
+  function onSend() {
+    setErr(null);
+    setResult(null);
+    const emails = emailsText
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (emails.length === 0) {
+      setErr("Add at least one email.");
+      return;
+    }
+    if (emails.length > 50) {
+      setErr("Max 50 emails per send.");
+      return;
+    }
+    send.mutate({ emails, recipientName: name.trim() || undefined });
+  }
+
+  return (
+    <Card className="mb-6">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="font-semibold text-slate-800">Beta invite blast</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Send the beta-invite email to one or more recipients. Up to 50 per send.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="sm:col-span-2">
+          <span className="block text-sm font-medium text-slate-700 mb-1">Emails</span>
+          <textarea
+            className={inputCls}
+            rows={3}
+            placeholder="alice@example.com, bob@example.com"
+            value={emailsText}
+            onChange={(e) => setEmailsText(e.target.value)}
+          />
+          <p className="text-xs text-slate-500 mt-1">Separate with commas, spaces, or newlines.</p>
+        </div>
+        <div>
+          <span className="block text-sm font-medium text-slate-700 mb-1">Recipient name (optional)</span>
+          <input
+            className={inputCls}
+            placeholder="e.g. Alice"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
+          <p className="text-xs text-slate-500 mt-1">Used in greeting. Blank = "Hi there".</p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-3 flex-wrap">
+        <Tooltip label="Send beta invite emails now">
+          <span className="inline-flex">
+            <Button onClick={onSend} disabled={send.isPending}>
+              {send.isPending ? "Sending..." : "Send invites"}
+            </Button>
+          </span>
+        </Tooltip>
+        {err && <span className="text-sm text-rose-700">{err}</span>}
+        {result && (
+          <span className="text-sm text-emerald-700">
+            Sent {result.sent}
+            {result.failed.length > 0 ? ` - ${result.failed.length} failed` : ""}.
+          </span>
+        )}
+      </div>
+      {result && result.failed.length > 0 && (
+        <ul className="mt-2 text-xs text-rose-700 list-disc pl-5">
+          {result.failed.map((f) => (
+            <li key={f.to}>
+              {f.to}
+              {f.error ? ` - ${f.error}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }

@@ -38,13 +38,17 @@ export function DevicesCard() {
 
   const [showEnroll, setShowEnroll] = useState(false);
   const [label, setLabel] = useState("");
+  const [longLived, setLongLived] = useState(false);
   const [enrollResp, setEnrollResp] = useState<EnrollResponse | null>(null);
 
   const enroll = useMutation({
     mutationFn: () =>
       api<EnrollResponse>("/family/devices/enroll", {
         method: "POST",
-        body: { label: label.trim() || undefined },
+        body: {
+          label: label.trim() || undefined,
+          longLived: longLived || undefined,
+        },
       }),
     onSuccess: (r) => {
       setEnrollResp(r);
@@ -66,6 +70,7 @@ export function DevicesCard() {
   const closeModal = () => {
     setShowEnroll(false);
     setLabel("");
+    setLongLived(false);
     setEnrollResp(null);
   };
 
@@ -156,6 +161,22 @@ export function DevicesCard() {
                   onChange={(e) => setLabel(e.target.value)}
                 />
               </Field>
+              <Tooltip label="Pairing codes normally expire after 10 minutes for security. Beta-tester mode extends the redemption window to 7 days so you can pair multiple test devices over a sprint without re-issuing.">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={longLived}
+                    onChange={(e) => setLongLived(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Beta-tester (7-day code)</span>
+                    <span className="block text-xs text-slate-500">
+                      For test devices that swap often. Code lasts 7 days instead of 10 minutes.
+                    </span>
+                  </span>
+                </label>
+              </Tooltip>
               {enroll.error && (
                 <div className="text-sm text-rose-600">{(enroll.error as Error).message ?? "Failed"}</div>
               )}
@@ -175,7 +196,7 @@ export function DevicesCard() {
                 <QrCode value={enrollResp.qrUrl} size={220} />
               </div>
               <p className="text-xs text-slate-500">
-                Expires {new Date(enrollResp.expiresAt).toLocaleTimeString()}. Single use.
+                Expires {new Date(enrollResp.expiresAt).toLocaleString()}. Single use.
               </p>
               <Button type="button" className="w-full" onClick={closeModal}>
                 Done

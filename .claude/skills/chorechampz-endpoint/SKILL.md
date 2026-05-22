@@ -21,6 +21,10 @@ const CreateInput = z.object({
   // fields only — never accept familyId from the client
 });
 
+// IMPORTANT: apply requireAuth per-route, never via `Router_.use(requireAuth)`.
+// If even one route in this router is public-by-design (token-in-URL credential,
+// e.g. invitation accept), a router-wide guard 401s it. Past incident: the
+// invitations router applied `.use(requireAuth)` and broke /by-token/:token.
 Router_.post("/", requireAuth, requireRole("PARENT"), async (req, res) => {
   const input = CreateInput.parse(req.body);
   const out = await svc.create(req.auth!.fid, input);
@@ -57,6 +61,24 @@ export function serialize(row: import("@prisma/client").<Model>) {
 - First arg of every service fn is `familyId: string`.
 - Every Prisma `where` includes `familyId` (directly or via relation `task: { familyId }`).
 - Never read `familyId` from `req.body` — only from `req.auth!.fid`.
+
+## 3a. Public-by-design routes
+
+Some routes intentionally have no `requireAuth` because the token in the URL **is** the credential — invitation accept, password reset, device pairing redemption, family lookup. For those:
+
+- Mount inside the same router as protected routes is fine; just **do not** apply `router.use(requireAuth)` at module scope.
+- Apply auth per-route: `router.get("/protected", requireAuth, requireRole("PARENT"), …)` and `router.get("/by-token/:t", …)` side by side.
+- The token-validation logic lives in the service (`findActiveByToken`, `redeemEnrollment`, etc.), not the route — same thin-route rule applies.
+- These routes still need `requireTurnstile` + a rate limiter when unauthenticated traffic could enumerate.
+
+## 3b. Email-affecting flows
+
+If the endpoint sends an email (verification, reset, invitation, ad-hoc notification):
+
+- Use the exported helpers in [apps/api/src/lib/email.ts](apps/api/src/lib/email.ts). Do not call the provider or Resend SDK directly.
+- For user-facing auth flows (verify / reset / invite): let the helper rethrow on failure. The caller responds with the error.
+- For anti-enumeration flows (forgot-password specifically): wrap the helper in try/catch at the SERVICE level so the route always returns 200 regardless of whether the email existed. A 500 from a Resend hiccup would leak account existence.
+- Notification mirror sends are already fire-and-forget — wrapped with `setImmediate` in [apps/api/src/services/notifications.ts](apps/api/src/services/notifications.ts). Don't await them inside a Prisma transaction.
 
 ## 4. Ledger-affecting flows
 

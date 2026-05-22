@@ -201,6 +201,8 @@ export interface MeResponseDTO {
   settings: FamilySettings;
   needsOnboarding: boolean;
   needsHouseholdAck: boolean;
+  /** Family-level beta enrollment. Drives the dashboard beta banner + /beta menu link. */
+  isBeta: boolean;
   features: FeatureFlagsDTO;
 }
 

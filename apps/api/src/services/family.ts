@@ -3,8 +3,12 @@ import { prisma } from "../db.js";
 import { DEFAULT_FAMILY_SETTINGS, type FamilySettings } from "@chorechampz/shared";
 import { HttpError } from "../errors.js";
 
-// 6-char alphanumeric, ambiguous chars (0/O/1/I/L) removed for verbal sharing.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+// 6-char code. Ambiguous glyphs removed for verbal sharing + kids reading
+// off a sticky note: 0/O, 1/I/L, B/8, U/V (read identical in condensed fonts).
+// 27 chars × 6 = ~387M codes — ample for collision resistance with unique retry.
+// Existing codes generated before this list shrank remain valid; clients
+// accept the full [A-Z0-9] set on input, so older codes keep working.
+const CODE_ALPHABET = "ACDEFGHJKMNPQRSTWXYZ2345679";
 
 export function generateFamilyCode(): string {
   const bytes = randomBytes(6);

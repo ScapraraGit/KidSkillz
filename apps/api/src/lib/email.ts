@@ -3,6 +3,7 @@ import { renderInvitationEmail } from "../email/templates/invitation.js";
 import { renderVerificationEmail } from "../email/templates/verification.js";
 import { renderPasswordResetEmail } from "../email/templates/password-reset.js";
 import { renderNotificationEmail } from "../email/templates/notification.js";
+import { renderBetaInviteEmail } from "../email/templates/beta-invite.js";
 
 // Public surface: keep the existing signatures so call sites in auth-tokens.ts,
 // invitations.ts, and notifications.ts don't change. Behavior:
@@ -66,6 +67,31 @@ export async function sendPasswordResetEmail(params: { to: string; resetUrl: str
   });
 }
 
+export interface BetaInviteEmailParams {
+  to: string;
+  recipientName?: string | null;
+  checklistUrl: string;
+  feedbackUrl: string;
+}
+
+// Rethrows on provider error — beta invites are typically sent from a script /
+// admin tool where the caller wants to know about failed sends. Mirror of
+// invitation email semantics.
+export async function sendBetaInviteEmail(params: BetaInviteEmailParams): Promise<void> {
+  const rendered = renderBetaInviteEmail({
+    recipientName: params.recipientName ?? null,
+    checklistUrl: params.checklistUrl,
+    feedbackUrl: params.feedbackUrl,
+  });
+  await emailProvider.send({
+    to: params.to,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    tags: { type: "beta_invite" },
+  });
+}
+
 export async function sendNotificationEmail(params: {
   to: string;
   title: string;
@@ -82,7 +108,7 @@ export async function sendNotificationEmail(params: {
     });
   } catch (e) {
     // Fire-and-forget — the in-app notification row is already persisted.
-    // eslint-disable-next-line no-console
+
     console.error("[email:notification] send failed", e);
   }
 }

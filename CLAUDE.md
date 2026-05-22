@@ -18,7 +18,9 @@ Monorepo. Kids/teens earn credit for chores, parents approve, reward catalog. Mu
 - **Recurring tasks** are not materialized — `GET /tasks/today` walks active templates and joins `TaskCompletion` by `(taskId, childId, occurrenceDate)`.
 - **Proof requirement resolves child override > task setting.** Six levels in `ProofRequirement` enum.
 - **Storage** behind `StorageProvider` interface — swap LocalStorage → S3 by writing one class.
+- **Email** behind `EmailProvider` interface in [apps/api/src/lib/email-provider.ts](apps/api/src/lib/email-provider.ts). `EMAIL_ENABLED=true` selects `ResendProvider`; `false` (default) selects `ConsoleProvider` for dev/local. Templates render to `{subject, html, text}` in `apps/api/src/email/templates/`. Call sites in `apps/api/src/lib/email.ts` keep stable signatures (`sendInvitationEmail`, `sendVerificationEmail`, `sendPasswordResetEmail`, `sendNotificationEmail`). Verify / reset / invite **rethrow** on provider error; notification **swallows** (fire-and-forget mirror of in-app alert). For auth flows that must not leak account existence (forgot-password), wrap the send in try/catch at the SERVICE level — a 500 from the email send would otherwise distinguish "known account, send failed" from "unknown account, silent no-op".
 - **Auth** is JWT (`{sub, fid, role}`). Middleware: `requireAuth`, `requireRole`, `requireParentOrCaregiver`.
+- **Public-by-design routes.** When the credential is a token in the URL (invitation accept, password reset, device pairing redemption, family lookup), the route is intentionally unauthenticated. Apply `requireAuth` **per route**, not via `router.use(requireAuth)`. A router-wide guard above a mix of public + protected routes 401s the public ones — bug observed historically when `invitationsRouter.use(requireAuth)` broke `/by-token/:token` and `/by-token/:token/accept`.
 
 ## Conventions
 
@@ -26,6 +28,12 @@ Monorepo. Kids/teens earn credit for chores, parents approve, reward catalog. Mu
 - Time helpers in `apps/api/src/lib/time.ts` — never `new Date()` without TZ awareness for family-scoped logic.
 - Service exports a `serialize*()` for any Prisma model exposed to clients. Never leak Prisma rows raw.
 - Web `lib/api.ts` is the only fetch wrapper. Always go through it for auth headers.
+- CORS: `CORS_ORIGIN` accepts a comma-separated list, parsed in [apps/api/src/app.ts](apps/api/src/app.ts). Lets apex + www + a Railway preview URL all be allowed against the same API. Exact-match only — no wildcards.
+- Mobile-responsive page chrome: `PageHeader` ([apps/web/src/components/ui.tsx](apps/web/src/components/ui.tsx)) is `flex-col` on small screens, `sm:flex-row` desktop. Right-slot action group should use `flex-wrap` so multiple buttons reflow on phone widths.
+- Onboarding tour targets: prefer `data-tour="<id>"` over `id="<id>"` for elements the tour anchors to. Multiple layouts (mobile bottom nav, desktop top nav, hidden popover menu) render the same logical link; using `data-tour` lets [OnboardingTour.tsx](apps/web/src/components/OnboardingTour.tsx) pick the first visible match without ID collisions. `getElementById` fallback stays for legacy targets.
+- Family code for kid login uses a restricted alphabet ([apps/api/src/services/family.ts](apps/api/src/services/family.ts) `CODE_ALPHABET`) that omits visually ambiguous glyphs (0/O, 1/I/L, B/8, U/V). Existing codes generated before this list shrank stay valid; the client filter accepts the full `[A-Z0-9]` set so older codes still work.
+- Web persists last-successful family lookup in `localStorage` via [apps/web/src/lib/lastFamily.ts](apps/web/src/lib/lastFamily.ts) so kids on shared devices don't re-type the 6-char code each session. 90-day age-out. Cleared on 404 (likely rotated) and on explicit "Switch family". Deep-link prefill: `/child?fc=<code>&fn=<name>` from the QR on Parent Settings; query params win over the localStorage fallback so a fresh QR can't be overridden by stale entry.
+- Device pairing accepts `longLived: true` on `POST /family/devices/enroll` for beta testers — pairing code TTL extends from 10 minutes to 7 days. TTL clamped server-side to `[10min, 7d]` regardless of client value. The minted `EnrolledDevice` has no expiry change.
 
 ## Commands
 

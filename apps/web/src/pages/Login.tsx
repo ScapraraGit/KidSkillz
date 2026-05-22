@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Link } from "react-router-dom";
@@ -8,6 +8,7 @@ import { KidAvatar } from "../components/KidAvatar";
 import { Turnstile, turnstileEnabled } from "../components/Turnstile";
 import { PasswordStrength } from "../components/PasswordStrength";
 import { clearDeviceSession, getDeviceSession } from "../lib/deviceToken";
+import { clearLastFamily, getLastFamily, normalizeFamilyCode, setLastFamily } from "../lib/lastFamily";
 import { useEffect } from "react";
 import {
   CURRENT_TERMS_VERSION,
@@ -352,8 +353,22 @@ function ChildLogin() {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
   const nav = useNavigate();
-  const [familyName, setFamilyName] = useState("");
-  const [familyCode, setFamilyCode] = useState("");
+  // Deep-link prefill via QR code on parent's Settings page. The QR encodes
+  // ?fc=<code>&fn=<name>; either can be present alone. Query-param wins over
+  // the remembered-family fallback so a parent showing a fresh QR doesn't get
+  // overridden by stale localStorage on a shared device.
+  const [searchParams] = useSearchParams();
+  const fcParam = (searchParams.get("fc") ?? "").toUpperCase();
+  const fnParam = searchParams.get("fn") ?? "";
+  // Seed name + code from the last successful lookup on this device. Beta
+  // testers swap devices a lot, so the friction of re-typing the 6-char code
+  // every session is real. Tester can wipe it via the "Switch family" button.
+  const remembered = getLastFamily();
+  const [familyName, setFamilyName] = useState(fnParam || remembered?.name || "");
+  const [familyCode, setFamilyCode] = useState(
+    fcParam ? normalizeFamilyCode(fcParam) : (remembered?.code ?? ""),
+  );
+  const [hasRemembered, setHasRemembered] = useState<boolean>(!!remembered && !fcParam);
   const [lookupTurnstile, setLookupTurnstile] = useState<string | null>(null);
   const [picked, setPicked] = useState<FamilyLookup | null>(null);
   const [childId, setChildId] = useState<string | null>(null);
@@ -362,6 +377,15 @@ function ChildLogin() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasDevice, setHasDevice] = useState<boolean>(() => !!getDeviceSession());
+
+  function switchFamily() {
+    clearLastFamily();
+    setHasRemembered(false);
+    setFamilyName("");
+    setFamilyCode("");
+    setPicked(null);
+    setErr(null);
+  }
 
   // On a paired device we can skip family lookup entirely — fetch the kid roster
   // for the device's family and render the profile picker straight away.
@@ -412,8 +436,19 @@ function ChildLogin() {
         },
       });
       setPicked(r.family);
+      // Remember on success so the next session can skip the code entry. We
+      // store the user-supplied name (not r.family.name) so the prefill round-
+      // trips identically — the server matches case-insensitive anyway.
+      setLastFamily(familyName.trim(), familyCode.toUpperCase());
+      setHasRemembered(true);
     } catch (e: any) {
       if (e?.status === 404) {
+        // Saved code may have rotated — clear so user gets a fresh entry next
+        // session instead of failing repeatedly with a stale prefill.
+        if (hasRemembered) {
+          clearLastFamily();
+          setHasRemembered(false);
+        }
         setErr(
           "No matching family. Double-check the family name (must match exactly) and the 6-character family code. Parents can find the code under Settings → Family code.",
         );
@@ -434,24 +469,67 @@ function ChildLogin() {
     <div className="space-y-3">
       {!picked && (
         <>
+          {hasRemembered && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm">
+              <div className="text-slate-700">
+                Last used on this device: <strong>{familyName}</strong>
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  Tap Find to continue, or switch families.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={switchFamily}
+                className="shrink-0 text-xs font-medium text-brand-700 hover:underline"
+              >
+                Switch family
+              </button>
+            </div>
+          )}
           <Field label="Family name">
             <input
               className={inputCls}
               placeholder="Family name"
               value={familyName}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="words"
+              spellCheck={false}
               onChange={(e) => setFamilyName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && familyName.trim() && familyCode.length === 6) {
+                  e.preventDefault();
+                  lookup();
+                }
+              }}
             />
           </Field>
-          <Field label="Family code">
+          <Field label="Family code" hint="6 characters · letters and numbers · case-insensitive">
             <div className="flex gap-2">
               <input
-                className={inputCls}
-                placeholder="6-char code"
+                className={`${inputCls} font-mono tracking-[0.3em] uppercase text-lg`}
+                placeholder="ABC123"
                 maxLength={6}
                 value={familyCode}
-                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                inputMode="text"
+                onChange={(e) => setFamilyCode(normalizeFamilyCode(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && familyName.trim() && familyCode.length === 6) {
+                    e.preventDefault();
+                    lookup();
+                  }
+                }}
               />
-              <Button variant="secondary" onClick={lookup} type="button">
+              <Button
+                variant="secondary"
+                onClick={lookup}
+                type="button"
+                disabled={!familyName.trim() || familyCode.length !== 6}
+              >
                 Find
               </Button>
             </div>
@@ -468,9 +546,20 @@ function ChildLogin() {
 
       {picked && !childId && (
         <>
-          <div className="text-sm text-slate-600">
-            Pick your profile in <strong>{picked.name}</strong>:
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+            <div className="text-emerald-800">
+              <span aria-hidden="true">✓ </span>
+              Family found: <strong>{picked.name}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPicked(null)}
+              className="shrink-0 text-xs font-medium text-emerald-700 hover:underline"
+            >
+              Not us
+            </button>
           </div>
+          <div className="text-sm text-slate-600">Pick your profile:</div>
           <div className="grid grid-cols-2 gap-2">
             {picked.users.map((u) => (
               <button
@@ -522,6 +611,10 @@ function ChildLogin() {
           }}
           className="space-y-3"
         >
+          {/* Family name shown above the kid avatar so the password step makes */}
+          {/* clear which family the credential will unlock — helpful on a shared */}
+          {/* device that's seen multiple families. */}
+          <div className="text-xs uppercase tracking-wide text-slate-500">{picked.name}</div>
           <div className="flex items-center gap-3">
             {child && (
               <KidAvatar name={child.name} color={child.avatarColor} config={child.avatarConfig} size={40} />

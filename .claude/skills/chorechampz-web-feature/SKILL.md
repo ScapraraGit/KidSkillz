@@ -93,6 +93,45 @@ Bad:
 - `apps/web/src/pages/parent/Approvals.tsx` — tooltips on Approve/Reject pairs with disabled-reason variants.
 - `apps/web/src/pages/child/Rewards.tsx` — tooltip with a computed `label` that explains why the button is disabled.
 
+## 7a. Mobile-responsive page chrome
+
+`PageHeader` is `flex-col` on small screens and `sm:flex-row` desktop ([apps/web/src/components/ui.tsx](../../../apps/web/src/components/ui.tsx)). When using its `right` slot for multiple buttons, wrap them in `flex flex-wrap gap-2` so they reflow on phone widths instead of overflowing. The title block has `min-w-0` to prevent ugly hyphenation; the right wrapper has `shrink-0` so buttons stay full size.
+
+```tsx
+<PageHeader
+  title="Family members"
+  subtitle="…"
+  right={
+    <div className="flex flex-wrap gap-2">
+      <Tooltip label="…">
+        <Button>Add Parent</Button>
+      </Tooltip>
+      <Tooltip label="…">
+        <Button>Invite caregiver</Button>
+      </Tooltip>
+    </div>
+  }
+/>
+```
+
+## 7b. Onboarding tour targets
+
+To make a control reachable from the onboarding tour, add `data-tour="<id>"` (not `id="<id>"`). The tour ([apps/web/src/components/OnboardingTour.tsx](../../../apps/web/src/components/OnboardingTour.tsx)) prefers `data-tour` and picks the first VISIBLE match via `offsetParent !== null`. This lets a logical link be duplicated across hidden mobile / visible desktop variants without ID collisions. Mirror the same `data-tour` on every visible duplicate (the desktop top nav AND the mobile bottom nav). Then add the step to [apps/web/src/lib/tours.ts](../../../apps/web/src/lib/tours.ts).
+
+## 7c. Runtime-positioned overlays (inline styles)
+
+The lint rule "CSS inline styles should not be used" is a VS Code warning, not an ESLint rule. For overlays whose position comes from `el.getBoundingClientRect()` at runtime (tour highlight, dnd-kit drag transform), inline `style={{ top, left, width, height }}` is the correct API. Prefix with a one-line comment explaining the constraint and (for ESLint side) `// eslint-disable-next-line react/forbid-dom-props`. Don't try to move dynamic values to a CSS file — they aren't compile-time known.
+
+## 7d. Drag + drop with dnd-kit
+
+For sortable lists (e.g. Task categories), use `@dnd-kit/core` + `@dnd-kit/sortable`. Pattern:
+
+- `DndContext` at the list root with `PointerSensor` + `closestCenter`.
+- `SortableContext` wrapping `items={ids}` with `verticalListSortingStrategy`.
+- Each row calls `useSortable({ id })` and spreads `{...attributes}` + `{...listeners}` on a drag handle (a `<button>` with `cursor-grab`), not the whole row.
+- After `onDragEnd`, optimistically reorder local state, then PATCH only the rows whose `position` changed.
+- See `TaskCategoriesCard` in [apps/web/src/pages/parent/Settings.tsx](../../../apps/web/src/pages/parent/Settings.tsx).
+
 ## 8. PR self-check
 
 Before opening a PR that touches `apps/web`, grep for new `<Button` / `<button` / `<select` / icon-only triggers you added. Each one must be either:

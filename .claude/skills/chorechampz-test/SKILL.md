@@ -71,8 +71,38 @@ render(
 );
 ```
 
+## Browser storage in web tests
+
+Components that read/write `localStorage` (`lastFamily`, `deviceToken`, `activeTimer`, level cache, etc.) leak across tests. Always:
+
+```ts
+beforeEach(() => localStorage.clear());
+afterEach(() => localStorage.clear());
+```
+
+Inside a test, prime state by writing the same keys the production code reads, so the test is independent of helper internals.
+
+## Email tests
+
+Two layers — provider and templates. Keep them separate.
+
+- **Templates** (`apps/api/src/email/templates/*`) are pure render fns returning `{ subject, html, text }`. Test these directly — no mocks. Assert subject set, html contains the URL/token from the input, text non-empty.
+- **Provider** (`apps/api/src/lib/email-provider.ts`) — test the factory's switch on `EMAIL_ENABLED`. Set `process.env.EMAIL_ENABLED` + `process.env.RESEND_API_KEY` before importing the module. Resend SDK calls inside `ResendProvider` should be mocked at the `resend` module boundary via `vi.mock('resend', ...)` — don't make real network calls.
+- **email.ts** wrappers (`sendInvitationEmail` etc.) — test by mocking `emailProvider.send`. Don't assert console.log shape; the log path is dev-only and changes.
+
+For anti-enumeration flows (`issuePasswordReset`), assert: when `emailProvider.send` throws, the service still resolves (swallow) AND the password-reset row was still written. A test that fails fast on send error misses the bug.
+
+## dnd-kit components
+
+Sortable lists testing-library asserts:
+
+- Render-only: assert each row has its `data-tour` / aria-label, drag handle is focusable.
+- Behavior: simulating a real pointer drag in jsdom is brittle. Prefer extracting the reorder logic (`arrayMove` + the PATCH-on-change loop) into a pure helper, test the helper, and skip the DOM drag simulation.
+
 ## Don't
 
 - Don't mock Prisma.
 - Don't snapshot Prisma rows (timestamps + ids churn).
 - Don't test the route handler directly — extract the logic into the service and test that.
+- Don't assert on `console.log` shape — these are dev-loop diagnostics and will churn. Mock the emitting collaborator instead.
+- Don't write tests that perform real network sends (Resend, Turnstile siteverify) — mock at the module boundary.

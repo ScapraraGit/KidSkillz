@@ -6,6 +6,7 @@ import {
   getFamilyDetail,
   listFamiliesWithOwner,
   renameFamily,
+  setFamilyBeta,
 } from "../services/admin.js";
 import { recordAudit } from "../services/audit.js";
 import { createTask, deleteTask, listTasks, serializeTask, updateTask } from "../services/tasks.js";
@@ -17,6 +18,8 @@ import {
   updateReward,
 } from "../services/rewards.js";
 import { proofRequirementSchema } from "../lib/features.js";
+import { sendBetaInviteEmail } from "../lib/email.js";
+import { env } from "../env.js";
 
 export const adminRouter = Router();
 
@@ -44,6 +47,21 @@ adminRouter.patch("/families/:familyId", async (req, res) => {
     payload: { name },
   });
   res.json({ family: { id: family.id, name: family.name } });
+});
+
+const setBetaSchema = z.object({ isBeta: z.boolean() });
+
+adminRouter.patch("/families/:familyId/beta", async (req, res) => {
+  const { isBeta } = setBetaSchema.parse(req.body);
+  const family = await setFamilyBeta(req.params.familyId, isBeta);
+  await recordAudit({
+    familyId: family.id,
+    actorId: req.auth!.sub,
+    kind: isBeta ? "ADMIN_FAMILY_BETA_ENABLED" : "ADMIN_FAMILY_BETA_DISABLED",
+    targetType: "Family",
+    targetId: family.id,
+  });
+  res.json({ family: { id: family.id, isBeta: family.isBeta } });
 });
 
 const resetPwSchema = z.object({ password: z.string().min(8).max(128) });
@@ -197,4 +215,35 @@ adminRouter.delete("/families/:familyId/rewards/:rewardId", async (req, res) => 
     targetId: req.params.rewardId,
   });
   res.status(204).end();
+});
+
+// Beta invite blast. Admin-only. Sends the beta-invite template to each address.
+// Rate-limit comes from the email provider — we cap batch size at 50 to keep
+// any single click bounded; bigger sends should script against the same endpoint.
+const betaInviteSchema = z.object({
+  emails: z.array(z.string().trim().email().max(200)).min(1).max(50),
+  recipientName: z.string().trim().max(80).optional(),
+});
+
+adminRouter.post("/beta/invite", async (req, res) => {
+  const { emails, recipientName } = betaInviteSchema.parse(req.body);
+  const dedup = Array.from(new Set(emails.map((e) => e.toLowerCase())));
+  const base = env.APP_URL.replace(/\/$/, "");
+  const checklistUrl = `${base}/beta/checklist`;
+  const feedbackUrl = `${base}/beta/feedback`;
+
+  const results = await Promise.all(
+    dedup.map(async (to) => {
+      try {
+        await sendBetaInviteEmail({ to, recipientName: recipientName ?? null, checklistUrl, feedbackUrl });
+        return { to, ok: true as const };
+      } catch (e) {
+        return { to, ok: false as const, error: (e as Error).message };
+      }
+    }),
+  );
+
+  const sent = results.filter((r) => r.ok).length;
+  const failed = results.filter((r) => !r.ok);
+  res.json({ sent, failed });
 });

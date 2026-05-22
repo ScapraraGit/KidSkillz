@@ -30,6 +30,9 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Pair } from "./pages/Pair";
+import { BetaWelcome } from "./pages/beta/Welcome";
+import { BetaChecklist } from "./pages/beta/Checklist";
+import { BetaFeedback } from "./pages/beta/Feedback";
 
 export default function App() {
   const { token, user } = useAuth();
@@ -40,6 +43,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Login initialMode="SIGNUP" />} />
+        <Route path="/child" element={<Login initialMode="CHILD" />} />
         <Route path="/invite/:token" element={<InviteAccept />} />
         <Route path="/caregiver/pin" element={<CaregiverPin />} />
         <Route path="/terms" element={<TermsOfService />} />
@@ -76,6 +80,9 @@ export default function App() {
           <Route path="/parent/settings" element={<ParentSettings />} />
           <Route path="/parent/members" element={<FamilyMembers />} />
           <Route path="/parent/challenges" element={<ParentChallenges />} />
+          <Route path="/beta" element={<BetaWelcome />} />
+          <Route path="/beta/checklist" element={<BetaChecklist />} />
+          <Route path="/beta/feedback" element={<BetaFeedback />} />
           {user.isAdmin && <Route path="/parent/admin" element={<AdminPortal />} />}
         </Route>
         <Route path="*" element={<Navigate to="/parent" replace />} />

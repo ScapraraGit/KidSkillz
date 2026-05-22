@@ -116,23 +116,31 @@ familyRouter.put("/device-password", requireRole("PARENT"), async (req, res) => 
 
 // --- Paired-device management (parent-only) -----------------------------
 
-const enrollDeviceSchema = z.object({ label: z.string().trim().min(1).max(80).optional() });
+const enrollDeviceSchema = z.object({
+  label: z.string().trim().min(1).max(80).optional(),
+  // Beta-tester mode: extends pairing-code TTL from 10 minutes to 7 days so
+  // testers swapping test devices over a sprint don't keep timing out the
+  // redemption window. The minted EnrolledDevice itself has no expiry change.
+  longLived: z.boolean().optional(),
+});
+const LONG_LIVED_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 familyRouter.post("/devices/enroll", requireRole("PARENT"), async (req, res) => {
   if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
-  const { label } = enrollDeviceSchema.parse(req.body ?? {});
+  const { label, longLived } = enrollDeviceSchema.parse(req.body ?? {});
   const r = await issueEnrollment({
     familyId: req.auth!.fid,
     createdById: req.auth!.sub,
     label,
+    ttlMs: longLived ? LONG_LIVED_TTL_MS : undefined,
   });
   await recordAudit({
     familyId: req.auth!.fid,
     actorId: req.auth!.sub,
-    kind: "DEVICE_ENROLLED",
+    kind: longLived ? "DEVICE_ENROLLED_LONG_LIVED" : "DEVICE_ENROLLED",
     targetType: "DeviceEnrollment",
     targetId: r.enrollmentId,
-    payload: { label: label ?? null },
+    payload: { label: label ?? null, longLived: longLived ?? false },
   });
   // QR URL points at the public web app /pair page; nonce JWT carries family scope.
   const qrUrl = `${env.APP_URL.replace(/\/$/, "")}/pair?nonce=${encodeURIComponent(r.qrNonce)}`;

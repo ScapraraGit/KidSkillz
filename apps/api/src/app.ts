@@ -29,6 +29,7 @@ import { taskCategoriesRouter } from "./routes/task-categories.js";
 import { missedOpportunitiesRouter } from "./routes/missed-opportunities.js";
 import { auditRouter } from "./routes/audit.js";
 import { adminRouter } from "./routes/admin.js";
+import { betaRouter } from "./routes/beta.js";
 
 export interface CreateAppOptions {
   /**
@@ -174,6 +175,7 @@ export function createApp(opts: CreateAppOptions = {}) {
   v1.use("/missed-opportunities", missedOpportunitiesRouter);
   v1.use("/audit", auditRouter);
   v1.use("/admin", adminRouter);
+  v1.use("/beta", betaRouter);
   v1.use("/uploads", uploadsRouter);
   app.use("/v1", v1);
 

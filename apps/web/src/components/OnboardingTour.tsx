@@ -173,7 +173,7 @@ export function OnboardingTour({ steps, onDone }: OnboardingTourProps) {
         {rect && !missing && (
           // Inline style required: the highlight position is computed at
           // runtime from the target element's DOMRect.
-          // eslint-disable-next-line react/forbid-dom-props
+
           <div
             className="fixed z-40 rounded-2xl ring-4 ring-brand-400 pointer-events-none transition-all"
             style={{
@@ -202,7 +202,7 @@ export function OnboardingTour({ steps, onDone }: OnboardingTourProps) {
       <div className="fixed inset-0 z-40 bg-slate-900/40 pointer-events-auto" onClick={onDone} />
       {rect && !missing && (
         // Inline style required: runtime DOMRect-driven position.
-        // eslint-disable-next-line react/forbid-dom-props
+
         <div
           className="fixed z-40 rounded-2xl ring-4 ring-brand-400 ring-offset-2 ring-offset-slate-900/0 pointer-events-none transition-all"
           style={{

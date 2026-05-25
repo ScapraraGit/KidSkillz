@@ -132,24 +132,28 @@ export function BillingSection() {
           </div>
 
           {!ent.isPaid || ent.source === "TRIAL" ? (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <PlanCard
-                title="Basic"
-                price={formatPrice(basic, "$— / month")}
-                features={["Up to 3 kids", "Standard rewards", "Email support"]}
-                cta="Choose Basic"
-                onClick={() => checkoutM.mutate("BASIC")}
-                disabled={checkoutM.isPending || !basic}
-              />
-              <PlanCard
-                title="Premium"
-                price={formatPrice(premium, "$— / month")}
-                features={["Unlimited kids", "Custom categories", "Photo proof retention", "CSV export"]}
-                cta="Choose Premium"
-                onClick={() => checkoutM.mutate("PREMIUM")}
-                disabled={checkoutM.isPending || !premium}
-                accent
-              />
+            <div className={"grid gap-4 " + (basic && premium ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
+              {basic && (
+                <PlanCard
+                  title="Basic"
+                  price={formatPrice(basic, "$— / month")}
+                  features={["Up to 3 kids", "Standard rewards", "Email support"]}
+                  cta="Choose Basic"
+                  onClick={() => checkoutM.mutate("BASIC")}
+                  disabled={checkoutM.isPending}
+                />
+              )}
+              {premium && (
+                <PlanCard
+                  title="Premium"
+                  price={formatPrice(premium, "$— / month")}
+                  features={["Unlimited kids", "Custom categories", "Photo proof retention", "CSV export"]}
+                  cta="Choose Premium"
+                  onClick={() => checkoutM.mutate("PREMIUM")}
+                  disabled={checkoutM.isPending}
+                  accent
+                />
+              )}
             </div>
           ) : null}
         </>

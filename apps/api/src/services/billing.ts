@@ -215,6 +215,15 @@ export async function createCheckoutSession(familyId: string, plan: PlanTier): P
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
+    // Explicit payment method types so Checkout doesn't fail when the account's
+    // dashboard-configured methods list is empty (common right after live-mode
+    // activation). Extend the array when adding non-card flows.
+    payment_method_types: ["card"],
+    // Show the "Add promotion code" field on Stripe Checkout so customers can
+    // redeem dashboard-defined Promotion Codes. Coupons themselves are created
+    // in Stripe Dashboard → Product catalog → Coupons; Promotion Codes wrap
+    // them with a human-typeable string (e.g. LAUNCH50).
+    allow_promotion_codes: true,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${base}/parent/settings?status=success#billing`,
     cancel_url: `${base}/parent/settings?status=cancel#billing`,

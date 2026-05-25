@@ -9,6 +9,7 @@ import {
   setFamilyBeta,
 } from "../services/admin.js";
 import { recordAudit } from "../services/audit.js";
+import { prisma } from "../db.js";
 import { createTask, deleteTask, listTasks, serializeTask, updateTask } from "../services/tasks.js";
 import {
   createReward,
@@ -75,13 +76,32 @@ const resetPwSchema = z.object({ password: z.string().min(8).max(128) });
 adminRouter.post("/users/:userId/reset-password", async (req, res) => {
   const { password } = resetPwSchema.parse(req.body);
   const result = await adminResetPassword(req.params.userId, password);
-  await recordAudit({
-    familyId: result.familyId,
-    actorId: req.auth!.sub,
-    kind: "ADMIN_PASSWORD_RESET",
-    targetType: "User",
-    targetId: req.params.userId,
-  });
+  // Phase 2 multi-family: a PARENT/CAREGIVER user may have no User.familyId
+  // (their families come from FamilyMembership). Audit per-membership rather
+  // than against a single familyId. CHILD users keep User.familyId.
+  if (result.familyId) {
+    await recordAudit({
+      familyId: result.familyId,
+      actorId: req.auth!.sub,
+      kind: "ADMIN_PASSWORD_RESET",
+      targetType: "User",
+      targetId: req.params.userId,
+    });
+  } else {
+    const memberships = await prisma.familyMembership.findMany({
+      where: { userId: req.params.userId, status: "ACTIVE" },
+      select: { familyId: true },
+    });
+    for (const m of memberships) {
+      await recordAudit({
+        familyId: m.familyId,
+        actorId: req.auth!.sub,
+        kind: "ADMIN_PASSWORD_RESET",
+        targetType: "User",
+        targetId: req.params.userId,
+      });
+    }
+  }
   res.json({ ok: true });
 });
 

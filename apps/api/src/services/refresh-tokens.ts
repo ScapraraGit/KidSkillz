@@ -10,6 +10,8 @@ const TTL_MS = () => env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 export interface IssueRefreshInput {
   userId: string;
+  // Active family membership (PARENT/CAREGIVER). Null for CHILD or legacy.
+  familyMembershipId?: string | null;
   userAgent?: string | null;
   ip?: string | null;
 }
@@ -25,6 +27,7 @@ export async function issueRefreshToken(input: IssueRefreshInput): Promise<Issue
   await prisma.refreshToken.create({
     data: {
       userId: input.userId,
+      familyMembershipId: input.familyMembershipId ?? null,
       tokenHash: sha256(raw),
       expiresAt,
       userAgent: input.userAgent ?? null,
@@ -64,6 +67,36 @@ export async function rotateRefreshToken(
   if (!row || !row.user) throw HttpError.unauthorized("Refresh token not found");
   if (!row.user.isActive) throw HttpError.forbidden("Account is inactive");
 
+  // Resolve the active membership recorded at issuance. If it's been revoked
+  // or removed since, the refresh is dead — force re-login so the user can
+  // pick a different family if they still belong to one.
+  let activeFamilyId: string | null = row.user.familyId;
+  let activeMembershipId: string | null = null;
+  if (row.familyMembershipId) {
+    const m = await prisma.familyMembership.findUnique({
+      where: { id: row.familyMembershipId },
+    });
+    if (!m || m.userId !== row.userId || m.status !== "ACTIVE") {
+      throw HttpError.unauthorized("Membership no longer active");
+    }
+    if (m.validUntil && m.validUntil.getTime() < Date.now()) {
+      throw HttpError.unauthorized("Membership expired");
+    }
+    activeFamilyId = m.familyId;
+    activeMembershipId = m.id;
+  } else if (row.user.role !== "CHILD") {
+    // Legacy refresh row predating Phase 2. Map to user's primary membership.
+    const m = await prisma.familyMembership.findFirst({
+      where: { userId: row.userId, status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+    });
+    if (m) {
+      activeFamilyId = m.familyId;
+      activeMembershipId = m.id;
+    }
+  }
+  if (!activeFamilyId) throw HttpError.unauthorized("No active family");
+
   if (row.revokedAt) {
     // Replay of an already-rotated token. Burn every outstanding refresh row
     // for the user and force re-login.
@@ -83,6 +116,7 @@ export async function rotateRefreshToken(
     const created = await tx.refreshToken.create({
       data: {
         userId: row.userId,
+        familyMembershipId: activeMembershipId,
         tokenHash: sha256(newRaw),
         expiresAt: newExpires,
         userAgent: meta.userAgent ?? null,
@@ -98,8 +132,9 @@ export async function rotateRefreshToken(
 
   const access = signToken({
     sub: row.user.id,
-    fid: row.user.familyId,
+    fid: activeFamilyId,
     role: row.user.role,
+    ...(activeMembershipId ? { mid: activeMembershipId } : {}),
     adm: row.user.isAdmin,
     tv: row.user.tokenVersion,
   });
@@ -109,7 +144,7 @@ export async function rotateRefreshToken(
     expiresAt: successor.expiresAt,
     user: {
       id: row.user.id,
-      familyId: row.user.familyId,
+      familyId: activeFamilyId,
       role: row.user.role,
       isAdmin: row.user.isAdmin,
     },

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { Role } from "@prisma/client";
+import type { FamilyMembership, Role } from "@prisma/client";
 import { verifyToken, type JWTPayload } from "../lib/auth.js";
 import { HttpError } from "../errors.js";
 import { prisma } from "../db.js";
@@ -10,6 +10,9 @@ declare global {
   namespace Express {
     interface Request {
       auth?: JWTPayload;
+      // Active FamilyMembership for PARENT/CAREGIVER tokens that carry `mid`.
+      // Null for CHILD and for legacy single-family tokens.
+      membership?: FamilyMembership | null;
     }
   }
 }
@@ -23,6 +26,11 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   if (!token) return next(HttpError.unauthorized());
   try {
     const payload = verifyToken(token);
+    // family-select tokens are single-purpose; reject them everywhere except
+    // the explicit /auth/select-family handler (which calls verifyToken directly).
+    if (payload.scope === "family-select") {
+      return next(HttpError.unauthorized("Family not selected"));
+    }
     // tokenVersion gate. Tokens minted before the user bumped it (logout-everywhere)
     // are rejected immediately, before they can touch any handler. Skipped when the
     // token predates the field (`tv === undefined`) and the user hasn't bumped yet.
@@ -35,6 +43,22 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       if (user.tokenVersion !== payload.tv) {
         return next(HttpError.unauthorized("Session ended"));
       }
+    }
+    // PARENT/CAREGIVER tokens with `mid` must resolve to an active membership
+    // whose familyId matches `fid`. This is the tenant-scope check: a stolen
+    // token from family A can never grant access to family B because both
+    // values are bound at mint time.
+    if (payload.mid) {
+      const m = await prisma.familyMembership.findUnique({ where: { id: payload.mid } });
+      if (!m || m.userId !== payload.sub || m.familyId !== payload.fid || m.status !== "ACTIVE") {
+        return next(HttpError.unauthorized("Session ended"));
+      }
+      if (m.validUntil && m.validUntil.getTime() < Date.now()) {
+        return next(HttpError.unauthorized("Membership expired"));
+      }
+      req.membership = m;
+    } else {
+      req.membership = null;
     }
     req.auth = payload;
     next();
@@ -77,12 +101,23 @@ export function requireParentOrCaregiver(
       if (!req.auth) throw HttpError.unauthorized();
       if (req.auth.role === "PARENT") return next();
       if (req.auth.role !== "CAREGIVER") throw HttpError.forbidden();
-      const user = await prisma.user.findUnique({ where: { id: req.auth.sub } });
-      if (!user || !user.isActive) throw HttpError.forbidden("Caregiver inactive");
-      if (!caregiverWindowActive(user.validFrom, user.validUntil)) {
+      // Caregiver window + scope live on FamilyMembership only. Legacy tokens
+      // without `mid` look up the user's first active membership so existing
+      // sessions don't break across the Phase 3 cutover.
+      let m = req.membership;
+      if (!m) {
+        m = await prisma.familyMembership.findFirst({
+          where: { userId: req.auth.sub, status: "ACTIVE" },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!m) throw HttpError.forbidden("Caregiver has no active membership");
+      }
+      const validFrom = m.validFrom;
+      const validUntil = m.validUntil;
+      const scope = (m.scope as CaregiverScope | null) ?? null;
+      if (!caregiverWindowActive(validFrom, validUntil)) {
         throw HttpError.forbidden("Caregiver access window expired");
       }
-      const scope = (user.scope as CaregiverScope | null) ?? null;
       if (!scope || !scope[scopeKey]) throw HttpError.forbidden("Caregiver lacks permission");
       if (getKidId && scope.kidIds.length > 0) {
         const kidId = getKidId(req);

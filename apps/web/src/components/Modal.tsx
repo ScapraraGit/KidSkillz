@@ -101,7 +101,7 @@ export function Modal({
             ✕
           </button>
         </div>
-        <div className="p-5 overflow-y-auto">{children}</div>
+        <div className="p-5 overflow-y-auto min-h-0 flex-1">{children}</div>
         {footer && (
           <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-2 shrink-0 flex-wrap">
             {footer}

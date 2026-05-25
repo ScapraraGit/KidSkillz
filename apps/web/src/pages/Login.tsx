@@ -63,6 +63,27 @@ export function Login({ initialMode = "PARENT" }: { initialMode?: Mode } = {}) {
   );
 }
 
+interface FamilyOption {
+  familyId: string;
+  familyName: string;
+  membershipId: string | null;
+  role: string;
+  isBillingOwner: boolean;
+}
+
+type ParentLoginSuccess =
+  | {
+      needsFamilySelect?: false;
+      token: string;
+      refreshToken?: string;
+      user: AuthUserDTO;
+    }
+  | {
+      needsFamilySelect: true;
+      selectToken: string;
+      families: FamilyOption[];
+    };
+
 function ParentLogin({ onSignup }: { onSignup: () => void }) {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
@@ -71,6 +92,61 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [picker, setPicker] = useState<{ selectToken: string; families: FamilyOption[] } | null>(null);
+
+  async function completeLogin(token: string, refreshToken: string | null, user: AuthUserDTO) {
+    setSession(token, user, refreshToken);
+    const me = await api<{ settings: FamilySettings }>("/auth/me");
+    setSettings(me.settings);
+    nav("/parent");
+  }
+
+  if (picker) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-slate-600">You belong to multiple families. Pick the one to open:</p>
+        {picker.families.map((f) => (
+          <button
+            key={f.familyId}
+            type="button"
+            disabled={loading}
+            onClick={async () => {
+              setErr(null);
+              setLoading(true);
+              try {
+                const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
+                  "/auth/select-family",
+                  { body: { selectToken: picker.selectToken, familyId: f.familyId } },
+                );
+                await completeLogin(r.token, r.refreshToken ?? null, r.user);
+              } catch (e: any) {
+                setErr(e.message ?? "Failed to open family");
+                setLoading(false);
+              }
+            }}
+            className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-400 hover:bg-brand-50/40 disabled:opacity-50"
+          >
+            <div className="font-semibold">{f.familyName}</div>
+            <div className="text-xs text-slate-500">
+              {f.role}
+              {f.isBillingOwner ? " · billing owner" : ""}
+            </div>
+          </button>
+        ))}
+        {err && <div className="text-sm text-rose-600">{err}</div>}
+        <button
+          type="button"
+          className="text-xs text-slate-500 hover:underline"
+          onClick={() => {
+            setPicker(null);
+            setErr(null);
+          }}
+        >
+          Use a different account
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -79,14 +155,14 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
         setErr(null);
         setLoading(true);
         try {
-          const r = await api<{ token: string; refreshToken?: string; user: AuthUserDTO }>(
-            "/auth/parent/login",
-            { body: { email, password } },
-          );
-          setSession(r.token, r.user, r.refreshToken ?? null);
-          const me = await api<{ settings: FamilySettings }>("/auth/me");
-          setSettings(me.settings);
-          nav("/parent");
+          const r = await api<ParentLoginSuccess>("/auth/parent/login", {
+            body: { email, password },
+          });
+          if (r.needsFamilySelect === true) {
+            setPicker({ selectToken: r.selectToken, families: r.families });
+            return;
+          }
+          await completeLogin(r.token, r.refreshToken ?? null, r.user);
         } catch (e: any) {
           setErr(e.message ?? "Login failed");
         } finally {

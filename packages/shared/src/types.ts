@@ -155,14 +155,16 @@ export interface AvatarConfig {
 
 export interface AuthUserDTO {
   id: string;
-  familyId: string;
+  // NULL for PARENT/CAREGIVER post-multi-family — adults' tenant link is the
+  // active family membership, surfaced via the JWT `fid` claim and
+  // /auth/me/families.
+  familyId: string | null;
   role: Role;
   name: string;
   email?: string | null;
   avatarColor?: string;
   avatarConfig?: AvatarConfig | null;
   onboardedAt?: string | null;
-  validUntil?: string | null;
   emailVerifiedAt?: string | null;
   acceptedTermsVersion?: number | null;
   acceptedTermsAt?: string | null;

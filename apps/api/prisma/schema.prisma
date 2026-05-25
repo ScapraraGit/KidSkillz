@@ -130,6 +130,16 @@ enum BillingOverride {
   COMPED_PREMIUM
 }
 
+enum MembershipRole {
+  PARENT
+  CAREGIVER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
 enum NotificationKind {
   COMPLETION_APPROVED
   COMPLETION_REJECTED
@@ -196,6 +206,7 @@ model Family {
   deviceEnrollments  DeviceEnrollment[]
   stripeEvents       StripeEvent[]
   billingOverrideLogs BillingOverrideLog[]
+  memberships        FamilyMembership[]
 }
 
 // Webhook event idempotency cache. Insert keyed by Stripe event id; duplicate
@@ -286,8 +297,11 @@ model AuditEvent {
 
 model User {
   id           String   @id @default(uuid())
-  familyId     String
-  family       Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  // NULL for PARENT/CAREGIVER once Phase 3 lands. CHILD users keep a single
+  // familyId — kids don't cross households. Until Phase 3, PARENT/CAREGIVER
+  // rows still carry a value for back-compat with legacy tokens that lack `mid`.
+  familyId     String?
+  family       Family?  @relation(fields: [familyId], references: [id], onDelete: Cascade)
   role         Role
   name         String
   email        String?  @unique
@@ -308,16 +322,14 @@ model User {
   isAdmin                Boolean   @default(false)
   acceptedTermsVersion   Int?
   acceptedTermsAt        DateTime?
-  // CAREGIVER-only access window + permission scope. Null on PARENT/CHILD.
-  validFrom    DateTime?
-  validUntil   DateTime?
-  scope        Json?
   invitedById  String?
   invitedBy    User?    @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
   invitees     User[]   @relation("InvitedBy")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  memberships          FamilyMembership[] @relation("MembershipUser")
+  membershipsInvited   FamilyMembership[] @relation("MembershipInviter")
   childProfile        ChildProfile?
   assignedTasks       Task[]                @relation("AssignedTasks")
   taskCompletions     TaskCompletion[]      @relation("CompletionChild")
@@ -705,17 +717,21 @@ enum LegalAcceptanceKind {
 // refresh token marks it revoked and links `replacedById` to the freshly minted
 // successor, so a stolen-and-replayed token after rotation hits a tripwire.
 model RefreshToken {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation("RefreshTokenUser", fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash    String    @unique
-  expiresAt    DateTime
-  revokedAt    DateTime?
-  replacedById String?   // id of the rotation successor, when revoked due to use
-  userAgent    String?
-  ip           String?
-  lastUsedAt   DateTime?
-  createdAt    DateTime  @default(now())
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation("RefreshTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  // Active family membership at issuance. NULL for CHILD or legacy rows.
+  // Rotation carries this forward; switch-family revokes + issues a new row
+  // with the new membership.
+  familyMembershipId  String?
+  tokenHash           String    @unique
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedById        String?   // id of the rotation successor, when revoked due to use
+  userAgent           String?
+  ip                  String?
+  lastUsedAt          DateTime?
+  createdAt           DateTime  @default(now())
 
   @@index([userId])
   @@index([expiresAt])
@@ -796,4 +812,30 @@ model LegalAcceptance {
   @@index([userId, kind])
   @@index([familyId])
   @@index([createdAt])
+}
+
+// Phase 1 of multi-family membership (plans/08-multi-family-membership.md).
+// One row per (user, family) for PARENT/CAREGIVER roles. CHILD users keep using
+// User.familyId — kids don't cross households. Phase 1 only adds this table +
+// backfills; no service code reads it yet.
+model FamilyMembership {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  familyId       String
+  family         Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  role           MembershipRole
+  status         MembershipStatus @default(ACTIVE)
+  validFrom      DateTime?
+  validUntil     DateTime?
+  scope          Json?
+  isBillingOwner Boolean          @default(false)
+  invitedById    String?
+  invitedBy      User?            @relation("MembershipInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, familyId])
+  @@index([familyId])
+  @@index([userId])
 }

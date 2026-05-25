@@ -180,8 +180,20 @@ async function notifyAdminsOfFeedback(opts: AdminAlertOpts): Promise<void> {
         // a familyId NOT NULL). createNotification also fire-and-forget mirrors
         // to email when the admin's family.settings.emailNotifications is on —
         // so a single call delivers both channels.
+        // Phase 2 multi-family: PARENT admins may have null User.familyId — fall
+        // back to their first active membership family for the notification scope.
+        let adminFamilyId = admin.familyId;
+        if (!adminFamilyId) {
+          const m = await prisma.familyMembership.findFirst({
+            where: { userId: admin.id, status: "ACTIVE" },
+            orderBy: { createdAt: "asc" },
+            select: { familyId: true },
+          });
+          adminFamilyId = m?.familyId ?? null;
+        }
+        if (!adminFamilyId) return;
         await createNotification({
-          familyId: admin.familyId,
+          familyId: adminFamilyId,
           userId: admin.id,
           kind: "BETA_FEEDBACK_RECEIVED",
           title,

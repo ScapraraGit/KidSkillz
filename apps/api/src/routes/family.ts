@@ -31,19 +31,25 @@ familyRouter.get("/", async (req, res) => {
 });
 
 familyRouter.get("/members", requireRole("PARENT"), async (req, res) => {
-  const users = await prisma.user.findMany({
-    where: { familyId: req.auth!.fid, role: { in: ["PARENT", "CAREGIVER"] }, isActive: true },
-    orderBy: [{ role: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, email: true, role: true, validUntil: true },
+  // Adults belong to a family via FamilyMembership now, not User.familyId.
+  // The membership owns the caregiver access window (`validUntil`), so we
+  // surface that — not the long-defunct User.validUntil.
+  const memberships = await prisma.familyMembership.findMany({
+    where: { familyId: req.auth!.fid, status: "ACTIVE" },
+    include: { user: { select: { id: true, name: true, email: true, isActive: true } } },
+    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
   });
   res.json({
-    members: users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      validUntil: u.validUntil?.toISOString() ?? null,
-    })),
+    members: memberships
+      .filter((m) => m.user.isActive)
+      .map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.role,
+        validUntil: m.validUntil?.toISOString() ?? null,
+        isBillingOwner: m.isBillingOwner,
+      })),
   });
 });
 

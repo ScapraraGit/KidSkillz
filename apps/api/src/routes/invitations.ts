@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { HttpError } from "../errors.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { hashPassword, signToken } from "../lib/auth.js";
+import { hashPassword, comparePassword } from "../lib/auth.js";
+import { mintAccessToken } from "../lib/active-family.js";
 import { serializeUser } from "./auth.js";
 import {
   DEFAULT_CAREGIVER_SCOPE,
@@ -167,6 +168,14 @@ const acceptSchema = z.object({
 });
 
 // Accept email invitation (CO_PARENT or CAREGIVER). Unauthenticated.
+//
+// Two paths:
+//  - Email not registered → create new User + FamilyMembership in the invited family.
+//  - Email already registered → password must match the existing account;
+//    we create a FamilyMembership in the new family without creating a duplicate
+//    User. This is the divorced-co-parent path (plans/08-multi-family-membership.md).
+//    Returning 409 here would force the user to use a different email per family,
+//    which is exactly what the multi-family work removes.
 invitationsRouter.post("/by-token/:token/accept", async (req, res) => {
   const { name, password } = acceptSchema.parse(req.body);
   const inv = await findActiveByToken(req.params.token);
@@ -174,37 +183,90 @@ invitationsRouter.post("/by-token/:token/accept", async (req, res) => {
   if (inv.kind === "CAREGIVER_PIN") throw HttpError.badRequest("Use PIN login instead");
   if (!inv.email) throw HttpError.badRequest("Invitation missing email");
 
-  const existing = await prisma.user.findUnique({ where: { email: inv.email } });
-  if (existing) throw HttpError.conflict("Email already in use");
-
-  const passwordHash = await hashPassword(password);
   const role = inv.kind === "CO_PARENT" ? "PARENT" : "CAREGIVER";
+  const existing = await prisma.user.findUnique({ where: { email: inv.email } });
 
-  const user = await prisma.$transaction(async (tx) => {
-    const u = await tx.user.create({
-      data: {
-        familyId: inv.familyId,
-        role,
-        name,
-        email: inv.email!,
-        passwordHash,
-        avatarColor: role === "CAREGIVER" ? "#f59e0b" : "#2563eb",
-        invitedById: inv.createdById,
-        ...(role === "CAREGIVER" && {
-          validFrom: inv.validFrom,
-          validUntil: inv.validUntil,
-          scope: inv.scope ?? undefined,
-        }),
-      },
-    });
-    await tx.invitation.update({
-      where: { id: inv.id },
-      data: { status: "ACCEPTED", acceptedAt: new Date(), acceptedById: u.id },
-    });
-    return u;
-  });
+  let userId: string;
+  let membershipId: string;
 
-  const token = signToken({ sub: user.id, fid: user.familyId, role: user.role });
+  if (existing) {
+    // Identity reuse: existing account joins this family as a new membership.
+    // We require the existing password (NOT the one supplied in the accept form
+    // beyond verification) so a stolen invite link can't grant access to a
+    // different family for an account the attacker doesn't control.
+    if (!existing.passwordHash || !(await comparePassword(password, existing.passwordHash))) {
+      throw HttpError.unauthorized(
+        "Email already registered — sign in with your existing password to join this family",
+      );
+    }
+    if (!existing.isActive) throw HttpError.forbidden("Account inactive");
+    // Prevent dup memberships when the same person re-accepts an invite.
+    const dup = await prisma.familyMembership.findUnique({
+      where: { userId_familyId: { userId: existing.id, familyId: inv.familyId } },
+    });
+    if (dup) throw HttpError.conflict("You're already a member of this family");
+
+    const result = await prisma.$transaction(async (tx) => {
+      const m = await tx.familyMembership.create({
+        data: {
+          userId: existing.id,
+          familyId: inv.familyId,
+          role: role === "PARENT" ? "PARENT" : "CAREGIVER",
+          invitedById: inv.createdById,
+          ...(role === "CAREGIVER" && {
+            validFrom: inv.validFrom,
+            validUntil: inv.validUntil,
+            scope: inv.scope ?? undefined,
+          }),
+        },
+      });
+      await tx.invitation.update({
+        where: { id: inv.id },
+        data: { status: "ACCEPTED", acceptedAt: new Date(), acceptedById: existing.id },
+      });
+      return m;
+    });
+    userId = existing.id;
+    membershipId = result.id;
+  } else {
+    const passwordHash = await hashPassword(password);
+    const result = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          // Adult identity rows hold no familyId; FamilyMembership (next) owns it.
+          role,
+          name,
+          email: inv.email!,
+          passwordHash,
+          avatarColor: role === "CAREGIVER" ? "#f59e0b" : "#2563eb",
+          invitedById: inv.createdById,
+        },
+      });
+      const m = await tx.familyMembership.create({
+        data: {
+          userId: u.id,
+          familyId: inv.familyId,
+          role: role === "PARENT" ? "PARENT" : "CAREGIVER",
+          invitedById: inv.createdById,
+          ...(role === "CAREGIVER" && {
+            validFrom: inv.validFrom,
+            validUntil: inv.validUntil,
+            scope: inv.scope ?? undefined,
+          }),
+        },
+      });
+      await tx.invitation.update({
+        where: { id: inv.id },
+        data: { status: "ACCEPTED", acceptedAt: new Date(), acceptedById: u.id },
+      });
+      return { u, m };
+    });
+    userId = result.u.id;
+    membershipId = result.m.id;
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const token = mintAccessToken({ user, familyId: inv.familyId, membershipId });
   res.json({ token, user: serializeUser(user) });
 });
 
@@ -225,12 +287,11 @@ invitationsRouter.post("/pin-login", async (req, res) => {
     throw HttpError.notFound("Legacy caregiver login disabled — pair the device first");
   }
   const { familyId, pin, name } = pinLoginSchema.parse(req.body);
-  const user = await redeemCaregiverPin({ familyId, pin, name });
-  const token = signToken({
-    sub: user.id,
-    fid: user.familyId,
-    role: user.role,
-    tv: user.tokenVersion,
+  const { user, membership } = await redeemCaregiverPin({ familyId, pin, name });
+  const token = mintAccessToken({
+    user,
+    familyId: membership.familyId,
+    membershipId: membership.id,
   });
   res.json({ token, user: serializeUser(user) });
 });

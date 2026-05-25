@@ -6,39 +6,59 @@ export async function listFamiliesWithOwner() {
   const families = await prisma.family.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      users: {
-        where: { role: "PARENT" },
+      // PARENT/CAREGIVER are linked via FamilyMembership now. `users` on
+      // Family only returns CHILD rows so we get child-count separately.
+      memberships: {
+        where: { role: "PARENT", status: "ACTIVE" },
         orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, email: true, isActive: true, createdAt: true },
+        include: {
+          user: { select: { id: true, name: true, email: true, isActive: true } },
+        },
       },
       _count: {
-        select: { users: true, tasks: true, rewards: true },
+        select: { users: true, tasks: true, rewards: true, memberships: true },
       },
     },
   });
-  return families.map((f) => ({
-    id: f.id,
-    name: f.name,
-    createdAt: f.createdAt.toISOString(),
-    owner: f.users[0]
-      ? {
-          id: f.users[0].id,
-          name: f.users[0].name,
-          email: f.users[0].email,
-          isActive: f.users[0].isActive,
-        }
-      : null,
-    parents: f.users.map((u) => ({ id: u.id, name: u.name, email: u.email, isActive: u.isActive })),
-    counts: { users: f._count.users, tasks: f._count.tasks, rewards: f._count.rewards },
-  }));
+  return families.map((f) => {
+    const parents = f.memberships.map((m) => ({
+      id: m.user.id,
+      name: m.user.name,
+      email: m.user.email,
+      isActive: m.user.isActive,
+    }));
+    const owner = f.memberships.find((m) => m.isBillingOwner) ?? f.memberships[0] ?? null;
+    return {
+      id: f.id,
+      name: f.name,
+      createdAt: f.createdAt.toISOString(),
+      owner: owner
+        ? {
+            id: owner.user.id,
+            name: owner.user.name,
+            email: owner.user.email,
+            isActive: owner.user.isActive,
+          }
+        : null,
+      parents,
+      // `users` count is now child-only; total people = children + adult memberships.
+      counts: {
+        users: f._count.users + f._count.memberships,
+        tasks: f._count.tasks,
+        rewards: f._count.rewards,
+      },
+    };
+  });
 }
 
 export async function getFamilyDetail(familyId: string) {
   const family = await prisma.family.findUnique({
     where: { id: familyId },
     include: {
+      // CHILD users — adults attach via memberships.
       users: {
-        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        where: { role: "CHILD" },
+        orderBy: { createdAt: "asc" },
         select: {
           id: true,
           role: true,
@@ -49,22 +69,46 @@ export async function getFamilyDetail(familyId: string) {
           createdAt: true,
         },
       },
+      memberships: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isActive: true,
+              isAdmin: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!family) throw HttpError.notFound("Family not found");
+  const adultMembers = family.memberships.map((m) => ({
+    id: m.user.id,
+    role: m.role,
+    name: m.user.name,
+    email: m.user.email,
+    isActive: m.user.isActive,
+    isAdmin: m.user.isAdmin,
+  }));
+  const childMembers = family.users.map((u) => ({
+    id: u.id,
+    role: u.role,
+    name: u.name,
+    email: u.email,
+    isActive: u.isActive,
+    isAdmin: u.isAdmin,
+  }));
   return {
     id: family.id,
     name: family.name,
     isBeta: family.isBeta,
     createdAt: family.createdAt.toISOString(),
-    members: family.users.map((u) => ({
-      id: u.id,
-      role: u.role,
-      name: u.name,
-      email: u.email,
-      isActive: u.isActive,
-      isAdmin: u.isAdmin,
-    })),
+    members: [...adultMembers, ...childMembers],
   };
 }
 

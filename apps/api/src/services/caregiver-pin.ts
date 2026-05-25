@@ -36,13 +36,25 @@ export async function redeemCaregiverPin(input: RedeemCaregiverPinInput) {
     throw HttpError.unauthorized("PIN expired");
   }
 
-  return prisma.$transaction(async (tx) => {
+  // CAREGIVER User has no familyId or window/scope after Phase 3 — those live
+  // on FamilyMembership. We create both rows in the same tx; the caller mints
+  // an access token from the returned membership id.
+  const result = await prisma.$transaction(async (tx) => {
     const u = await tx.user.create({
       data: {
-        familyId: input.familyId,
+        // Caregivers redeemed by PIN have no User-level family scope; their
+        // tenant identity comes from the FamilyMembership row created below.
         role: "CAREGIVER",
         name: input.name ?? inv.inviteeName ?? "Caregiver",
         avatarColor: "#f59e0b",
+        invitedById: inv.createdById,
+      },
+    });
+    const m = await tx.familyMembership.create({
+      data: {
+        userId: u.id,
+        familyId: input.familyId,
+        role: "CAREGIVER",
         validFrom: inv.validFrom ?? now,
         validUntil: inv.validUntil ?? inv.expiresAt,
         scope: inv.scope ?? undefined,
@@ -53,6 +65,7 @@ export async function redeemCaregiverPin(input: RedeemCaregiverPinInput) {
       where: { id: inv.id },
       data: { status: "ACCEPTED", acceptedAt: now, acceptedById: u.id },
     });
-    return u;
+    return { user: u, membership: m };
   });
+  return result;
 }

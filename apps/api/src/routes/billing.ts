@@ -1,9 +1,32 @@
 import { Router, raw } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import type Stripe from "stripe";
 import { env } from "../env.js";
 import { HttpError } from "../errors.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
+
+// Billing actions (checkout, portal) are gated on the per-family billing owner
+// rather than role=PARENT. A co-parent who joined an existing family later can
+// see entitlement status but cannot move money until ownership is transferred.
+// Legacy single-family tokens with no `mid` fall back to role=PARENT for back-compat
+// during the Phase 2 cutover.
+async function requireBillingOwner(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.auth) return next(HttpError.unauthorized());
+    if (req.membership) {
+      if (req.membership.role !== "PARENT") return next(HttpError.forbidden("Parents only"));
+      if (!req.membership.isBillingOwner) {
+        return next(HttpError.forbidden("Only the family billing owner can manage billing"));
+      }
+      return next();
+    }
+    if (req.auth.role !== "PARENT") return next(HttpError.forbidden("Parents only"));
+    next();
+  } catch (e) {
+    next(e as Error);
+  }
+}
 import {
   createCheckoutSession,
   createPortalSession,
@@ -28,13 +51,13 @@ billingRouter.get("/status", requireAuth, async (req, res) => {
 
 const checkoutSchema = z.object({ plan: z.enum(["BASIC", "PREMIUM"]) });
 
-billingRouter.post("/checkout", requireAuth, requireRole("PARENT"), async (req, res) => {
+billingRouter.post("/checkout", requireAuth, requireBillingOwner, async (req, res) => {
   const { plan } = checkoutSchema.parse(req.body);
   const url = await createCheckoutSession(req.auth!.fid, plan);
   res.json({ url });
 });
 
-billingRouter.post("/portal", requireAuth, requireRole("PARENT"), async (req, res) => {
+billingRouter.post("/portal", requireAuth, requireBillingOwner, async (req, res) => {
   const url = await createPortalSession(req.auth!.fid);
   res.json({ url });
 });

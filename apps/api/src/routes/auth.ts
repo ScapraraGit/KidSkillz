@@ -2,7 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
-import { comparePassword, hashPassword, signToken } from "../lib/auth.js";
+import { comparePassword, hashPassword, signToken, verifyToken } from "../lib/auth.js";
+import { listAuthFamilies, mintAccessToken, resolveActiveFamily } from "../lib/active-family.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getFamilySettings } from "../services/family.js";
@@ -80,7 +81,8 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
   await seedDefaultRewards(family.id);
   const user = await prisma.user.create({
     data: {
-      familyId: family.id,
+      // PARENT identity rows no longer carry a familyId; their tenant link is
+      // FamilyMembership (created immediately below).
       role: "PARENT",
       name: parentName,
       email,
@@ -88,6 +90,17 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
       avatarColor: "#2563eb",
       acceptedTermsVersion,
       acceptedTermsAt: new Date(),
+    },
+  });
+  // Founding parent of the family becomes the billing-owner membership. All
+  // new flows (PARENT/CAREGIVER) require a FamilyMembership row; legacy
+  // single-family code keeps working via the back-compat path in requireAuth.
+  const membership = await prisma.familyMembership.create({
+    data: {
+      userId: user.id,
+      familyId: family.id,
+      role: "PARENT",
+      isBillingOwner: true,
     },
   });
   const ip = clientIpFrom(req);
@@ -112,15 +125,10 @@ authRouter.post("/parent/register", requireTurnstile, async (req, res) => {
   }).catch((e) => console.error("[legal:accept privacy]", e));
   // Fire-and-forget verification email; failures don't block registration.
   await issueVerificationEmail(user.id).catch((e) => console.error("[verify:send]", e));
-  const token = signToken({
-    sub: user.id,
-    fid: user.familyId,
-    role: user.role,
-    adm: user.isAdmin,
-    tv: user.tokenVersion,
-  });
+  const token = mintAccessToken({ user, familyId: family.id, membershipId: membership.id });
   const refresh = await issueRefreshToken({
     userId: user.id,
+    familyMembershipId: membership.id,
     userAgent: req.header("user-agent") ?? null,
     ip: clientIpFromReq(req),
   });
@@ -140,20 +148,51 @@ const parentLoginSchema = z.object({
 authRouter.post("/parent/login", async (req, res) => {
   const { email, password } = parentLoginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.role !== "PARENT" || !user.passwordHash)
+  // The role gate (PARENT or CAREGIVER) is intentionally loose so co-parents
+  // who hold both PARENT and CAREGIVER memberships across families can sign in
+  // through the same form. The active role/family is decided by the chosen
+  // membership at select-family time.
+  if (!user || !user.passwordHash || (user.role !== "PARENT" && user.role !== "CAREGIVER"))
     throw HttpError.unauthorized("Invalid credentials");
   if (!user.isActive) throw HttpError.forbidden("Account is inactive");
   const ok = await comparePassword(password, user.passwordHash);
   if (!ok) throw HttpError.unauthorized("Invalid credentials");
-  const token = signToken({
-    sub: user.id,
-    fid: user.familyId,
-    role: user.role,
-    adm: user.isAdmin,
-    tv: user.tokenVersion,
+
+  const families = await listAuthFamilies(user);
+  if (families.length === 0) throw HttpError.forbidden("No active family membership");
+
+  if (families.length > 1) {
+    // Issue a single-purpose select token. No fid/mid yet — the caller picks.
+    const selectToken = signToken({
+      sub: user.id,
+      fid: "",
+      role: user.role,
+      adm: user.isAdmin,
+      tv: user.tokenVersion,
+      scope: "family-select",
+    });
+    return res.json({
+      needsFamilySelect: true,
+      selectToken,
+      families: families.map((f) => ({
+        familyId: f.id,
+        familyName: f.name,
+        membershipId: f.membershipId,
+        role: f.role,
+        isBillingOwner: f.isBillingOwner ?? false,
+      })),
+    });
+  }
+
+  const only = families[0];
+  const token = mintAccessToken({
+    user,
+    familyId: only.id,
+    membershipId: only.membershipId ?? undefined,
   });
   const refresh = await issueRefreshToken({
     userId: user.id,
+    familyMembershipId: only.membershipId,
     userAgent: req.header("user-agent") ?? null,
     ip: clientIpFromReq(req),
   });
@@ -162,6 +201,96 @@ authRouter.post("/parent/login", async (req, res) => {
     refreshToken: refresh.refreshToken,
     refreshExpiresAt: refresh.expiresAt.toISOString(),
     user: serializeUser(user),
+  });
+});
+
+const selectFamilySchema = z.object({
+  selectToken: z.string().min(10).max(4096),
+  familyId: z.string().uuid(),
+});
+
+authRouter.post("/select-family", async (req, res) => {
+  const { selectToken, familyId } = selectFamilySchema.parse(req.body);
+  let payload;
+  try {
+    payload = verifyToken(selectToken);
+  } catch {
+    throw HttpError.unauthorized("Invalid or expired select token");
+  }
+  if (payload.scope !== "family-select") throw HttpError.unauthorized("Wrong token scope");
+  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  if (!user || !user.isActive) throw HttpError.unauthorized();
+  if (payload.tv !== undefined && user.tokenVersion !== payload.tv) {
+    throw HttpError.unauthorized("Session ended");
+  }
+  const { membership, familyId: resolvedFid } = await resolveActiveFamily(user, familyId);
+  const token = mintAccessToken({
+    user,
+    familyId: resolvedFid,
+    membershipId: membership?.id,
+  });
+  const refresh = await issueRefreshToken({
+    userId: user.id,
+    familyMembershipId: membership?.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(user),
+  });
+});
+
+const switchFamilySchema = z.object({
+  familyId: z.string().uuid(),
+  refreshToken: z.string().min(16).max(1024).optional(),
+});
+
+// Authenticated. Revokes the supplied refresh, mints a fresh access + refresh
+// pair scoped to the target membership. Frontend should clear its query cache
+// after this call.
+authRouter.post("/switch-family", requireAuth, async (req, res) => {
+  const { familyId, refreshToken } = switchFamilySchema.parse(req.body);
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });
+  if (!user || !user.isActive) throw HttpError.unauthorized();
+  if (user.role === "CHILD") throw HttpError.forbidden("Children cannot switch families");
+  const { membership, familyId: resolvedFid } = await resolveActiveFamily(user, familyId);
+  if (refreshToken) await revokeRefreshToken(refreshToken);
+  const token = mintAccessToken({
+    user,
+    familyId: resolvedFid,
+    membershipId: membership?.id,
+  });
+  const refresh = await issueRefreshToken({
+    userId: user.id,
+    familyMembershipId: membership?.id,
+    userAgent: req.header("user-agent") ?? null,
+    ip: clientIpFromReq(req),
+  });
+  res.json({
+    token,
+    refreshToken: refresh.refreshToken,
+    refreshExpiresAt: refresh.expiresAt.toISOString(),
+    user: serializeUser(user),
+  });
+});
+
+authRouter.get("/me/families", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });
+  if (!user) throw HttpError.unauthorized();
+  const families = await listAuthFamilies(user);
+  res.json({
+    activeFamilyId: req.auth!.fid,
+    activeMembershipId: req.membership?.id ?? null,
+    families: families.map((f) => ({
+      familyId: f.id,
+      familyName: f.name,
+      membershipId: f.membershipId,
+      role: f.role,
+      isBillingOwner: f.isBillingOwner ?? false,
+    })),
   });
 });
 
@@ -177,7 +306,7 @@ const childLoginSchema = z.object({
 authRouter.post("/child/login", async (req, res) => {
   const { childId, pin, familyPassword } = childLoginSchema.parse(req.body);
   const child = await prisma.user.findUnique({ where: { id: childId }, include: { family: true } });
-  if (!child || child.role !== "CHILD" || !child.isActive)
+  if (!child || child.role !== "CHILD" || !child.isActive || !child.familyId || !child.family)
     throw HttpError.unauthorized("Invalid credentials");
   const settings = await getFamilySettings(child.familyId);
 
@@ -225,10 +354,15 @@ authRouter.post("/child/login", async (req, res) => {
       // Migration: fall back to any parent password ONCE so existing families don't
       // brick at boot. On the first successful match we copy the hash up to
       // Family.devicePasswordHash and prompt parents to set an explicit one.
-      const parents = await prisma.user.findMany({
-        where: { familyId: child.familyId, role: "PARENT", isActive: true },
-        select: { passwordHash: true },
+      // PARENT users no longer carry User.familyId — find them via
+      // FamilyMembership scoped to this child's family.
+      const parentMemberships = await prisma.familyMembership.findMany({
+        where: { familyId: child.familyId, role: "PARENT", status: "ACTIVE" },
+        select: { user: { select: { passwordHash: true, isActive: true } } },
       });
+      const parents = parentMemberships
+        .filter((m) => m.user.isActive)
+        .map((m) => ({ passwordHash: m.user.passwordHash }));
       let migrated: string | null = null;
       for (const p of parents) {
         if (p.passwordHash && (await comparePassword(familyPassword, p.passwordHash))) {
@@ -248,12 +382,8 @@ authRouter.post("/child/login", async (req, res) => {
     }
   }
 
-  const token = signToken({
-    sub: child.id,
-    fid: child.familyId,
-    role: child.role,
-    tv: child.tokenVersion,
-  });
+  if (!child.familyId) throw HttpError.forbidden("Child has no family");
+  const token = mintAccessToken({ user: child, familyId: child.familyId });
   const refresh = await issueRefreshToken({
     userId: child.id,
     userAgent: req.header("user-agent") ?? null,
@@ -279,19 +409,19 @@ const caregiverPinSchema = z.object({
 authRouter.post("/caregiver/pin-login", requireDeviceToken, async (req, res) => {
   if (!env.DEVICE_PAIRING_ENABLED) throw HttpError.notFound("Feature disabled");
   const input = caregiverPinSchema.parse(req.body);
-  const user = await redeemCaregiverPin({
+  const { user, membership } = await redeemCaregiverPin({
     familyId: req.device!.familyId,
     pin: input.pin,
     name: input.name,
   });
-  const token = signToken({
-    sub: user.id,
-    fid: user.familyId,
-    role: user.role,
-    tv: user.tokenVersion,
+  const token = mintAccessToken({
+    user,
+    familyId: membership.familyId,
+    membershipId: membership.id,
   });
   const refresh = await issueRefreshToken({
     userId: user.id,
+    familyMembershipId: membership.id,
     userAgent: req.header("user-agent") ?? null,
     ip: clientIpFromReq(req),
   });
@@ -428,9 +558,10 @@ authRouter.post("/families/lookup", lookupRateLimiter, requireTurnstile, async (
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });
   if (!user) throw HttpError.unauthorized();
+  const activeFid = req.auth!.fid;
   const [settings, family] = await Promise.all([
-    getFamilySettings(user.familyId),
-    prisma.family.findUnique({ where: { id: user.familyId }, select: { isBeta: true } }),
+    getFamilySettings(activeFid),
+    prisma.family.findUnique({ where: { id: activeFid }, select: { isBeta: true } }),
   ]);
   res.json({
     user: serializeUser(user),
@@ -459,11 +590,12 @@ authRouter.post("/household-ack", requireAuth, async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { id: userId } });
   if (!existing) throw HttpError.unauthorized();
   if (existing.role !== "PARENT") throw HttpError.forbidden("Parents only");
+  const activeFid = req.auth!.fid;
   const ip = clientIpFrom(req);
   const ua = userAgentFrom(req);
   await recordLegalAcceptance({
     userId,
-    familyId: existing.familyId,
+    familyId: activeFid,
     kind: "HOUSEHOLD_TOOL_ACK",
     version: 1,
     ipAddress: ip,
@@ -472,7 +604,7 @@ authRouter.post("/household-ack", requireAuth, async (req, res) => {
   }).catch((e) => console.error("[legal:household-tool-ack]", e));
   await recordLegalAcceptance({
     userId,
-    familyId: existing.familyId,
+    familyId: activeFid,
     kind: "NO_CASH_VALUE_ACK",
     version: 1,
     ipAddress: ip,
@@ -559,11 +691,12 @@ authRouter.post("/accept-terms", requireAuth, async (req, res) => {
     where: { id: req.auth!.sub },
     data: { acceptedTermsVersion: version, acceptedTermsAt: new Date() },
   });
+  const activeFid = req.auth!.fid;
   const ip = clientIpFrom(req);
   const ua = userAgentFrom(req);
   await recordLegalAcceptance({
     userId: user.id,
-    familyId: user.familyId,
+    familyId: activeFid,
     kind: "TERMS",
     version,
     ipAddress: ip,
@@ -572,7 +705,7 @@ authRouter.post("/accept-terms", requireAuth, async (req, res) => {
   }).catch((e) => console.error("[legal:accept terms re]", e));
   await recordLegalAcceptance({
     userId: user.id,
-    familyId: user.familyId,
+    familyId: activeFid,
     kind: "PRIVACY",
     version: CURRENT_PRIVACY_VERSION,
     ipAddress: ip,
@@ -610,14 +743,13 @@ authRouter.post("/legal/accept", requireAuth, async (req, res) => {
 export function serializeUser(u: import("@prisma/client").User) {
   return {
     id: u.id,
-    familyId: u.familyId,
+    familyId: u.familyId ?? null,
     role: u.role,
     name: u.name,
     email: u.email,
     avatarColor: u.avatarColor,
     avatarConfig: (u.avatarConfig as AvatarConfig | null) ?? null,
     onboardedAt: u.onboardedAt?.toISOString() ?? null,
-    validUntil: u.validUntil?.toISOString() ?? null,
     emailVerifiedAt: u.emailVerifiedAt?.toISOString() ?? null,
     acceptedTermsVersion: u.acceptedTermsVersion ?? null,
     acceptedTermsAt: u.acceptedTermsAt?.toISOString() ?? null,

@@ -10,6 +10,7 @@ import { Tooltip } from "./Tooltip";
 import { SoundToggle } from "./SoundToggle";
 import { NotificationBell } from "./NotificationBell";
 import { Popover } from "./Popover";
+import { FamilySwitcher } from "./FamilySwitcher";
 import { EmailVerifyBanner } from "./EmailVerifyBanner";
 import { TrialBanner } from "./TrialBanner";
 import { UpgradePrompt } from "./UpgradePrompt";
@@ -130,7 +131,6 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
       {isCaregiver && (
         <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
           Caregiver session
-          {user?.validUntil && <> · expires {new Date(user.validUntil).toLocaleString()}</>}
         </div>
       )}
       {role === "PARENT" && !isCaregiver && user && !user.emailVerifiedAt && (
@@ -197,6 +197,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
                   className="p-1 min-w-[180px]"
                 >
                   <div className="flex flex-col">
+                    <FamilySwitcher onSwitched={() => setMenuOpen(false)} />
                     <button
                       type="button"
                       onClick={() => {

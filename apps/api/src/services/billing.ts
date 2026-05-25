@@ -189,12 +189,19 @@ export async function ensureStripeCustomer(familyId: string): Promise<string> {
       id: true,
       name: true,
       stripeCustomerId: true,
-      users: { where: { role: "PARENT" }, select: { email: true, name: true }, take: 1 },
+      // Owner pulled from FamilyMembership (PARENT users no longer carry
+      // User.familyId). Prefer the billing owner; fall back to oldest PARENT.
+      memberships: {
+        where: { role: "PARENT", status: "ACTIVE" },
+        orderBy: [{ isBillingOwner: "desc" }, { createdAt: "asc" }],
+        take: 1,
+        include: { user: { select: { email: true, name: true } } },
+      },
     },
   });
   if (!fam) throw HttpError.notFound("Family not found");
   if (fam.stripeCustomerId) return fam.stripeCustomerId;
-  const owner = fam.users[0];
+  const owner = fam.memberships[0]?.user;
   const customer = await stripe().customers.create({
     email: owner?.email ?? undefined,
     name: fam.name,

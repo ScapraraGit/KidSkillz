@@ -72,8 +72,16 @@ export async function deleteFamily(opts: {
     throw new Error("Confirmation text did not match family name");
   }
   // Belt-and-suspenders: confirm the caller is a parent in this family.
+  // PARENT users no longer carry User.familyId — membership row is the source
+  // of truth for which families the caller belongs to.
   const actor = await prisma.user.findUnique({ where: { id: opts.parentUserId } });
-  if (!actor || actor.familyId !== family.id || actor.role !== "PARENT") {
+  if (!actor || actor.role !== "PARENT") {
+    throw new Error("Only a parent in this family can delete it");
+  }
+  const membership = await prisma.familyMembership.findUnique({
+    where: { userId_familyId: { userId: actor.id, familyId: family.id } },
+  });
+  if (!membership || membership.status !== "ACTIVE" || membership.role !== "PARENT") {
     throw new Error("Only a parent in this family can delete it");
   }
 

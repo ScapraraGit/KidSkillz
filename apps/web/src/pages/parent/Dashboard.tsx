@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
-import { Avatar, Badge, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
+import { Badge, Card, CreditChip, EmptyState, PageHeader } from "../../components/ui";
+import { KidAvatar } from "../../components/KidAvatar";
 import { SetupChecklist } from "../../components/SetupChecklist";
 import { BetaBanner } from "../../components/BetaBanner";
 import type { ParentDashboardDTO } from "@chorechampz/shared";
@@ -44,7 +45,7 @@ export function ParentDashboard() {
               }
             >
               <div className="flex items-center gap-3">
-                <Avatar name={c.name} color={c.avatarColor} />
+                <KidAvatar name={c.name} color={c.avatarColor} config={c.avatarConfig} size={48} />
                 <div>
                   <div className="font-medium">{c.name}</div>
                   <div className="text-xs text-slate-500">
@@ -90,33 +91,49 @@ export function ParentDashboard() {
             <EmptyState title="All caught up!" />
           ) : (
             <ul className="space-y-2">
-              {data.pendingCompletions.slice(0, 5).map((c) => (
-                <li key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                  <Avatar name={c.child!.name} color={c.child!.avatarColor} size={32} />
-                  <div className="flex-1">
-                    <div className="text-sm">
-                      <strong>{c.child!.name}</strong> finished <strong>{c.task!.title}</strong>
+              {data.pendingCompletions.slice(0, 5).map((c) => {
+                const full = data.children.find((k) => k.id === c.childId);
+                return (
+                  <li key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                    <KidAvatar
+                      name={c.child!.name}
+                      color={c.child!.avatarColor}
+                      config={full?.avatarConfig}
+                      size={32}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm">
+                        <strong>{c.child!.name}</strong> finished <strong>{c.task!.title}</strong>
+                      </div>
+                      {c.notes && <div className="text-xs text-slate-500">"{c.notes}"</div>}
                     </div>
-                    {c.notes && <div className="text-xs text-slate-500">"{c.notes}"</div>}
-                  </div>
-                  <CreditChip amount={c.task!.creditValue} />
-                </li>
-              ))}
-              {data.pendingInitiative.slice(0, 5).map((i) => (
-                <li key={i.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                  <Avatar name={i.child!.name} color={i.child!.avatarColor} size={32} />
-                  <div className="flex-1">
-                    <div className="text-sm flex items-center gap-2">
-                      <strong>{i.child!.name}</strong>
-                      <Badge color={i.kind === "PLANNED" ? "brand" : "slate"}>
-                        {i.kind === "PLANNED" ? "📅 Planned" : "✍️ Write-in"}
-                      </Badge>
-                      <span className="truncate">{i.title}</span>
+                    <CreditChip amount={c.task!.creditValue} />
+                  </li>
+                );
+              })}
+              {data.pendingInitiative.slice(0, 5).map((i) => {
+                const full = data.children.find((k) => k.id === i.childId);
+                return (
+                  <li key={i.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                    <KidAvatar
+                      name={i.child!.name}
+                      color={i.child!.avatarColor}
+                      config={full?.avatarConfig}
+                      size={32}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm flex items-center gap-2">
+                        <strong>{i.child!.name}</strong>
+                        <Badge color={i.kind === "PLANNED" ? "brand" : "slate"}>
+                          {i.kind === "PLANNED" ? "📅 Planned" : "✍️ Write-in"}
+                        </Badge>
+                        <span className="truncate">{i.title}</span>
+                      </div>
                     </div>
-                  </div>
-                  <CreditChip amount={i.suggestedCredits} />
-                </li>
-              ))}
+                    <CreditChip amount={i.suggestedCredits} />
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="mt-3 text-right">
@@ -138,19 +155,27 @@ export function ParentDashboard() {
             <EmptyState title="No requests right now." />
           ) : (
             <ul className="space-y-2">
-              {data.pendingRedemptions.map((r) => (
-                <li key={r.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                  <Avatar name={r.child!.name} color={r.child!.avatarColor} size={32} />
-                  <div className="flex-1">
-                    <div className="text-sm">
-                      <strong>{r.child!.name}</strong> wants <strong>{r.reward!.name}</strong>
-                      {r.quantity > 1 && ` ×${r.quantity}`}
+              {data.pendingRedemptions.map((r) => {
+                const full = data.children.find((k) => k.id === r.childId);
+                return (
+                  <li key={r.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                    <KidAvatar
+                      name={r.child!.name}
+                      color={r.child!.avatarColor}
+                      config={full?.avatarConfig}
+                      size={32}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm">
+                        <strong>{r.child!.name}</strong> wants <strong>{r.reward!.name}</strong>
+                        {r.quantity > 1 && ` ×${r.quantity}`}
+                      </div>
+                      {r.notes && <div className="text-xs text-slate-500">"{r.notes}"</div>}
                     </div>
-                    {r.notes && <div className="text-xs text-slate-500">"{r.notes}"</div>}
-                  </div>
-                  <CreditChip amount={-r.creditCost} />
-                </li>
-              ))}
+                    <CreditChip amount={-r.creditCost} />
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
@@ -171,7 +196,12 @@ export function ParentDashboard() {
               const child = data.children.find((c) => c.id === e.childId);
               return (
                 <li key={e.id} className="py-2 flex items-center gap-3 text-sm">
-                  <Avatar name={child?.name ?? "?"} color={child?.avatarColor} size={28} />
+                  <KidAvatar
+                    name={child?.name ?? "?"}
+                    color={child?.avatarColor}
+                    config={child?.avatarConfig}
+                    size={28}
+                  />
                   <span className="font-medium">{child?.name}</span>
                   <span className="text-slate-500">{e.reason}</span>
                   <CreditChip amount={e.amount} />

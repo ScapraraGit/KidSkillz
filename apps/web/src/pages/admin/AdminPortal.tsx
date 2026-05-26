@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { api } from "../../lib/api";
 import { Button, Card, PageHeader, inputCls } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
@@ -69,6 +69,8 @@ export function AdminPortal() {
       />
 
       <BetaInviteCard />
+      <BetaFeedbackCard />
+      <BetaChecklistCard />
 
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -875,6 +877,165 @@ function BetaInviteCard() {
             </li>
           ))}
         </ul>
+      )}
+    </Card>
+  );
+}
+
+interface AdminFeedback {
+  id: string;
+  createdAt: string;
+  overallRating: number | null;
+  recommend: "YES" | "NO" | "MAYBE" | null;
+  tags: string[];
+  payload: any;
+  userAgent: string | null;
+  user: { id: string; name: string; email: string | null } | null;
+  family: { id: string; name: string } | null;
+}
+
+function BetaFeedbackCard() {
+  const q = useQuery({
+    queryKey: ["admin", "beta", "feedback"],
+    queryFn: () => api<{ feedback: AdminFeedback[] }>("/admin/beta/feedback"),
+  });
+  const [open, setOpen] = useState<string | null>(null);
+
+  return (
+    <Card className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="font-semibold text-slate-800">Beta feedback submissions</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Latest 200 submissions. Click a row to expand the full payload.
+          </p>
+        </div>
+        <span className="text-xs text-slate-500">
+          {q.data ? `${q.data.feedback.length} submission${q.data.feedback.length === 1 ? "" : "s"}` : ""}
+        </span>
+      </div>
+      {q.isLoading ? (
+        <div className="text-slate-500 text-sm">Loading…</div>
+      ) : !q.data || q.data.feedback.length === 0 ? (
+        <div className="text-slate-500 text-sm">No feedback yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-slate-500 border-b">
+              <tr>
+                <th className="py-2">When</th>
+                <th>User</th>
+                <th>Family</th>
+                <th>Rating</th>
+                <th>Recommend</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.feedback.map((f) => {
+                const isOpen = open === f.id;
+                return (
+                  <Fragment key={f.id}>
+                    <tr
+                      className="border-b cursor-pointer hover:bg-slate-50"
+                      onClick={() => setOpen(isOpen ? null : f.id)}
+                    >
+                      <td className="py-2">{new Date(f.createdAt).toLocaleString()}</td>
+                      <td>
+                        {f.user?.name ?? "—"}
+                        {f.user?.email ? <div className="text-xs text-slate-500">{f.user.email}</div> : null}
+                      </td>
+                      <td>{f.family?.name ?? "—"}</td>
+                      <td>{f.overallRating ?? "—"}</td>
+                      <td>{f.recommend ?? "—"}</td>
+                      <td className="text-xs text-slate-600">{f.tags.join(", ") || "—"}</td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b bg-slate-50">
+                        <td colSpan={6} className="py-3">
+                          <pre className="text-xs whitespace-pre-wrap break-words bg-white p-3 rounded border">
+                            {JSON.stringify(f.payload, null, 2)}
+                          </pre>
+                          {f.userAgent && (
+                            <div className="mt-2 text-xs text-slate-500">UA: {f.userAgent}</div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+interface AdminChecklistProgress {
+  userId: string;
+  familyId: string;
+  completed: string[];
+  submittedAt: string | null;
+  updatedAt: string;
+  user: { id: string; name: string; email: string | null } | null;
+  family: { id: string; name: string } | null;
+}
+
+function BetaChecklistCard() {
+  const q = useQuery({
+    queryKey: ["admin", "beta", "checklist"],
+    queryFn: () => api<{ progress: AdminChecklistProgress[] }>("/admin/beta/checklist-progress"),
+  });
+
+  return (
+    <Card className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="font-semibold text-slate-800">Beta checklist progress</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Who started, how far they got, whether they submitted feedback.
+          </p>
+        </div>
+        <span className="text-xs text-slate-500">
+          {q.data ? `${q.data.progress.length} user${q.data.progress.length === 1 ? "" : "s"}` : ""}
+        </span>
+      </div>
+      {q.isLoading ? (
+        <div className="text-slate-500 text-sm">Loading…</div>
+      ) : !q.data || q.data.progress.length === 0 ? (
+        <div className="text-slate-500 text-sm">No checklist activity yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-slate-500 border-b">
+              <tr>
+                <th className="py-2">User</th>
+                <th>Family</th>
+                <th>Completed</th>
+                <th>Submitted feedback</th>
+                <th>Last update</th>
+                <th>Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.progress.map((p) => (
+                <tr key={p.userId} className="border-b">
+                  <td className="py-2">
+                    {p.user?.name ?? "—"}
+                    {p.user?.email ? <div className="text-xs text-slate-500">{p.user.email}</div> : null}
+                  </td>
+                  <td>{p.family?.name ?? "—"}</td>
+                  <td>{p.completed.length}</td>
+                  <td>{p.submittedAt ? new Date(p.submittedAt).toLocaleString() : "—"}</td>
+                  <td>{new Date(p.updatedAt).toLocaleString()}</td>
+                  <td className="text-xs text-slate-600">{p.completed.join(", ") || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Card>
   );

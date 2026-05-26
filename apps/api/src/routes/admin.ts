@@ -20,6 +20,7 @@ import {
 } from "../services/rewards.js";
 import { proofRequirementSchema } from "../lib/features.js";
 import { sendBetaInviteEmail } from "../lib/email.js";
+import { adminListFeedback, adminListChecklistProgress } from "../services/beta.js";
 import { env } from "../env.js";
 import {
   clearBillingOverride,
@@ -330,4 +331,14 @@ adminRouter.post("/beta/invite", async (req, res) => {
   const sent = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok);
   res.json({ sent, failed });
+});
+
+adminRouter.get("/beta/feedback", async (_req, res) => {
+  const feedback = await adminListFeedback();
+  res.json({ feedback });
+});
+
+adminRouter.get("/beta/checklist-progress", async (_req, res) => {
+  const progress = await adminListChecklistProgress();
+  res.json({ progress });
 });

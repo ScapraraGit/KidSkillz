@@ -242,3 +242,60 @@ export async function updateChecklist(familyId: string, userId: string, raw: unk
 }
 
 export { deriveTags };
+
+async function hydrateUsersAndFamilies(userIds: string[], familyIds: string[]) {
+  const [users, families] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: Array.from(new Set(userIds)) } },
+      select: { id: true, name: true, email: true },
+    }),
+    prisma.family.findMany({
+      where: { id: { in: Array.from(new Set(familyIds)) } },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const uMap = new Map(users.map((u) => [u.id, u]));
+  const fMap = new Map(families.map((f) => [f.id, f]));
+  return { uMap, fMap };
+}
+
+export async function adminListFeedback(limit = 200) {
+  const rows = await prisma.betaFeedback.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  const { uMap, fMap } = await hydrateUsersAndFamilies(
+    rows.map((r) => r.userId),
+    rows.map((r) => r.familyId),
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt.toISOString(),
+    overallRating: r.overallRating,
+    recommend: r.recommend,
+    tags: r.tags,
+    payload: r.payload,
+    userAgent: r.userAgent,
+    user: uMap.get(r.userId) ?? null,
+    family: fMap.get(r.familyId) ?? null,
+  }));
+}
+
+export async function adminListChecklistProgress() {
+  const rows = await prisma.betaChecklistProgress.findMany({
+    orderBy: [{ submittedAt: "desc" }, { updatedAt: "desc" }],
+  });
+  const { uMap, fMap } = await hydrateUsersAndFamilies(
+    rows.map((r) => r.userId),
+    rows.map((r) => r.familyId),
+  );
+  return rows.map((r) => ({
+    userId: r.userId,
+    familyId: r.familyId,
+    completed: r.completed as ChecklistKey[],
+    submittedAt: r.submittedAt ? r.submittedAt.toISOString() : null,
+    updatedAt: r.updatedAt.toISOString(),
+    user: uMap.get(r.userId) ?? null,
+    family: fMap.get(r.familyId) ?? null,
+  }));
+}

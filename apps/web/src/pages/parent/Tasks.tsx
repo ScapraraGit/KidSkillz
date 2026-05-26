@@ -335,8 +335,18 @@ export function TaskFormModal({
         body.timesPerDay = 1;
         body.slotLabels = [];
       }
-      if (initial) await api(`/tasks/${initial.id}`, { method: "PATCH", body });
-      else await api("/tasks", { body });
+      if (initial) {
+        await api(`/tasks/${initial.id}`, { method: "PATCH", body });
+      } else if (assignedToId === "__ALL__" && assignmentMode === "ASSIGNED" && kids.length > 0) {
+        // Create against first kid, then fan out via duplicate-across-kids so every
+        // kid gets their own copy. Server enforces "skip if kid already has it" so
+        // re-runs are safe.
+        body.assignedToId = kids[0].id;
+        const created = await api<{ task: { id: string } }>("/tasks", { body });
+        await api(`/tasks/${created.task.id}/duplicate-across-kids`, { method: "POST", body: {} });
+      } else {
+        await api("/tasks", { body });
+      }
     },
     onSuccess: onSaved,
   });
@@ -491,10 +501,7 @@ export function TaskFormModal({
           />
         </Field>
         {assignmentMode === "ASSIGNED" && (
-          <Field
-            label="Assigned to"
-            hint="Use 'Copy to all kids' from the table for separate copies per kid."
-          >
+          <Field label="Assigned to" hint="Pick a kid, or 'All kids' to create one copy per kid in one shot.">
             <select
               className={inputCls}
               value={assignedToId}
@@ -504,6 +511,7 @@ export function TaskFormModal({
               <option value="" disabled>
                 Select a kid…
               </option>
+              {!initial && kids.length > 1 && <option value="__ALL__">All kids (one copy each)</option>}
               {kids.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

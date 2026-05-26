@@ -166,6 +166,7 @@ const TABS: Tab[] = [
   { key: "mouth", label: "Mouth", emoji: "😀" },
   { key: "accessories", label: "Glasses", emoji: "🤓" },
   { key: "facialHair", label: "Facial hair", emoji: "🧔" },
+  { key: "facialHairColor", label: "Beard color", emoji: "🎨" },
   { key: "clothing", label: "Outfit", emoji: "👕" },
   { key: "clothesColor", label: "Shirt color", emoji: "🎨" },
   { key: "background", label: "Background", emoji: "🌈" },
@@ -210,6 +211,7 @@ export function defaultAvatarConfig(): AvatarConfig {
     skinColor: ["edb98a"],
     accessoriesProbability: 0,
     facialHairProbability: 0,
+    facialHairColor: ["2c1b18"],
     clothing: ["hoodie"],
     clothesColor: ["65c9ff"],
     backgroundColor: ["b6e3f4"],
@@ -414,6 +416,16 @@ function OptionGrid({ tab, config, name, onChange }: OptionGridProps) {
           onChange={onChange}
         />
       );
+    case "facialHairColor":
+      return (
+        <SwatchPicker
+          name={name}
+          config={config}
+          field="facialHairColor"
+          options={FACIAL_HAIR_COLORS.map((v) => ({ value: v, swatch: `#${v}` }))}
+          onChange={onChange}
+        />
+      );
     case "clothing":
       return (
         <PreviewPicker name={name} config={config} field="clothing" options={CLOTHING} onChange={onChange} />
@@ -553,7 +565,7 @@ function SwatchPicker({
 }: {
   name: string;
   config: AvatarConfig;
-  field: "skinColor" | "hairColor" | "clothesColor" | "backgroundColor";
+  field: "skinColor" | "hairColor" | "clothesColor" | "backgroundColor" | "facialHairColor";
   options: { value: string; swatch: string }[];
   onChange: (next: AvatarConfig) => void;
 }) {

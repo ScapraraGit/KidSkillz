@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, API_URL } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Link } from "react-router-dom";
 import { Button, Card, Field, inputCls } from "../components/ui";
@@ -84,6 +84,58 @@ type ParentLoginSuccess =
       families: FamilyOption[];
     };
 
+const SOCIAL_LOGIN_ENABLED = (import.meta.env.VITE_SOCIAL_LOGIN_ENABLED as string) === "true";
+
+function GoogleSignInButton() {
+  if (!SOCIAL_LOGIN_ENABLED) return null;
+  return (
+    <a
+      href={`${API_URL}/v1/auth/oauth/google/signin/start`}
+      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path
+          fill="#4285F4"
+          d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+        />
+        <path
+          fill="#34A853"
+          d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.997 8.997 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
+        />
+        <path
+          fill="#EA4335"
+          d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
+        />
+      </svg>
+      Sign in with Google
+    </a>
+  );
+}
+
+function SocialHintBanner() {
+  const [params] = useSearchParams();
+  const unlinked = params.get("social_unlinked");
+  const noAccount = params.get("social_no_account");
+  const error = params.get("oauth_error");
+  if (!unlinked && !noAccount && !error) return null;
+  let msg: string | null = null;
+  if (error) msg = `Google sign-in was cancelled or blocked (${error}).`;
+  else if (noAccount)
+    msg = "No account found for that Google email. Sign up first, then link Google from Account → Security.";
+  else if (unlinked)
+    msg =
+      "That Google account isn't linked yet. Sign in with your password, then connect Google from Account → Security.";
+  return (
+    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      {msg}
+    </div>
+  );
+}
+
 function ParentLogin({ onSignup }: { onSignup: () => void }) {
   const setSession = useAuth((s) => s.setSession);
   const setSettings = useAuth((s) => s.setSettings);
@@ -149,61 +201,72 @@ function ParentLogin({ onSignup }: { onSignup: () => void }) {
   }
 
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setErr(null);
-        setLoading(true);
-        try {
-          const r = await api<ParentLoginSuccess>("/auth/parent/login", {
-            body: { email, password },
-          });
-          if (r.needsFamilySelect === true) {
-            setPicker({ selectToken: r.selectToken, families: r.families });
-            return;
+    <div className="space-y-3">
+      <SocialHintBanner />
+      <GoogleSignInButton />
+      {SOCIAL_LOGIN_ENABLED && (
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span>or</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+      )}
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErr(null);
+          setLoading(true);
+          try {
+            const r = await api<ParentLoginSuccess>("/auth/parent/login", {
+              body: { email, password },
+            });
+            if (r.needsFamilySelect === true) {
+              setPicker({ selectToken: r.selectToken, families: r.families });
+              return;
+            }
+            await completeLogin(r.token, r.refreshToken ?? null, r.user);
+          } catch (e: any) {
+            setErr(e.message ?? "Login failed");
+          } finally {
+            setLoading(false);
           }
-          await completeLogin(r.token, r.refreshToken ?? null, r.user);
-        } catch (e: any) {
-          setErr(e.message ?? "Login failed");
-        } finally {
-          setLoading(false);
-        }
-      }}
-      className="space-y-3"
-    >
-      <Field label="Email">
-        <input
-          className={inputCls}
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </Field>
-      <Field label="Password">
-        <input
-          className={inputCls}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </Field>
-      {err && <div className="text-sm text-rose-600">{err}</div>}
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in..." : "Sign in"}
-      </Button>
-      <p className="text-xs text-center text-slate-500 pt-1">
-        New here?{" "}
-        <button type="button" className="text-brand-600 hover:underline" onClick={onSignup}>
-          Create a family
-        </button>
-        {" · "}
-        <Link to="/forgot-password" className="text-brand-600 hover:underline">
-          Forgot password?
-        </Link>
-      </p>
-    </form>
+        }}
+        className="space-y-3"
+      >
+        <Field label="Email">
+          <input
+            className={inputCls}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Password">
+          <input
+            className={inputCls}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </Field>
+        {err && <div className="text-sm text-rose-600">{err}</div>}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Signing in..." : "Sign in"}
+        </Button>
+        <p className="text-xs text-center text-slate-500 pt-1">
+          New here?{" "}
+          <button type="button" className="text-brand-600 hover:underline" onClick={onSignup}>
+            Create a family
+          </button>
+          {" · "}
+          <Link to="/forgot-password" className="text-brand-600 hover:underline">
+            Forgot password?
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }
 

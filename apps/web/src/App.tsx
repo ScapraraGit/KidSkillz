@@ -30,6 +30,8 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Pair } from "./pages/Pair";
+import { OAuthComplete } from "./pages/OAuthComplete";
+import { OAuthSignup } from "./pages/OAuthSignup";
 import { BetaWelcome } from "./pages/beta/Welcome";
 import { BetaChecklist } from "./pages/beta/Checklist";
 import { BetaFeedback } from "./pages/beta/Feedback";
@@ -55,6 +57,8 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/pair" element={<Pair />} />
+        <Route path="/auth/oauth/complete" element={<OAuthComplete />} />
+        <Route path="/auth/oauth/signup" element={<OAuthSignup />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

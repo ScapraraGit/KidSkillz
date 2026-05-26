@@ -140,6 +140,10 @@ enum MembershipStatus {
   REVOKED
 }
 
+enum OAuthProvider {
+  GOOGLE
+}
+
 enum NotificationKind {
   COMPLETION_APPROVED
   COMPLETION_REJECTED
@@ -348,8 +352,28 @@ model User {
   passwordResets      PasswordReset[]       @relation("PasswordResetUser")
   refreshTokens       RefreshToken[]        @relation("RefreshTokenUser")
   legalAcceptances    LegalAcceptance[]     @relation("LegalAcceptanceUser")
+  oauthIdentities     OAuthIdentity[]       @relation("OAuthIdentityUser")
 
   @@index([familyId])
+}
+
+model OAuthIdentity {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation("OAuthIdentityUser", fields: [userId], references: [id], onDelete: Cascade)
+  provider      OAuthProvider
+  // Provider's stable per-user id (Google's `sub` claim). Never email — email
+  // can change at the provider, sub cannot.
+  providerSub   String
+  // Email at link time. Audit only — do not use for lookups or matching.
+  email         String
+  emailVerified Boolean       @default(false)
+  linkedAt      DateTime      @default(now())
+  lastLoginAt   DateTime?
+
+  @@unique([provider, providerSub])
+  @@unique([provider, userId])
+  @@index([userId])
 }
 
 model Invitation {

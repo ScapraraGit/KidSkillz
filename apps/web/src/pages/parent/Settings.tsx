@@ -21,6 +21,7 @@ import { DEFAULT_FAMILY_SETTINGS, type FamilySettings, type TaskCategoryDTO } fr
 import { useFeatures } from "../../hooks/useFeatures";
 import { DevicesCard } from "../../components/DevicesCard";
 import { BillingSection } from "../../components/BillingSection";
+import { ConnectedAccountsCard } from "../../components/ConnectedAccountsCard";
 
 export function ParentSettings() {
   const qc = useQueryClient();
@@ -78,6 +79,8 @@ export function ParentSettings() {
       <PageHeader title="Family settings" subtitle={familyQ.data?.name} />
 
       <BillingSection />
+
+      <ConnectedAccountsCard />
 
       <Card className="space-y-4">
         <h3 className="font-semibold">Authentication</h3>

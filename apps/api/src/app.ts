@@ -11,6 +11,7 @@ import { Sentry } from "./lib/sentry.js";
 import { errorHandler } from "./middleware/error.js";
 import { metricsMiddleware, registry as metricsRegistry } from "./lib/metrics.js";
 import { authRouter } from "./routes/auth.js";
+import { authOAuthRouter } from "./routes/auth-oauth.js";
 import { familyRouter } from "./routes/family.js";
 import { childrenRouter } from "./routes/children.js";
 import { tasksRouter } from "./routes/tasks.js";
@@ -165,6 +166,7 @@ export function createApp(opts: CreateAppOptions = {}) {
 
   const v1 = express.Router();
   v1.use("/auth", authLimiter, authRouter);
+  v1.use("/auth/oauth", authLimiter, authOAuthRouter);
   v1.use("/family", familyRouter);
   v1.use("/children", childrenRouter);
   v1.use("/tasks", tasksRouter);

@@ -81,4 +81,13 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   STRIPE_PRICE_BASIC_MONTHLY: process.env.STRIPE_PRICE_BASIC_MONTHLY ?? "",
   STRIPE_PRICE_PREMIUM_MONTHLY: process.env.STRIPE_PRICE_PREMIUM_MONTHLY ?? "",
+  // --- Social login (Google) ---
+  // SOCIAL_LOGIN_ENABLED is the server-side master kill-switch. When false
+  // (default) the /auth/oauth/* routes 404 and the provider factory returns a
+  // disabled stub. Flip true only after Google OAuth client + redirect URI are
+  // configured for the deployment.
+  SOCIAL_LOGIN_ENABLED: (process.env.SOCIAL_LOGIN_ENABLED ?? "false").toLowerCase() === "true",
+  GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
+  GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
+  GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI ?? "",
 };

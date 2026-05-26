@@ -36,6 +36,7 @@
     "express": "4.21.1",
     "express-async-errors": "3.1.1",
     "express-rate-limit": "^8.5.1",
+    "google-auth-library": "^9.15.0",
     "file-type": "19.6.0",
     "sharp": "^0.34.4",
     "helmet": "^8.1.0",

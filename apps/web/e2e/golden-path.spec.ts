@@ -38,10 +38,10 @@ test("parent → kid → task → submit → approve → balance", async ({ page
   const confirm = page.getByLabel(/confirm password/i);
   await confirm.fill(PARENT_PASSWORD);
 
-  // Accept all four legal acknowledgements.
-  for (const cb of await page.locator('input[type="checkbox"]').all()) {
-    if (await cb.isVisible()) await cb.check();
-  }
+  // Accept the legal acknowledgement (last checkbox in the form). Don't blanket-
+  // check every checkbox — toggling "Invite a co-parent" makes partner email
+  // required and blocks submit.
+  await page.locator('input[type="checkbox"]').last().check();
   await page.getByRole("button", { name: /start free/i }).click();
   await expect(page).toHaveURL(/\/parent/, { timeout: 15_000 });
 

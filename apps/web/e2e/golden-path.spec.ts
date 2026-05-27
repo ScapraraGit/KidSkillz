@@ -42,7 +42,7 @@ test("parent → kid → task → submit → approve → balance", async ({ page
   for (const cb of await page.locator('input[type="checkbox"]').all()) {
     if (await cb.isVisible()) await cb.check();
   }
-  await page.getByRole("button", { name: /create family/i }).click();
+  await page.getByRole("button", { name: /start free/i }).click();
   await expect(page).toHaveURL(/\/parent/, { timeout: 15_000 });
 
   // ---- 2. Grab the auth token from localStorage so we can drive the API

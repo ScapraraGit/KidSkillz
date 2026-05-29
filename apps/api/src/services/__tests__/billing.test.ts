@@ -13,6 +13,8 @@ vi.mock("../../db.js", () => ({
     family: { findUnique: findUniqueMock, update: updateMock, findFirst: vi.fn() },
     stripeEvent: { create: stripeEventCreateMock, update: stripeEventUpdateMock },
     billingOverrideLog: { create: overrideLogCreateMock, findMany: vi.fn() },
+    // getEntitlement now also probes IAP grants; default null so non-IAP cases unaffected.
+    iapEntitlementGrant: { findFirst: vi.fn().mockResolvedValue(null) },
     $transaction: transactionMock,
   },
 }));

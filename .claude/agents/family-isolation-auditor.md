@@ -10,7 +10,7 @@ You audit `apps/api` for multi-tenant isolation. Every domain row in this projec
 ## Scan for
 
 1. **`prisma.<model>.findFirst|findUnique|findMany|update|delete|aggregate|count`** calls whose `where` clause does not include `familyId` (directly or via a relation like `task: { familyId }`). Exception: `User` lookups by primary key during auth bootstrap.
-2. **`prisma.<model>.create({ data })`** that does not set `familyId` for domain models (Task, TaskCompletion, LedgerEntry, Reward, Redemption, ChildProfile, Adjustment, Invitation, InitiativeRequest).
+2. **`prisma.<model>.create({ data })`** that does not set `familyId` for domain models (Task, TaskCompletion, LedgerEntry, Reward, Redemption, ChildProfile, Adjustment, Invitation, InitiativeRequest, PushToken, IapEntitlementGrant). Note: `IapSubscription` is scoped by `purchaserUserId`, not `familyId` — one subscription can fund multiple families via revocable `IapEntitlementGrant` rows. Flag any code that treats `IapSubscription` as family-scoped, AND flag any push/IAP code path that derives `familyId` from `req.body` rather than `req.auth!.fid`.
 3. **Service functions** whose signature does not take `familyId` as the first argument when they operate on domain data.
 4. **Route handlers** that pass `req.body.familyId` or `req.query.familyId` to a service instead of `req.auth!.fid`. Clients must never choose their tenant.
 5. **Raw SQL / `$queryRaw`** missing a `family_id =` predicate.

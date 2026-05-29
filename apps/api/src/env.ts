@@ -90,4 +90,22 @@ export const env = {
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
   GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
   GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI ?? "",
+  // --- Push notifications (FCM → APNs + Android) ---
+  // PUSH_ENABLED is the kill-switch. When false (default) push-provider.ts
+  // returns a ConsoleProvider so dev/local + CI never need FCM credentials.
+  // FCM_SERVICE_ACCOUNT_JSON holds the raw Firebase service-account JSON (the
+  // whole key file as a single env value). FCM_PROJECT_ID is the ADC fallback
+  // for local dev: when service-account key creation is blocked by org policy,
+  // run `gcloud auth application-default login` and set this; push-provider.ts
+  // initializes firebase-admin without a credential and ADC supplies the auth.
+  // Exactly one of (FCM_SERVICE_ACCOUNT_JSON, FCM_PROJECT_ID) is required when
+  // PUSH_ENABLED=true; service-account JSON wins if both are set.
+  PUSH_ENABLED: (process.env.PUSH_ENABLED ?? "false").toLowerCase() === "true",
+  FCM_SERVICE_ACCOUNT_JSON: process.env.FCM_SERVICE_ACCOUNT_JSON ?? "",
+  FCM_PROJECT_ID: process.env.FCM_PROJECT_ID ?? "",
+  // --- In-app purchase (mobile billing) ---
+  // Comma-separated list of store product ids that map to the PREMIUM plan
+  // (mirrors the CORS comma-list convention). Any IAP product not in this set
+  // resolves to BASIC in getEntitlement. Empty = all IAP products treated BASIC.
+  IAP_PREMIUM_PRODUCT_IDS: process.env.IAP_PREMIUM_PRODUCT_IDS ?? "",
 };

@@ -322,6 +322,22 @@ export function ParentSettings() {
       </Card>
 
       <Card className="space-y-4">
+        <h3 className="font-semibold">Push notifications</h3>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={s.pushNotifications ?? false}
+            onChange={(e) => setS({ ...s, pushNotifications: e.target.checked })}
+          />
+          Mirror in-app notifications to the mobile app
+        </label>
+        <p className="text-xs text-slate-500">
+          Only delivers to devices that have installed the mobile app and granted notification permission. Off
+          by default.
+        </p>
+      </Card>
+
+      <Card className="space-y-4">
         <h3 className="font-semibold">Vacation mode</h3>
         <p className="text-sm text-slate-500">
           Pauses earning family-wide and freezes streak loss. Toggle on for trips so kids don't get penalized

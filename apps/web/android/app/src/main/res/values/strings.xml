@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ChoreChampz</string>
+    <string name="title_activity_main">ChoreChampz</string>
+    <string name="package_name">com.chorechampz.app</string>
+    <string name="custom_url_scheme">com.chorechampz.app</string>
+</resources>

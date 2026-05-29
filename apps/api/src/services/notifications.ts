@@ -1,7 +1,8 @@
 import { prisma } from "../db.js";
-import type { NotificationKind, Prisma } from "@prisma/client";
+import type { NotificationKind, Prisma, PushPlatform } from "@prisma/client";
 import type { NotificationDTO } from "@chorechampz/shared";
 import { sendNotificationEmail } from "../lib/email.js";
+import { pushProvider } from "../lib/push-provider.js";
 import { getFamilySettings } from "./family.js";
 
 interface CreateOpts {
@@ -37,6 +38,7 @@ export async function createNotification(opts: CreateOpts) {
   // caller's tx), so even if the email errors the user still sees the alert in-app.
   setImmediate(() => {
     void deliverEmailMirror(opts).catch((e) => console.error("[notifications:email]", e));
+    void deliverPushMirror(opts).catch((e) => console.error("[notifications:push]", e));
   });
 
   return created;
@@ -55,6 +57,72 @@ async function deliverEmailMirror(opts: CreateOpts) {
     title: opts.title,
     body: opts.body ?? null,
   });
+}
+
+// Native-push mirror of an in-app notification. Same fire-and-forget contract as
+// deliverEmailMirror: gated on a family setting, errors swallowed, the in-app
+// Notification row is the source of truth. FCM requires all data values to be
+// strings, so the payload is flattened to a string map for deep-link routing.
+async function deliverPushMirror(opts: CreateOpts) {
+  const settings = await getFamilySettings(opts.familyId);
+  if (!settings.pushNotifications) return;
+  const tokens = await prisma.pushToken.findMany({
+    where: { userId: opts.userId },
+    select: { token: true },
+  });
+  if (tokens.length === 0) return;
+  const res = await pushProvider.send({
+    tokens: tokens.map((t) => t.token),
+    title: opts.title,
+    body: opts.body,
+    data: { kind: opts.kind, ...flattenPayload(opts.payload) },
+  });
+  if (res.invalidTokens.length) {
+    await prisma.pushToken.deleteMany({ where: { token: { in: res.invalidTokens } } });
+  }
+}
+
+function flattenPayload(payload: Record<string, unknown> | undefined): Record<string, string> {
+  if (!payload) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (v == null) continue;
+    out[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+  return out;
+}
+
+// Upsert a device's push token on (re-)registration. token is unique, so a
+// rotated token from the same device lands as a new row and dead ones are pruned
+// by deliverPushMirror when FCM reports them invalid.
+export async function registerPushToken(opts: {
+  familyId: string;
+  userId: string;
+  token: string;
+  platform: PushPlatform;
+}) {
+  return prisma.pushToken.upsert({
+    where: { token: opts.token },
+    create: {
+      familyId: opts.familyId,
+      userId: opts.userId,
+      token: opts.token,
+      platform: opts.platform,
+    },
+    update: {
+      familyId: opts.familyId,
+      userId: opts.userId,
+      platform: opts.platform,
+      lastSeenAt: new Date(),
+    },
+  });
+}
+
+// Drop a token on logout. Scoped to the calling user so one account can't unregister
+// another's device.
+export async function clearPushToken(userId: string, token: string): Promise<number> {
+  const r = await prisma.pushToken.deleteMany({ where: { userId, token } });
+  return r.count;
 }
 
 export async function listForUser(

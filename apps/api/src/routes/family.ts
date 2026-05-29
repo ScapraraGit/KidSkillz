@@ -72,6 +72,7 @@ const settingsSchema = z.object({
     .optional(),
   photoRetentionDays: z.number().int().min(0).max(3650).optional(),
   emailNotifications: z.boolean().optional(),
+  pushNotifications: z.boolean().optional(),
   vacationMode: z
     .object({
       active: z.boolean(),

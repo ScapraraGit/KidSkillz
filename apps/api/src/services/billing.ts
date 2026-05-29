@@ -29,8 +29,9 @@ export interface Entitlement {
   isPaid: boolean;
   isPremium: boolean;
   // Where the entitlement decision came from. Lets UI explain why a family is
-  // not blocked even with a CANCELED Stripe state (admin comped them).
-  source: "STRIPE" | "TRIAL" | "OVERRIDE";
+  // not blocked even with a CANCELED Stripe state (admin comped them), and which
+  // channel manages the subscription (web Stripe portal vs. App Store / Play).
+  source: "STRIPE" | "TRIAL" | "OVERRIDE" | "APPLE_IAP" | "GOOGLE_PLAY";
   override: BillingOverride;
   overrideReason: string | null;
   overrideUntil: Date | null;
@@ -79,23 +80,75 @@ export async function getEntitlement(familyId: string): Promise<Entitlement> {
     // Expired FREE_UNTIL — fall through to Stripe state.
   }
 
-  // Stripe layer.
-  const trialActive = fam.trialEndsAt && fam.trialEndsAt.getTime() > now;
-  const isPaid =
-    fam.subscriptionStatus === "ACTIVE" || (fam.subscriptionStatus === "TRIALING" && !!trialActive);
+  // Stripe + IAP layer. A family can be funded by Stripe (web checkout) or by an
+  // in-app purchase on iOS/Android — entitlement is family-wide regardless of
+  // the channel that paid. "Best entitlement wins"; Stripe takes precedence when
+  // both are active so the web billing portal stays the management surface.
+  const trialActive = !!(fam.trialEndsAt && fam.trialEndsAt.getTime() > now);
+  const stripeActive =
+    fam.subscriptionStatus === "ACTIVE" || (fam.subscriptionStatus === "TRIALING" && trialActive);
+
+  // An IAP grant counts only while ACTIVE *and* its underlying subscription is
+  // itself active/unexpired. So a lapsed store sub silently drops the family with
+  // no grant bookkeeping, and a renewal restores it. Indexed on (familyId, status)
+  // + (subscriptionId, status); one extra cheap query per entitlement check.
+  const iapGrant = await prisma.iapEntitlementGrant.findFirst({
+    where: {
+      familyId,
+      status: "ACTIVE",
+      subscription: {
+        status: "ACTIVE",
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date(now) } }],
+      },
+    },
+    orderBy: { grantedAt: "desc" },
+    select: { subscription: { select: { platform: true, productId: true } } },
+  });
+  const isPaid = stripeActive || !!iapGrant || trialActive;
+  // Stripe owns Family.currentPlan; an IAP-only family derives its plan from the
+  // funding product id. Stripe wins the plan when both channels are active.
+  const plan: PlanTier = stripeActive
+    ? fam.currentPlan
+    : iapGrant
+      ? iapProductToPlan(iapGrant.subscription.productId)
+      : fam.currentPlan;
+
+  let source: Entitlement["source"];
+  if (stripeActive) {
+    source = trialActive && fam.subscriptionStatus === "TRIALING" ? "TRIAL" : "STRIPE";
+  } else if (iapGrant) {
+    source = iapGrant.subscription.platform === "IOS" ? "APPLE_IAP" : "GOOGLE_PLAY";
+  } else if (trialActive) {
+    source = "TRIAL";
+  } else {
+    source = "STRIPE";
+  }
+
   return {
     status: fam.subscriptionStatus,
-    plan: fam.currentPlan,
+    plan,
     trialEndsAt: fam.trialEndsAt,
     currentPeriodEnd: fam.currentPeriodEnd,
     cancelAtPeriodEnd: fam.cancelAtPeriodEnd,
     isPaid,
-    isPremium: isPaid && fam.currentPlan === "PREMIUM",
-    source: trialActive && fam.subscriptionStatus === "TRIALING" ? "TRIAL" : "STRIPE",
+    isPremium: isPaid && plan === "PREMIUM",
+    source,
     override: fam.billingOverride,
     overrideReason: fam.billingOverrideReason,
     overrideUntil: fam.billingOverrideUntil,
   };
+}
+
+/**
+ * Map an IAP store product id to a plan tier. Premium product ids are listed
+ * (comma-separated) in IAP_PREMIUM_PRODUCT_IDS — mirrors the CORS comma-list
+ * convention. Anything not in that set resolves to BASIC.
+ */
+function iapProductToPlan(productId: string): PlanTier {
+  const premium = env.IAP_PREMIUM_PRODUCT_IDS.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return premium.includes(productId) ? "PREMIUM" : "BASIC";
 }
 
 function overrideEntitlement(

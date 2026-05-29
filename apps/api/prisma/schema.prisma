@@ -157,6 +157,22 @@ enum NotificationKind {
   BETA_FEEDBACK_RECEIVED
 }
 
+// Push-notification device platform. WEB covers PWA/web-push registrations.
+enum PushPlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+// Lifecycle of an IAP entitlement grant linking a store subscription to a family.
+// Revoking a grant detaches the family WITHOUT canceling the underlying store
+// subscription, so a purchaser funding multiple families can drop one household
+// (e.g. after remarriage) while keeping the others.
+enum GrantStatus {
+  ACTIVE
+  REVOKED
+}
+
 model Family {
   id        String   @id @default(uuid())
   name      String
@@ -211,6 +227,8 @@ model Family {
   stripeEvents       StripeEvent[]
   billingOverrideLogs BillingOverrideLog[]
   memberships        FamilyMembership[]
+  pushTokens         PushToken[]
+  iapGrants          IapEntitlementGrant[]
 }
 
 // Webhook event idempotency cache. Insert keyed by Stripe event id; duplicate
@@ -353,6 +371,8 @@ model User {
   refreshTokens       RefreshToken[]        @relation("RefreshTokenUser")
   legalAcceptances    LegalAcceptance[]     @relation("LegalAcceptanceUser")
   oauthIdentities     OAuthIdentity[]       @relation("OAuthIdentityUser")
+  pushTokens          PushToken[]
+  iapSubscriptions    IapSubscription[]     @relation("IapPurchaser")
 
   @@index([familyId])
 }
@@ -862,4 +882,71 @@ model FamilyMembership {
   @@unique([userId, familyId])
   @@index([familyId])
   @@index([userId])
+}
+
+// Native/web push registration token. One row per device token; re-registration
+// upserts on `token` and bumps lastSeenAt. Pruned when the push provider reports
+// a token as unregistered/invalid, and cleared on logout. Scoped by familyId so
+// fan-out can target a single household even when a user spans families.
+model PushToken {
+  id         String       @id @default(uuid())
+  familyId   String
+  family     Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   PushPlatform
+  token      String       @unique
+  lastSeenAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  @@index([familyId])
+  @@index([userId])
+}
+
+// An in-app-purchase subscription owned by a single store account (the purchasing
+// user). Keyed by the stable store transaction id (Apple original_transaction_id /
+// Google purchaseToken). Status/expiresAt are kept fresh by receipt verification +
+// server-to-server notifications, mirroring the StripeEvent-driven Family billing
+// fields. A subscription can fund more than one family via IapEntitlementGrant.
+model IapSubscription {
+  id                    String                @id @default(uuid())
+  purchaserUserId       String
+  purchaser             User                  @relation("IapPurchaser", fields: [purchaserUserId], references: [id], onDelete: Cascade)
+  platform              PushPlatform          // IOS | ANDROID
+  productId             String
+  originalTransactionId String                @unique
+  status                SubscriptionStatus    @default(INCOMPLETE)
+  expiresAt             DateTime?
+  autoRenewing          Boolean               @default(true)
+  lastVerifiedAt        DateTime              @default(now())
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  grants IapEntitlementGrant[]
+
+  @@index([purchaserUserId])
+  @@index([status])
+}
+
+// Revocable link from one store subscription to one family. A family is IAP-paid
+// when it has an ACTIVE grant whose subscription is itself active/unexpired.
+// REVOKED detaches the family without touching the subscription (the purchaser's
+// other families keep their entitlement). grantedBy/revokedBy are User ids stored
+// as plain strings, matching the audit-field convention used elsewhere
+// (billingOverrideBy, claimedByUserId).
+model IapEntitlementGrant {
+  id              String          @id @default(uuid())
+  subscriptionId  String
+  subscription    IapSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  familyId        String
+  family          Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  status          GrantStatus     @default(ACTIVE)
+  grantedByUserId String
+  grantedAt       DateTime        @default(now())
+  revokedByUserId String?
+  revokedAt       DateTime?
+
+  @@unique([subscriptionId, familyId])
+  @@index([familyId])
+  @@index([status])
 }

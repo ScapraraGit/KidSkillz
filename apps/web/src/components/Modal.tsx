@@ -79,7 +79,6 @@ export function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4"
-      onClick={onClose}
       role="presentation"
     >
       <div
@@ -89,7 +88,6 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         className="w-full max-w-lg max-h-[92vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 focus:outline-none"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h3 className="font-semibold">{title}</h3>

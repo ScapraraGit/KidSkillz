@@ -11,9 +11,21 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "cap:sync": "pnpm build && cap sync",
+    "cap:android": "pnpm build && cap sync android && cap open android",
+    "cap:ios": "pnpm build && cap sync ios && cap open ios",
+    "cap:dev:android": "cross-env CAP_ENV=dev vite build --mode mobile && cross-env CAP_ENV=dev cap sync android && cap open android",
+    "cap:dev:ios": "cross-env CAP_ENV=dev vite build --mode mobile && cross-env CAP_ENV=dev cap sync ios && cap open ios"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.0",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "@capacitor/keyboard": "^8.0.3",
+    "@capacitor/push-notifications": "^8.1.1",
     "@chorechampz/shared": "workspace:*",
     "@dicebear/collection": "^9.4.2",
     "@dicebear/core": "^9.4.2",
@@ -33,6 +45,8 @@
     "zxcvbn": "4.4.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.3.4",
     "@playwright/test": "1.50.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
@@ -44,6 +58,7 @@
     "@types/zxcvbn": "4.4.5",
     "@vitejs/plugin-react": "4.3.3",
     "autoprefixer": "10.4.20",
+    "cross-env": "^10.1.0",
     "jsdom": "^25.0.1",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.14",

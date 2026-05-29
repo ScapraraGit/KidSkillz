@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuthUserDTO, FamilySettings } from "@chorechampz/shared";
+import { authPersistStorage } from "../lib/secureStore";
 
 interface AuthState {
   token: string | null;
@@ -29,6 +30,6 @@ export const useAuth = create<AuthState>()(
       setUser: (user) => set({ user }),
       logout: () => set({ token: null, refreshToken: null, user: null, settings: null }),
     }),
-    { name: "chorechampz-auth" },
+    { name: "chorechampz-auth", storage: createJSONStorage(() => authPersistStorage) },
   ),
 );

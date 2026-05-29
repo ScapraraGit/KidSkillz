@@ -1,5 +1,8 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "./store/auth";
+import { registerPushForSession, teardownPushForSession, setPushNavigateHandler } from "./lib/push";
 import { AppLayout } from "./components/AppLayout";
 import { Login } from "./pages/Login";
 import { Landing } from "./pages/Landing";
@@ -36,13 +39,36 @@ import { BetaWelcome } from "./pages/beta/Welcome";
 import { BetaChecklist } from "./pages/beta/Checklist";
 import { BetaFeedback } from "./pages/beta/Feedback";
 
+// Native shells skip the marketing landing — a store user already chose the app,
+// so root drops straight to login. Web keeps the landing page.
+const isNativeApp = Capacitor.isNativePlatform();
+
 export default function App() {
   const { token, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Native push lifecycle: register the FCM token when a session exists, tear it
+  // down on logout. Token-presence transitions are the chokepoint, so every login
+  // path (parent, child, OAuth, refresh) is covered without per-page wiring.
+  useEffect(() => {
+    setPushNavigateHandler((path) => navigate(path));
+  }, [navigate]);
+
+  useEffect(() => {
+    let active = !!useAuth.getState().token;
+    if (active) void registerPushForSession();
+    return useAuth.subscribe((s) => {
+      const now = !!s.token;
+      if (now && !active) void registerPushForSession();
+      else if (!now && active) void teardownPushForSession();
+      active = now;
+    });
+  }, []);
 
   if (!token || !user) {
     return (
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={isNativeApp ? <Navigate to="/login" replace /> : <Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Login initialMode="SIGNUP" />} />
         <Route path="/child" element={<Login initialMode="CHILD" />} />

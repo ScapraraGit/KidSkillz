@@ -64,6 +64,8 @@ export interface FamilySettings {
   photoRetentionDays: number;
   /** Mirror in-app notifications to email for any user with an email on file. Default off. */
   emailNotifications?: boolean;
+  /** Mirror in-app notifications to native push for any user's registered devices. Default off. */
+  pushNotifications?: boolean;
   /** When active, blocks new completion submissions and freezes streak loss family-wide. */
   vacationMode?: {
     active: boolean;
@@ -102,6 +104,7 @@ export const DEFAULT_FAMILY_SETTINGS: FamilySettings = {
   },
   photoRetentionDays: 90,
   emailNotifications: false,
+  pushNotifications: false,
   vacationMode: { active: false, startsAt: null, endsAt: null, note: null },
   siblingPrivacy: false,
   penaltiesEnabled: false,

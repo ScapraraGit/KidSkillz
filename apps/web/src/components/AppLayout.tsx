@@ -99,6 +99,10 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
 
   const native = isNative();
   const primaryRoutes = role === "CHILD" ? CHILD_PRIMARY_ROUTES : PARENT_PRIMARY_ROUTES;
+  // Tab destinations are same-level navigation → cross-fade feels right.
+  // Drill-ins (any other path) get a slide-from-right push transition.
+  const tabPaths = new Set([...primaryRoutes, MORE_TAB.to]);
+  const isTabNav = tabPaths.has(loc.pathname);
   // Native bottom bar: the curated primary destinations (resolved from `links`)
   // plus a synthetic More tab. NOT a slice — every primary route is intentional,
   // and overflow (Rewards, Members, …) lives on the More screen, never dropped.
@@ -311,7 +315,12 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
 
       <main
         className={clsx(
-          "flex-1 max-w-6xl mx-auto w-full px-4 py-6 animate-page-in",
+          "flex-1 max-w-6xl mx-auto w-full px-4 py-6",
+          // Web: subtle upward-nudge entry. Native tab switch: cross-fade (same
+          // level). Native drill-in: slide from right (push feel).
+          !native && "animate-page-in",
+          native && isTabNav && "animate-fade-in",
+          native && !isTabNav && "animate-slide-in-right",
           // Reserve space for the fixed bottom tab bar (h-16) plus the home
           // indicator safe area so scrollable content doesn't hide under it.
           native && "pb-[calc(4rem+env(safe-area-inset-bottom))]",

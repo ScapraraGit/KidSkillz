@@ -171,7 +171,26 @@ Use `pt-safe`, `pb-safe`, `pl-safe`, `pr-safe` utility classes (defined in `inde
 
 ### Bottom-sheet modals
 
-`Modal.tsx` already renders as a bottom sheet on native (`animate-sheet-up`, drag handle, `pb-safe`, `rounded-t-2xl`). No extra work needed — just use `<Modal>` normally.
+`Modal.tsx` already renders as a bottom sheet on native (`animate-sheet-up`, drag handle, `pb-safe`, `rounded-t-2xl`). No extra work needed — just use `<Modal>` normally. Keyboard auto-shifts the sheet up because `capacitor.config.ts` sets `Keyboard.resize = "body"`.
+
+### Status bar
+
+`initNativeUI()` in [lib/boot.ts](../../../apps/web/src/lib/boot.ts) runs once on app mount (called from `App.tsx`). Sets `Style.Dark` (dark icons on white bg) everywhere and `setBackgroundColor("#ffffff")` on Android only. **Do not call `StatusBar` APIs directly in pages** — one central setup. If a screen genuinely needs a different style (e.g. a dark full-screen photo viewer), call `StatusBar.setStyle()` on entry and restore in the `useEffect` cleanup.
+
+### Keyboard
+
+Global config in `capacitor.config.ts` (`Keyboard.resize: "body"`) — pushes the document up when the keyboard opens. No per-component `@capacitor/keyboard` calls needed for standard inputs. Only reach for the keyboard plugin directly when you need the exact keyboard height (e.g. an absolutely-positioned overlay), and always clean up the event listener.
+
+### Back navigation and drill-in routes
+
+`NativeHeader` automatically shows a back chevron when `window.history.state?.idx > 0` (set by React Router 6 on every push). No extra code needed in leaf pages. To create a new drill-in:
+
+1. Add a `<Route path="/parent/foo/:id" element={<FooDetail />} />` **inside** the `AppLayout` outlet in [App.tsx](../../../apps/web/src/App.tsx).
+2. Navigate via `useNavigate()` (not `<Link>` for imperative button actions), passing `haptic("light")` on native before the `nav()` call.
+3. The page gets `animate-slide-in-right` automatically (AppLayout detects non-tab paths). Screen title resolves from `resolveScreenTitle` prefix fallback.
+4. `resolveScreenTitle` resolves `/parent/foo/:id` → the parent route's label via longest-prefix match — no `EXTRA_TITLES` entry needed for simple drill-ins.
+
+Add `PullToRefresh` + `SkeletonCard` loading state to every new drill-in (same pattern as `ChildDetail.tsx`).
 
 ## 9. Env vars
 

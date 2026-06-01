@@ -24,6 +24,22 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: isDev ? "http" : "https",
   },
+  plugins: {
+    // Resize the document body (not just the viewport) when the software
+    // keyboard appears. This pushes fixed-bottom elements — including the
+    // bottom-sheet Modal and the bottom tab bar — up above the keyboard
+    // instead of getting hidden beneath it.
+    Keyboard: {
+      resize: "body",
+      resizeOnFullScreen: true,
+    },
+    // Auto-hide splash on app start; initNativeUI() in boot.ts manages the
+    // status bar style so the white header and dark icons match on every screen.
+    SplashScreen: {
+      launchAutoHide: true,
+      launchShowDuration: 500,
+    },
+  },
 };
 
 export default config;

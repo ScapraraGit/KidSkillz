@@ -45,6 +45,17 @@ You review changes to ChoreChampz's `apps/web` for Capacitor mobile-shell correc
 
 13. **Banner count on native.** `AppLayout` banners block must show at most 1 strip on native (caregiver > email-verify > trial). Flag if the ternary is removed or if `{banners}` is replaced with 3 unconditional renders without a native guard.
 
+14. **Status-bar init is fire-and-forget from `App.tsx`.** `initNativeUI()` from [lib/boot.ts](apps/web/src/lib/boot.ts) is called in a `useEffect` with no deps on mount and must remain `void` (not awaited). Flag if:
+    - it's moved to block render (awaited in `main.tsx` or `awaitBoot`),
+    - the try/catch inside is removed (could crash on web builds or missing native dep),
+    - `StatusBar.setBackgroundColor` is called unconditionally instead of inside `getPlatform() === "android"` (method is Android-only).
+
+15. **Keyboard resize is `"body"` in `capacitor.config.ts`.** Required so bottom-sheet modals and the tab bar stay above the software keyboard. Flag if `Keyboard.resize` is changed to `"none"` or removed.
+
+16. **Back button uses `history.state.idx`, not a custom stack.** `NativeHeader` reads `window.history.state?.idx ?? 0` to decide whether to show the back chevron. Flag if a separate navigation-stack store is introduced — React Router 6 already tracks depth natively. Flag if `nav(-1)` is replaced with `nav("/some/hardcoded/path")` (breaks browser history stack; use `navigate(-1)` or navigate to the originating route via state).
+
+17. **Drill-in routes must register inside `AppLayout` outlet.** `/parent/children/:childId` and any future detail routes must be `<Route>` children of `<Route element={<AppLayout role="PARENT" />}>` so they inherit the header, bottom tab bar, and outlet context. Flag if a detail route is registered at the top level outside `AppLayout`.
+
 ## Output format
 
 One finding per line:

@@ -55,6 +55,34 @@ body,
   animation: pageSlideIn 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+/* Native drill-in: content slides from the right (iOS/Android push transition). */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slideInRight 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Native tab switch: cross-fade so same-level tabs don't feel like navigation. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 160ms ease both;
+}
+
 @keyframes sheetSlideUp {
   from {
     transform: translateY(100%);

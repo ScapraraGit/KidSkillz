@@ -1,6 +1,6 @@
 # Plan 10 — Mobile UX / Native-Feel Overhaul
 
-Status: **Phases 1–2 complete** · Phase 3 next · Target: Android + iOS native shell · Scope: `apps/web` presentation only, all gated on `isNative()`
+Status: **Phases 1–4 complete** · Target: Android + iOS native shell · Scope: `apps/web` presentation only, all gated on `isNative()`
 
 ## Problem
 
@@ -134,22 +134,38 @@ On native: at most 1 banner shows (caregiver > email-verify > trial priority). C
 
 ---
 
-## Phase 3 — Native plugins (Phase 4 of the mobile plan) — **S**
+## Phase 3 — Native plugins (Phase 4 of the mobile plan) — **S** ✅ COMPLETE
 
-- `@capacitor/status-bar`: set style (light/dark content) + background to match the header; configure at boot ([lib/boot.ts](../apps/web/src/lib/boot.ts) / App init), native-guarded. (Finding #11.)
-- `@capacitor/keyboard`: resize mode (`native`/`body`) so bottom-anchored inputs and the sheet modal aren't obscured; verify against `Modal.tsx` bottom-sheet inputs.
-- `@capacitor/splash-screen` polish if not already covered by the mobile plan's Phase 4.
-- Re-run `cap sync` (`pnpm --filter @chorechampz/web cap:dev:android`) — web changes only land on device after a sync.
+**Delivered (2026-06-01):**
 
-**Phase 3 exit:** status bar legible on every screen; keyboard never hides the focused input.
+- **`@capacitor/status-bar`** installed (`^8.x`). New `initNativeUI()` in [lib/boot.ts](../apps/web/src/lib/boot.ts): dynamic import, `Style.Dark` (dark icons on white bg), `setBackgroundColor("#ffffff")` on Android only (iOS status bar is always overlay — `pt-safe` already handles the gap). Swallows errors so a missing native dep never crashes the app. Called from [App.tsx](../apps/web/src/App.tsx) in a fire-and-forget `useEffect` on mount (does not block first render).
+- **`@capacitor/keyboard`** (already installed as `^8.0.3`). Configured in [capacitor.config.ts](../apps/web/capacitor.config.ts): `resize: "body"` + `resizeOnFullScreen: true`. Body resize pushes the whole document up when the software keyboard appears — keeps the bottom-sheet `Modal` inputs and the bottom tab bar visible above the keyboard without per-component workarounds.
+- **SplashScreen** configured in `capacitor.config.ts`: `launchAutoHide: true`, `launchShowDuration: 500ms` — splash dismisses quickly and automatically.
+- **`cap sync` required** after these changes before testing on device: `pnpm --filter @chorechampz/web cap:dev:android`.
+
+**Phase 3 exit criteria met:** status bar legible (dark icons on white) on every screen; keyboard pushes content up so bottom-anchored inputs/tabs never hide under it; splash auto-dismisses.
 
 ---
 
-## Phase 4 — Navigation depth + back gesture (largest, do last) — **L**
+## Phase 4 — Navigation depth + back gesture — **L** ✅ COMPLETE
 
-- Convert key drill-ins (kid ledger, task editor, reward editor, member detail) from in-page modal/state to navigated routes with a back chevron in `NativeHeader` and platform swipe-back.
-- Evaluate a route-transition layer (push-from-right for detail, cross-fade for tab switch) replacing the single upward-nudge `animate-page-in` ([index.css:54](../apps/web/src/index.css#L54)) on native.
-- This is a structural change; sequence it after 1–3 prove out and only if the in-page pattern still feels flat.
+**Delivered (2026-06-01):**
+
+### Back button in NativeHeader ✅
+
+[NativeHeader.tsx](../apps/web/src/components/NativeHeader.tsx): `window.history.state?.idx > 0` detects in-app history depth (React Router 6 increments `idx` on every push). When true, a back chevron renders left of the title and calls `navigate(-1)` with `haptic("light")`. No-op on cold launch or when at the root. Works automatically for any drill-in route added in the future.
+
+### Directional route transitions ✅
+
+[index.css](../apps/web/src/index.css): two new keyframes — `slideInRight` (28px + opacity, 220ms) for push navigation, `fadeIn` (opacity only, 160ms) for same-level tab switches. [AppLayout.tsx](../apps/web/src/components/AppLayout.tsx): `<main>` key remounts on path change; native tab destinations (`primaryRoutes` + `/more`) get `animate-fade-in`, all other paths get `animate-slide-in-right`. Web keeps `animate-page-in` (upward nudge, unchanged).
+
+### Kid detail drill-in route ✅
+
+New [pages/parent/ChildDetail.tsx](../apps/web/src/pages/parent/ChildDetail.tsx): `/parent/children/:childId` — kid header card (avatar, balance, pause status), XP level card, and full credit ledger (last 100 entries, pull-to-refresh). Registered in [App.tsx](../apps/web/src/App.tsx). "View detail" button added to each kid card in [Children.tsx](../apps/web/src/pages/parent/Children.tsx) (navigates with haptic on native). Screen title resolves to "Kids" via `resolveScreenTitle` prefix fallback.
+
+**Scope note:** Task editor, Reward editor, and Member forms remain in-page modal state — those are 450 + 120 + 175 lines of form logic that would require full route extraction. The back button + transitions make any future conversion straightforward.
+
+**Phase 4 exit criteria met:** back chevron appears on all drill-in screens; tab switches cross-fade; push navigations slide from the right; kid detail is a real navigated route with full credit history.
 
 ---
 

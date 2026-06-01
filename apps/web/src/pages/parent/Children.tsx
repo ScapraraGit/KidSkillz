@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, inputCls } from "../../components/ui";
 import { Modal } from "../../components/Modal";
@@ -8,6 +8,7 @@ import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio, randomAvatarConfig } from "../../components/AvatarStudio";
 import { Tooltip } from "../../components/Tooltip";
 import { useFeatures } from "../../hooks/useFeatures";
+import { isNative, haptic } from "../../lib/native";
 import { getPet, petStageForLevel, PET_STAGE_NAMES } from "../../lib/pets";
 import type {
   AvatarConfig,
@@ -27,6 +28,7 @@ interface ChallengeRow {
 
 export function ParentChildren() {
   const qc = useQueryClient();
+  const nav = useNavigate();
   const childrenQ = useQuery({
     queryKey: ["children"],
     queryFn: () => api<{ children: ChildDTO[] }>("/children"),
@@ -78,6 +80,18 @@ export function ParentChildren() {
             </div>
             <KidGamificationStrip child={c} />
             <div className="flex flex-wrap gap-2">
+              <Tooltip label={`View ${c.name}'s credit history and level`}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (isNative()) void haptic("light");
+                    nav(`/parent/children/${c.id}`);
+                  }}
+                >
+                  View detail
+                </Button>
+              </Tooltip>
               <Tooltip label={`Create a new task assigned to ${c.name}`}>
                 <Button size="sm" onClick={() => setNewTaskFor(c)}>
                   Add task

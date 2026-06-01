@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "./store/auth";
 import { registerPushForSession, teardownPushForSession, setPushNavigateHandler } from "./lib/push";
+import { initNativeUI } from "./lib/boot";
 import { AppLayout } from "./components/AppLayout";
 import { Login } from "./pages/Login";
 import { Landing } from "./pages/Landing";
@@ -11,6 +12,7 @@ import { ParentApprovals } from "./pages/parent/Approvals";
 import { ParentTasks } from "./pages/parent/Tasks";
 import { ParentRewards } from "./pages/parent/Rewards";
 import { ParentChildren } from "./pages/parent/Children";
+import { ChildDetail } from "./pages/parent/ChildDetail";
 import { ParentLedger } from "./pages/parent/Ledger";
 import { ParentSettings } from "./pages/parent/Settings";
 import { FamilyMembers } from "./pages/parent/FamilyMembers";
@@ -47,6 +49,12 @@ const isNativeApp = Capacitor.isNativePlatform();
 export default function App() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
+
+  // Configure native status-bar style once on mount. Fire-and-forget — any
+  // failure is swallowed inside initNativeUI, so no error boundary needed.
+  useEffect(() => {
+    void initNativeUI();
+  }, []);
 
   // Native push lifecycle: register the FCM token when a session exists, tear it
   // down on logout. Token-presence transitions are the chokepoint, so every login
@@ -107,6 +115,7 @@ export default function App() {
           <Route path="/parent/tasks" element={<ParentTasks />} />
           <Route path="/parent/rewards" element={<ParentRewards />} />
           <Route path="/parent/children" element={<ParentChildren />} />
+          <Route path="/parent/children/:childId" element={<ChildDetail />} />
           <Route path="/parent/ledger" element={<ParentLedger />} />
           <Route path="/parent/settings" element={<ParentSettings />} />
           <Route path="/parent/members" element={<FamilyMembers />} />

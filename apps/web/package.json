@@ -27,6 +27,7 @@
     "@capacitor/ios": "^8.3.4",
     "@capacitor/keyboard": "^8.0.3",
     "@capacitor/push-notifications": "^8.1.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@chorechampz/shared": "workspace:*",
     "@dicebear/collection": "^9.4.2",
     "@dicebear/core": "^9.4.2",

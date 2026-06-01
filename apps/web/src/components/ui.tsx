@@ -1,6 +1,12 @@
 import clsx from "clsx";
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, MouseEvent, ReactNode } from "react";
 import { InfoButton } from "./InfoButton";
+import { isNative, haptic } from "../lib/native";
+
+// On native (touch only) all interactive elements get 44px min-target — iOS HIG
+// and Android Material both call out 44pt/48dp. Web keeps compact sizing because
+// pointer precision is higher and dense desktop UIs are the dominant use case.
+const TOUCH_MIN = isNative() ? "min-h-[44px] min-w-[44px]" : "";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   info?: { title: string; body: ReactNode; tone?: "default" | "onDark" };
@@ -31,13 +37,19 @@ export function PageHeader({
   subtitle?: ReactNode;
   right?: ReactNode;
 }) {
+  // On native the contextual title bar (NativeHeader) already shows the screen
+  // title, so a plain-string PageHeader title would be a duplicate — suppress it.
+  // A ReactNode title (e.g. the child dashboard's avatar+greeting hero) is NOT a
+  // duplicate and always renders. If nothing's left to show, render nothing.
+  const hideTitle = isNative() && typeof title === "string";
+  if (hideTitle && !subtitle && !right) return null;
   return (
     // Stack vertically on small screens so the action group below the title
     // gets full width — at sm+ it returns to the desktop side-by-side layout.
     <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="text-slate-500 mt-1">{subtitle}</p>}
+        {!hideTitle && <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>}
+        {subtitle && <p className={clsx("text-slate-500", !hideTitle && "mt-1")}>{subtitle}</p>}
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </div>
@@ -49,11 +61,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md" | "lg";
 }
 
-export function Button({ variant = "primary", size = "md", className, ...rest }: ButtonProps) {
+export function Button({ variant = "primary", size = "md", className, onClick, ...rest }: ButtonProps) {
+  function handleClick(e: MouseEvent<HTMLButtonElement>) {
+    if (isNative()) void haptic("light");
+    onClick?.(e);
+  }
   return (
     <button
+      onClick={handleClick}
       className={clsx(
         "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
+        TOUCH_MIN,
         size === "sm" && "px-3 py-1.5 text-sm",
         size === "md" && "px-4 py-2 text-sm",
         size === "lg" && "px-5 py-3 text-base",
@@ -161,5 +179,38 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   );
 }
 
-export const inputCls =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500";
+export const inputCls = clsx(
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500",
+  isNative() && "min-h-[44px] text-base",
+);
+
+// Pick the right software-keyboard layout. iOS/Android honor inputMode, so a
+// number field shows a numeric pad instead of the full QWERTY. Use these as the
+// `inputMode` prop on `<input>` for credit overrides, PINs, codes, etc.
+export const inputModes = {
+  numeric: "numeric" as const,
+  decimal: "decimal" as const,
+  tel: "tel" as const,
+  email: "email" as const,
+  search: "search" as const,
+  url: "url" as const,
+};
+
+// Animated placeholder block for loading states. Matches the slate-200 shimmer
+// convention used elsewhere; className lets callers set width + height.
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={clsx("animate-pulse rounded-lg bg-slate-200", className)} aria-hidden="true" />;
+}
+
+// Multi-line skeleton card for when you need a card-shaped loading state.
+export function SkeletonCard({ lines = 3, className }: { lines?: number; className?: string }) {
+  return (
+    <div
+      className={clsx("bg-white rounded-2xl shadow-soft border border-slate-200/60 p-5 space-y-3", className)}
+    >
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} className={clsx("h-4", i === 0 ? "w-1/3" : i === lines - 1 ? "w-2/3" : "w-full")} />
+      ))}
+    </div>
+  );
+}

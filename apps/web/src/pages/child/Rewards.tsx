@@ -9,12 +9,16 @@ import {
   Field,
   PageHeader,
   ProgressBar,
+  Skeleton,
+  SkeletonCard,
   inputCls,
 } from "../../components/ui";
+import { PullToRefresh } from "../../components/PullToRefresh";
 import { Modal } from "../../components/Modal";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { celebrate as fireCelebrate } from "../../lib/celebrate";
+import { haptic } from "../../lib/native";
 import type { ChildDTO, RewardDTO } from "@chorechampz/shared";
 
 export function ChildRewards() {
@@ -40,113 +44,134 @@ export function ChildRewards() {
     },
   });
 
-  if (!me || !rewardsQ.data) return <div>Loading…</div>;
+  async function refreshAll() {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["children"] }),
+      qc.invalidateQueries({ queryKey: ["rewards"] }),
+    ]);
+  }
+
+  if (!me || !rewardsQ.data) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-1/2" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <SkeletonCard key={i} lines={4} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const visibleRewards = rewardsQ.data.rewards.filter(
     (r) => r.eligibleChildIds.length === 0 || r.eligibleChildIds.includes(me.id),
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Rewards"
-        subtitle={
-          me.redemptionPaused
-            ? "Redemption is paused right now — but keep earning!"
-            : `You have ${me.balance} credits to spend.`
-        }
-      />
-
-      {me.redemptionPaused && (
-        <Card className="bg-rose-50 border-rose-200">
-          <div className="text-sm text-rose-800">
-            <strong>Redemption paused.</strong> You can still earn credits and bank them for later.
-          </div>
-        </Card>
-      )}
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleRewards.length === 0 && <EmptyState title="No rewards available." />}
-        {visibleRewards.map((r) => {
-          const affordable = me.balance >= r.creditCost;
-          const progressPct = Math.min(100, Math.round((me.balance / r.creditCost) * 100));
-          return (
-            <Card key={r.id} className={r.isActive ? "" : "opacity-60"}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{r.name}</h3>
-                  <Badge color="brand">{r.type.replace("_", " ")}</Badge>
-                </div>
-                <div className="text-2xl font-bold">{r.creditCost} 🪙</div>
-              </div>
-              {r.description && <p className="text-sm text-slate-600 mt-2">{r.description}</p>}
-              <div className="mt-3">
-                <ProgressBar value={Math.min(me.balance, r.creditCost)} max={r.creditCost} />
-                <div className="text-xs text-slate-500 mt-1">
-                  {affordable
-                    ? "You can afford this!"
-                    : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
-                </div>
-              </div>
-              <Tooltip
-                label={
-                  me.redemptionPaused
-                    ? "Redemption paused — ask a parent"
-                    : !affordable
-                      ? `Need ${r.creditCost - me.balance} more credits`
-                      : "Request this reward (parent approves)"
-                }
-              >
-                <Button
-                  className="w-full mt-3"
-                  disabled={!affordable || me.redemptionPaused || !r.isActive}
-                  onClick={() => setRequesting(r)}
-                >
-                  {affordable ? "Redeem" : "Keep saving"}
-                </Button>
-              </Tooltip>
-              {(() => {
-                const isGoal = me.savingsGoalRewardId === r.id;
-                return (
-                  <Tooltip
-                    label={
-                      isGoal
-                        ? "Stop saving for this"
-                        : "Pin this as your savings goal — dashboard shows progress."
-                    }
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-2"
-                      disabled={setGoal.isPending}
-                      onClick={() => setGoal.mutate(isGoal ? null : r.id)}
-                    >
-                      {isGoal ? "★ Saving for this — unpin" : "☆ Set as savings goal"}
-                    </Button>
-                  </Tooltip>
-                );
-              })()}
-            </Card>
-          );
-        })}
-      </div>
-
-      {requesting && (
-        <RedeemModal
-          reward={requesting}
-          balance={me.balance}
-          onClose={() => setRequesting(null)}
-          onDone={() => {
-            setRequesting(null);
-            fireCelebrate("redeem", { sound: me.soundEnabled });
-            qc.invalidateQueries({ queryKey: ["dashboard"] });
-            qc.invalidateQueries({ queryKey: ["children"] });
-            qc.invalidateQueries({ queryKey: ["redemptions"] });
-          }}
+    <PullToRefresh onRefresh={refreshAll}>
+      <div className="space-y-6">
+        <PageHeader
+          title="Rewards"
+          subtitle={
+            me.redemptionPaused
+              ? "Redemption is paused right now — but keep earning!"
+              : `You have ${me.balance} credits to spend.`
+          }
         />
-      )}
-    </div>
+
+        {me.redemptionPaused && (
+          <Card className="bg-rose-50 border-rose-200">
+            <div className="text-sm text-rose-800">
+              <strong>Redemption paused.</strong> You can still earn credits and bank them for later.
+            </div>
+          </Card>
+        )}
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleRewards.length === 0 && <EmptyState title="No rewards available." />}
+          {visibleRewards.map((r) => {
+            const affordable = me.balance >= r.creditCost;
+            const progressPct = Math.min(100, Math.round((me.balance / r.creditCost) * 100));
+            return (
+              <Card key={r.id} className={r.isActive ? "" : "opacity-60"}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold">{r.name}</h3>
+                    <Badge color="brand">{r.type.replace("_", " ")}</Badge>
+                  </div>
+                  <div className="text-2xl font-bold">{r.creditCost} 🪙</div>
+                </div>
+                {r.description && <p className="text-sm text-slate-600 mt-2">{r.description}</p>}
+                <div className="mt-3">
+                  <ProgressBar value={Math.min(me.balance, r.creditCost)} max={r.creditCost} />
+                  <div className="text-xs text-slate-500 mt-1">
+                    {affordable
+                      ? "You can afford this!"
+                      : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
+                  </div>
+                </div>
+                <Tooltip
+                  label={
+                    me.redemptionPaused
+                      ? "Redemption paused — ask a parent"
+                      : !affordable
+                        ? `Need ${r.creditCost - me.balance} more credits`
+                        : "Request this reward (parent approves)"
+                  }
+                >
+                  <Button
+                    className="w-full mt-3"
+                    disabled={!affordable || me.redemptionPaused || !r.isActive}
+                    onClick={() => setRequesting(r)}
+                  >
+                    {affordable ? "Redeem" : "Keep saving"}
+                  </Button>
+                </Tooltip>
+                {(() => {
+                  const isGoal = me.savingsGoalRewardId === r.id;
+                  return (
+                    <Tooltip
+                      label={
+                        isGoal
+                          ? "Stop saving for this"
+                          : "Pin this as your savings goal — dashboard shows progress."
+                      }
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full mt-2"
+                        disabled={setGoal.isPending}
+                        onClick={() => setGoal.mutate(isGoal ? null : r.id)}
+                      >
+                        {isGoal ? "★ Saving for this — unpin" : "☆ Set as savings goal"}
+                      </Button>
+                    </Tooltip>
+                  );
+                })()}
+              </Card>
+            );
+          })}
+        </div>
+
+        {requesting && (
+          <RedeemModal
+            reward={requesting}
+            balance={me.balance}
+            onClose={() => setRequesting(null)}
+            onDone={() => {
+              setRequesting(null);
+              void haptic("success");
+              fireCelebrate("redeem", { sound: me.soundEnabled });
+              qc.invalidateQueries({ queryKey: ["dashboard"] });
+              qc.invalidateQueries({ queryKey: ["children"] });
+              qc.invalidateQueries({ queryKey: ["redemptions"] });
+            }}
+          />
+        )}
+      </div>
+    </PullToRefresh>
   );
 }
 

@@ -142,6 +142,37 @@ Before opening a PR that touches `apps/web`, grep for new `<Button` / `<button` 
 
 If your diff adds a new icon-only control and there's no `<Tooltip>` on it, the diff is incomplete.
 
+## 8b. Native-specific UI patterns
+
+These components and helpers are native-only (gated on `isNative()`) and must not affect web rendering.
+
+### Navigation
+
+- **`lib/nav.ts`** — single source of truth for link definitions, curated primary-tab routes (`PARENT_PRIMARY_ROUTES`, `CHILD_PRIMARY_ROUTES`), `MORE_TAB`, and `resolveScreenTitle`. Import link arrays from here; never define them inline in `AppLayout`.
+- **`NavIcon`** (`components/NavIcon.tsx`) — maps route → hand-rolled inline SVG. Uses `currentColor` so `text-brand-700`/`text-slate-500` tint correctly. Props: `to`, `active`, `size`. Add a new entry to the `ICONS` map when a new primary route is added.
+- **`NativeHeader`** (`components/NativeHeader.tsx`) — `sticky top-0 z-30 pt-safe` title bar showing the current screen title + `NotificationBell` + avatar → `/more`. Shown only when `isNative()` inside `AppLayout`. Title comes from `resolveScreenTitle(pathname, links)`.
+- **`More` page** (`pages/More.tsx`) — overflow nav + account actions for native. Receives `AppLayoutOutletContext` via `useOutletContext()`. When adding a new parent/child nav destination, it automatically appears here if its route is not in `primaryRoutes`.
+
+### Haptics
+
+Import `haptic` from `lib/native`. Styles: `"light"` (taps), `"medium"` (drag), `"success"/"warning"/"error"` (outcomes). Always `void haptic(...)` — it returns a Promise. Already fired on: tab switch (AppLayout), avatar/menu nav (NativeHeader), More page rows. **Add to:** approve/reject actions, redemption submit, any mutation that completes a user-initiated flow.
+
+### Pull-to-refresh
+
+Wrap page content with `<PullToRefresh onRefresh={...}>` from `components/PullToRefresh.tsx`. The `onRefresh` callback should call `qc.invalidateQueries(...)` for all queries on that page. Native-only — no-ops as a passthrough on web. Use `useQueryClient()` to get the client.
+
+### Skeleton loading
+
+Replace bare `<div>Loading…</div>` guards with `<Skeleton>` and `<SkeletonCard>` from `components/ui`. On native the loading flash is more noticeable (no SSR), so every data screen should have a skeleton matching the content shape.
+
+### Safe area
+
+Use `pt-safe`, `pb-safe`, `pl-safe`, `pr-safe` utility classes (defined in `index.css`) for any element that could overlap the device status bar or home indicator. Never hard-code pixel values for these gaps.
+
+### Bottom-sheet modals
+
+`Modal.tsx` already renders as a bottom sheet on native (`animate-sheet-up`, drag handle, `pb-safe`, `rounded-t-2xl`). No extra work needed — just use `<Modal>` normally.
+
 ## 9. Env vars
 
 If you read `import.meta.env.VITE_*` for any new variable, add a commented entry to [.env.example](../../.env.example) in the same change. Place it under the `# Web — apps/web` section with a one-line description of what it does and what happens when unset. Same rule applies for any new server-side env var read in `apps/api/src/env.ts` (under the API section).

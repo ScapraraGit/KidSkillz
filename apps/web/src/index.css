@@ -7,6 +7,65 @@ body,
 #root {
   height: 100%;
 }
+
+/* Capacitor sets `--ion-safe-area-*` on some plugins, but a portable approach
+   is the platform env() function. Tailwind arbitrary values consume these via
+   `pt-[env(safe-area-inset-top)]` etc. We expose helper classes so layout
+   templates don't repeat the env() string. */
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+  .mt-safe {
+    margin-top: env(safe-area-inset-top);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  .h-safe-top {
+    height: env(safe-area-inset-top);
+  }
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+}
+
+/* Native page transitions: applied by route changes when AppLayout is wrapped
+   in a transition group. Keeps web feel snappy (skipped on prefers-reduced-motion). */
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: pageSlideIn 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheetSlideUp 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
 body {
   font-family:
     ui-sans-serif,

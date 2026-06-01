@@ -37,6 +37,14 @@ You review changes to ChoreChampz's `apps/web` for Capacitor mobile-shell correc
 
 10. **Re-sync needed when web changes.** Native APK on the emulator/device holds the previously-synced bundle. If the diff modifies `apps/web/src/**` AND there's a related "test on device" instruction, the reviewer-of-PR (humans) need to know `cap sync` is required. Note this as `low` severity context, not a failing finding.
 
+11. **`PullToRefresh` must be a no-op on web.** `usePullToRefresh` attaches `window` touch listeners only inside `isNative()` guard in the `useEffect`. Flag if:
+    - Touch listeners are added unconditionally (without `if (!isNative()) return`),
+    - The `PullToRefresh` wrapper div renders on web (the component must return `<>{children}</>` when `!isNative()`).
+
+12. **`Skeleton`/`SkeletonCard` replace bare loading guards.** When a diff adds a new data-fetching screen (`isLoading || !data` guard), flag if it returns a bare `<div>Loading…</div>` — use `Skeleton`/`SkeletonCard` from `components/ui` instead. This is a `medium` finding (perceived quality, not a security/correctness regression).
+
+13. **Banner count on native.** `AppLayout` banners block must show at most 1 strip on native (caregiver > email-verify > trial). Flag if the ternary is removed or if `{banners}` is replaced with 3 unconditional renders without a native guard.
+
 ## Output format
 
 One finding per line:

@@ -10,10 +10,13 @@ import {
   EmptyState,
   Field,
   PageHeader,
+  SkeletonCard,
   inputCls,
 } from "../../components/ui";
 import { Tooltip } from "../../components/Tooltip";
 import { PhotoLightbox } from "../../components/PhotoLightbox";
+import { PullToRefresh } from "../../components/PullToRefresh";
+import { haptic } from "../../lib/native";
 import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechampz/shared";
 
 export function ParentApprovals() {
@@ -59,80 +62,94 @@ export function ParentApprovals() {
     queryFn: () => api<{ redemptions: RedemptionDTO[] }>("/redemptions?status=PENDING"),
   });
 
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: ["completions"] });
-    qc.invalidateQueries({ queryKey: ["initiative"] });
-    qc.invalidateQueries({ queryKey: ["redemptions"] });
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
-    qc.invalidateQueries({ queryKey: ["ledger"] });
-  };
+  async function refresh() {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["completions"] }),
+      qc.invalidateQueries({ queryKey: ["initiative"] }),
+      qc.invalidateQueries({ queryKey: ["redemptions"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard"] }),
+      qc.invalidateQueries({ queryKey: ["ledger"] }),
+    ]);
+  }
+
+  if (completionsQ.isLoading && initiativeQ.isLoading && redemptionsQ.isLoading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={3} />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Approvals" subtitle="Review what your kids submitted." />
+    <PullToRefresh onRefresh={refresh}>
+      <div className="space-y-6">
+        <PageHeader title="Approvals" subtitle="Review what your kids submitted." />
 
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Task completions</h3>
-          {(completionsQ.data?.completions.length ?? 0) > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-500">{selected.size} selected</span>
-              <Tooltip label="Approve all selected at once (no override, no kudos).">
-                <Button
-                  variant="success"
-                  size="sm"
-                  disabled={selected.size === 0 || bulk.isPending}
-                  onClick={() => bulk.mutate(Array.from(selected))}
-                >
-                  {bulk.isPending ? "Approving…" : `Approve ${selected.size || ""}`}
-                </Button>
-              </Tooltip>
-            </div>
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Task completions</h3>
+            {(completionsQ.data?.completions.length ?? 0) > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-500">{selected.size} selected</span>
+                <Tooltip label="Approve all selected at once (no override, no kudos).">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    disabled={selected.size === 0 || bulk.isPending}
+                    onClick={() => bulk.mutate(Array.from(selected))}
+                  >
+                    {bulk.isPending ? "Approving…" : `Approve ${selected.size || ""}`}
+                  </Button>
+                </Tooltip>
+              </div>
+            )}
+          </div>
+          {completionsQ.data?.completions.length === 0 ? (
+            <EmptyState title="No completions waiting." />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {completionsQ.data?.completions.map((c) => (
+                <CompletionRow
+                  key={c.id}
+                  completion={c}
+                  selected={selected.has(c.id)}
+                  onToggleSelect={() => toggleSelect(c.id)}
+                  onChange={refresh}
+                />
+              ))}
+            </ul>
           )}
-        </div>
-        {completionsQ.data?.completions.length === 0 ? (
-          <EmptyState title="No completions waiting." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {completionsQ.data?.completions.map((c) => (
-              <CompletionRow
-                key={c.id}
-                completion={c}
-                selected={selected.has(c.id)}
-                onToggleSelect={() => toggleSelect(c.id)}
-                onChange={refresh}
-              />
-            ))}
-          </ul>
-        )}
-      </Card>
+        </Card>
 
-      <Card>
-        <h3 className="font-semibold mb-3">Initiative requests</h3>
-        {initiativeQ.data?.initiative.length === 0 ? (
-          <EmptyState title="No initiative submissions." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {initiativeQ.data?.initiative.map((i) => (
-              <InitiativeRow key={i.id} initiative={i} onChange={refresh} />
-            ))}
-          </ul>
-        )}
-      </Card>
+        <Card>
+          <h3 className="font-semibold mb-3">Initiative requests</h3>
+          {initiativeQ.data?.initiative.length === 0 ? (
+            <EmptyState title="No initiative submissions." />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {initiativeQ.data?.initiative.map((i) => (
+                <InitiativeRow key={i.id} initiative={i} onChange={refresh} />
+              ))}
+            </ul>
+          )}
+        </Card>
 
-      <Card>
-        <h3 className="font-semibold mb-3">Reward redemptions</h3>
-        {redemptionsQ.data?.redemptions.length === 0 ? (
-          <EmptyState title="No reward requests." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {redemptionsQ.data?.redemptions.map((r) => (
-              <RedemptionRow key={r.id} redemption={r} onChange={refresh} />
-            ))}
-          </ul>
-        )}
-      </Card>
-    </div>
+        <Card>
+          <h3 className="font-semibold mb-3">Reward redemptions</h3>
+          {redemptionsQ.data?.redemptions.length === 0 ? (
+            <EmptyState title="No reward requests." />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {redemptionsQ.data?.redemptions.map((r) => (
+                <RedemptionRow key={r.id} redemption={r} onChange={refresh} />
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+    </PullToRefresh>
   );
 }
 
@@ -156,11 +173,17 @@ function CompletionRow({
       if (kudos.trim()) body.parentNote = kudos.trim();
       return api(`/completions/${completion.id}/approve`, { body });
     },
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("success");
+      onChange();
+    },
   });
   const reject = useMutation({
     mutationFn: (reason: string) => api(`/completions/${completion.id}/reject`, { body: { reason } }),
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("warning");
+      onChange();
+    },
   });
   const photoUrl = uploadUrl(completion.photoKey);
   const suggested = completion.suggestedAward;
@@ -205,6 +228,7 @@ function CompletionRow({
         <input
           className={`${inputCls} w-24`}
           type="number"
+          inputMode="numeric"
           min={0}
           placeholder={`${suggested?.credits ?? fullCredit}`}
           value={override}
@@ -251,11 +275,17 @@ function InitiativeRow({ initiative, onChange }: { initiative: InitiativeRequest
       api(`/initiative/${initiative.id}/approve`, {
         body: override ? { creditOverride: Number(override) } : {},
       }),
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("success");
+      onChange();
+    },
   });
   const reject = useMutation({
     mutationFn: () => api(`/initiative/${initiative.id}/reject`, { body: {} }),
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("warning");
+      onChange();
+    },
   });
 
   return (
@@ -298,11 +328,17 @@ function InitiativeRow({ initiative, onChange }: { initiative: InitiativeRequest
 function RedemptionRow({ redemption, onChange }: { redemption: RedemptionDTO; onChange: () => void }) {
   const approve = useMutation({
     mutationFn: () => api(`/redemptions/${redemption.id}/approve`, { body: {} }),
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("success");
+      onChange();
+    },
   });
   const reject = useMutation({
     mutationFn: () => api(`/redemptions/${redemption.id}/reject`, { body: {} }),
-    onSuccess: onChange,
+    onSuccess: () => {
+      void haptic("warning");
+      onChange();
+    },
   });
 
   return (

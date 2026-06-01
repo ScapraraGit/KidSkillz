@@ -19,8 +19,8 @@ const addListener = vi.fn(async (event: string, cb: (arg: unknown) => void) => {
   listeners.set(event, cb);
   return { remove: vi.fn() };
 });
-const checkPermissions = vi.fn(async () => ({ receive: "granted" as const }));
-const requestPermissions = vi.fn(async () => ({ receive: "granted" as const }));
+const checkPermissions = vi.fn(async () => ({ receive: "granted" as "granted" | "denied" | "prompt" }));
+const requestPermissions = vi.fn(async () => ({ receive: "granted" as "granted" | "denied" | "prompt" }));
 const register = vi.fn(async () => {});
 
 vi.mock("@capacitor/push-notifications", () => ({

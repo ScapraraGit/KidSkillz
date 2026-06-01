@@ -17,45 +17,25 @@ import { UpgradePrompt } from "./UpgradePrompt";
 import { TermsGate } from "./TermsGate";
 import { HouseholdAckModal } from "./HouseholdAckModal";
 import { LegalFooter } from "./LegalFooter";
+import { NativeHeader } from "./NativeHeader";
+import { NavIcon } from "./NavIcon";
 import { childTour, parentTour } from "../lib/tours";
+import {
+  parentLinks,
+  caregiverLinks,
+  childLinks,
+  PARENT_PRIMARY_ROUTES,
+  CHILD_PRIMARY_ROUTES,
+  MORE_TAB,
+  resolveScreenTitle,
+  type NavLinkDef,
+  type AppLayoutOutletContext,
+} from "../lib/nav";
+import { isNative, haptic } from "../lib/native";
 import clsx from "clsx";
 import type { MeResponseDTO } from "@chorechampz/shared";
 
-interface NavLinkDef {
-  to: string;
-  label: string;
-  end?: boolean;
-  id?: string;
-  tip?: string;
-}
-
 const BILLING_UI = (import.meta.env.VITE_BILLING_ENABLED as string) === "true";
-
-const parentLinks: NavLinkDef[] = [
-  { to: "/parent", label: "Dashboard", end: true, tip: "Family overview, balances, recent activity" },
-  { to: "/parent/approvals", label: "Approvals", tip: "Review pending chores and redemptions" },
-  { to: "/parent/tasks", label: "Tasks", id: "nav-tasks", tip: "Create and manage chore templates" },
-  { to: "/parent/rewards", label: "Rewards", id: "nav-rewards", tip: "Manage the reward catalog" },
-  { to: "/parent/challenges", label: "Challenges", tip: "Daily and weekly bonus missions" },
-  { to: "/parent/children", label: "Kids", tip: "Add kids, edit per-child settings, view ledger" },
-  { to: "/parent/members", label: "Members", tip: "Invite parents and caregivers" },
-];
-
-// Caregivers see a reduced nav — no Settings, no Members.
-const caregiverLinks: NavLinkDef[] = [
-  { to: "/parent", label: "Dashboard", end: true, tip: "Family overview" },
-  { to: "/parent/approvals", label: "Approvals", tip: "Review pending chores and redemptions" },
-  { to: "/parent/tasks", label: "Tasks", tip: "View chore templates" },
-  { to: "/parent/rewards", label: "Rewards", tip: "View reward catalog" },
-  { to: "/parent/children", label: "Kids", tip: "View kid profiles and ledger" },
-];
-
-const childLinks: NavLinkDef[] = [
-  { to: "/me", label: "My Day", end: true, tip: "Today's chores and your balance" },
-  { to: "/me/rewards", label: "Rewards", tip: "Spend credits on rewards" },
-  { to: "/me/initiative", label: "Initiative", tip: "Log extra work you did on your own" },
-  { to: "/me/activity", label: "Activity", tip: "Your credit history" },
-];
 
 export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const user = useAuth((s) => s.user);
@@ -78,7 +58,7 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   const showUpgrade =
     BILLING_UI && role === "PARENT" && !isCaregiver && billingQ.data?.entitlement.source === "TRIAL";
 
-  const links = [
+  const links: NavLinkDef[] = [
     ...baseLinks,
     ...(showUpgrade
       ? [{ to: "/parent/settings#billing", label: "Upgrade", tip: "Choose a plan before your trial ends" }]
@@ -117,6 +97,54 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
     }
   }
 
+  const native = isNative();
+  const primaryRoutes = role === "CHILD" ? CHILD_PRIMARY_ROUTES : PARENT_PRIMARY_ROUTES;
+  // Native bottom bar: the curated primary destinations (resolved from `links`)
+  // plus a synthetic More tab. NOT a slice — every primary route is intentional,
+  // and overflow (Rewards, Members, …) lives on the More screen, never dropped.
+  const tabDefs: NavLinkDef[] = native
+    ? [
+        ...primaryRoutes.map((r) => links.find((l) => l.to === r)).filter((l): l is NavLinkDef => !!l),
+        MORE_TAB,
+      ]
+    : [];
+
+  const screenTitle = resolveScreenTitle(loc.pathname, links);
+  const outletCtx: AppLayoutOutletContext = {
+    links,
+    primaryRoutes,
+    role,
+    isCaregiver,
+    isBeta: me.data?.isBeta ?? false,
+  };
+
+  // Inline status strips. On web all three stack (unchanged). On native only the
+  // highest-priority one shows — caregiver > email-verify > trial — as a single
+  // compact strip so at most 32px is consumed above the fold.
+  const showEmailVerify = role === "PARENT" && !isCaregiver && !!user && !user.emailVerifiedAt;
+  const showTrial = role === "PARENT" && !isCaregiver;
+  const banners = native ? (
+    <>
+      {isCaregiver && (
+        <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-xs px-4 py-1 text-center font-medium">
+          Caregiver session
+        </div>
+      )}
+      {!isCaregiver && showEmailVerify && <EmailVerifyBanner email={user!.email} />}
+      {!isCaregiver && !showEmailVerify && showTrial && <TrialBanner />}
+    </>
+  ) : (
+    <>
+      {isCaregiver && (
+        <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
+          Caregiver session
+        </div>
+      )}
+      {showEmailVerify && <EmailVerifyBanner email={user!.email} />}
+      {showTrial && <TrialBanner />}
+    </>
+  );
+
   return (
     <div className="min-h-full flex flex-col">
       {user && <TermsGate user={user} />}
@@ -128,157 +156,203 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
           }}
         />
       )}
-      {isCaregiver && (
-        <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-sm px-4 py-1.5 text-center">
-          Caregiver session
-        </div>
-      )}
-      {role === "PARENT" && !isCaregiver && user && !user.emailVerifiedAt && (
-        <EmailVerifyBanner email={user.email} />
-      )}
-      {role === "PARENT" && !isCaregiver && <TrialBanner />}
       <UpgradePrompt />
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🪙</span>
-            <span className="font-semibold text-slate-800">ChoreChampz</span>
-            <nav className="hidden sm:flex items-center gap-1 ml-4">
-              {links.map((l) => (
-                <Tooltip key={l.to} label={l.tip} side="bottom">
-                  <span className="inline-flex">
-                    <NavLink
-                      to={l.to}
-                      end={l.end}
-                      id={l.id}
-                      data-tour={l.id}
-                      className={({ isActive }) =>
-                        clsx(
-                          "px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                          isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
-                        )
-                      }
+
+      {native ? (
+        <>
+          <NativeHeader title={screenTitle} role={role} />
+          {banners}
+        </>
+      ) : (
+        <>
+          {banners}
+          <header className="bg-white border-b border-slate-200">
+            <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🪙</span>
+                <span className="font-semibold text-slate-800">ChoreChampz</span>
+                <nav className="hidden sm:flex items-center gap-1 ml-4">
+                  {links.map((l) => (
+                    <Tooltip key={l.to} label={l.tip} side="bottom">
+                      <span className="inline-flex">
+                        <NavLink
+                          to={l.to}
+                          end={l.end}
+                          id={l.id}
+                          data-tour={l.id}
+                          className={({ isActive }) =>
+                            clsx(
+                              "px-3 py-1.5 rounded-lg text-sm font-medium transition",
+                              isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
+                            )
+                          }
+                        >
+                          {l.label}
+                        </NavLink>
+                      </span>
+                    </Tooltip>
+                  ))}
+                </nav>
+              </div>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                {role === "CHILD" && <SoundToggle />}
+                {user && (
+                  <>
+                    <Tooltip label="Account menu" side="bottom">
+                      <button
+                        ref={menuBtnRef}
+                        type="button"
+                        data-tour="account-menu"
+                        onClick={() => setMenuOpen((v) => !v)}
+                        className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
+                      >
+                        <KidAvatar
+                          name={user.name}
+                          color={user.avatarColor}
+                          config={user.avatarConfig}
+                          size={32}
+                        />
+                        <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
+                        <span className="hidden sm:inline text-xs text-slate-400">▾</span>
+                      </button>
+                    </Tooltip>
+                    <Popover
+                      open={menuOpen}
+                      onClose={() => setMenuOpen(false)}
+                      anchor={menuBtnRef.current}
+                      placement="bottom"
+                      className="p-1 min-w-[180px]"
                     >
-                      {l.label}
-                    </NavLink>
-                  </span>
-                </Tooltip>
+                      <div className="flex flex-col">
+                        <FamilySwitcher onSwitched={() => setMenuOpen(false)} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setStudioOpen(true);
+                          }}
+                          className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          Edit avatar
+                        </button>
+                        {role === "PARENT" && !isCaregiver && (
+                          <Link
+                            to="/parent/settings"
+                            id="nav-settings"
+                            data-tour="nav-settings"
+                            onClick={() => setMenuOpen(false)}
+                            className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            Settings
+                          </Link>
+                        )}
+                        {role === "PARENT" && !isCaregiver && me.data?.isBeta && (
+                          <Link
+                            to="/beta"
+                            onClick={() => setMenuOpen(false)}
+                            className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            Beta tester 💜
+                          </Link>
+                        )}
+                        <div className="my-1 h-px bg-slate-100" />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setMenuOpen(false);
+                            // Best-effort: tell the server to revoke this refresh token
+                            // so a stolen one can't outlive the sign-out click. Fire-and-forget.
+                            const rt = useAuth.getState().refreshToken;
+                            if (rt) {
+                              try {
+                                await api("/auth/logout", { body: { refreshToken: rt } });
+                              } catch {
+                                /* ignore — logging out locally regardless */
+                              }
+                            }
+                            logout();
+                            nav("/login");
+                          }}
+                          className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          Sign out
+                        </button>
+                      </div>
+                    </Popover>
+                  </>
+                )}
+              </div>
+            </div>
+            {/* Web mobile: horizontal scroll-strip below the top bar. The native
+                shell uses the fixed bottom tab bar instead — this whole header is
+                web-only now. */}
+            <nav className="sm:hidden border-t border-slate-100 px-2 py-1 flex gap-1 overflow-x-auto">
+              {links.map((l) => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  end={l.end}
+                  data-tour={l.id}
+                  className={({ isActive }) =>
+                    clsx(
+                      "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium",
+                      isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
+                    )
+                  }
+                >
+                  {l.label}
+                </NavLink>
               ))}
             </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationBell />
-            {role === "CHILD" && <SoundToggle />}
-            {user && (
-              <>
-                <Tooltip label="Account menu" side="bottom">
-                  <button
-                    ref={menuBtnRef}
-                    type="button"
-                    data-tour="account-menu"
-                    onClick={() => setMenuOpen((v) => !v)}
-                    className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
-                  >
-                    <KidAvatar
-                      name={user.name}
-                      color={user.avatarColor}
-                      config={user.avatarConfig}
-                      size={32}
-                    />
-                    <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
-                    <span className="hidden sm:inline text-xs text-slate-400">▾</span>
-                  </button>
-                </Tooltip>
-                <Popover
-                  open={menuOpen}
-                  onClose={() => setMenuOpen(false)}
-                  anchor={menuBtnRef.current}
-                  placement="bottom"
-                  className="p-1 min-w-[180px]"
-                >
-                  <div className="flex flex-col">
-                    <FamilySwitcher onSwitched={() => setMenuOpen(false)} />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setStudioOpen(true);
-                      }}
-                      className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      Edit avatar
-                    </button>
-                    {role === "PARENT" && !isCaregiver && (
-                      <Link
-                        to="/parent/settings"
-                        id="nav-settings"
-                        data-tour="nav-settings"
-                        onClick={() => setMenuOpen(false)}
-                        className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                      >
-                        Settings
-                      </Link>
-                    )}
-                    {role === "PARENT" && !isCaregiver && me.data?.isBeta && (
-                      <Link
-                        to="/beta"
-                        onClick={() => setMenuOpen(false)}
-                        className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                      >
-                        Beta tester 💜
-                      </Link>
-                    )}
-                    <div className="my-1 h-px bg-slate-100" />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setMenuOpen(false);
-                        // Best-effort: tell the server to revoke this refresh token
-                        // so a stolen one can't outlive the sign-out click. Fire-and-forget.
-                        const rt = useAuth.getState().refreshToken;
-                        if (rt) {
-                          try {
-                            await api("/auth/logout", { body: { refreshToken: rt } });
-                          } catch {
-                            /* ignore — logging out locally regardless */
-                          }
-                        }
-                        logout();
-                        nav("/login");
-                      }}
-                      className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                </Popover>
-              </>
-            )}
-          </div>
-        </div>
-        <nav className="sm:hidden border-t border-slate-100 px-2 py-1 flex gap-1 overflow-x-auto">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end}
-              data-tour={l.id}
-              className={({ isActive }) =>
-                clsx(
-                  "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium",
-                  isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
-                )
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
-        </nav>
-      </header>
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
-        <Outlet />
+          </header>
+        </>
+      )}
+
+      <main
+        className={clsx(
+          "flex-1 max-w-6xl mx-auto w-full px-4 py-6 animate-page-in",
+          // Reserve space for the fixed bottom tab bar (h-16) plus the home
+          // indicator safe area so scrollable content doesn't hide under it.
+          native && "pb-[calc(4rem+env(safe-area-inset-bottom))]",
+        )}
+        key={loc.pathname}
+      >
+        <Outlet context={outletCtx} />
       </main>
-      <LegalFooter />
+      {!native && <LegalFooter />}
+      {native && (
+        <nav
+          aria-label="Primary"
+          className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 pb-safe"
+        >
+          <ul className="flex items-stretch justify-around h-16">
+            {tabDefs.map((l) => (
+              <li key={l.to} className="flex-1">
+                <NavLink
+                  to={l.to}
+                  end={l.end}
+                  data-tour={l.id}
+                  onClick={() => void haptic("light")}
+                  className={({ isActive }) =>
+                    clsx(
+                      "h-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                      isActive ? "text-brand-700" : "text-slate-500",
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <NavIcon to={l.to} active={isActive} size={24} />
+                      <span>{l.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
       {tourActive && (
         <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
       )}

@@ -11,8 +11,11 @@ import {
   Field,
   PageHeader,
   ProgressBar,
+  Skeleton,
+  SkeletonCard,
   inputCls,
 } from "../../components/ui";
+import { PullToRefresh } from "../../components/PullToRefresh";
 import { Modal } from "../../components/Modal";
 import { KidAvatar } from "../../components/KidAvatar";
 import { AvatarStudio } from "../../components/AvatarStudio";
@@ -20,6 +23,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { useFeatures } from "../../hooks/useFeatures";
 import { celebrate as fireCelebrate } from "../../lib/celebrate";
+import { haptic } from "../../lib/native";
 import { LevelCard, LevelRing } from "../../components/LevelCard";
 import { PetHero } from "../../components/PetHero";
 import { ChallengeSection } from "../../components/ChallengeCard";
@@ -83,6 +87,14 @@ export function ChildDashboard() {
   const user = useAuth((s) => s.user);
   const settings = useAuth((s) => s.settings);
   const qc = useQueryClient();
+
+  async function refreshAll() {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["dashboard", "child"] }),
+      qc.invalidateQueries({ queryKey: ["children", meId, "level"] }),
+      qc.invalidateQueries({ queryKey: ["challenges", "me"] }),
+    ]);
+  }
 
   const soundEnabled = dash.data?.child.soundEnabled ?? false;
   const timer = useActiveTimer({
@@ -151,7 +163,21 @@ export function ChildDashboard() {
     }
   }, [challengesQ.data, meId, dash.data?.child.soundEnabled]);
 
-  if (dash.isLoading || !dash.data) return <div>Loading…</div>;
+  if (dash.isLoading || !dash.data) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <SkeletonCard key={i} lines={3} />
+          ))}
+        </div>
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={5} />
+      </div>
+    );
+  }
   const d = dash.data;
   const level = levelQ.data ?? { level: 1, xp: 0, xpInLevel: 0, xpToNext: 50 };
   const isYounger = d.child.viewMode === "YOUNGER";
@@ -160,336 +186,340 @@ export function ChildDashboard() {
   const greeting = greet();
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={
-          <span className="flex items-center gap-3">
-            <Tooltip label="Design your avatar">
-              <button
-                type="button"
-                onClick={() => setStudioOpen(true)}
-                className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
-              >
-                {isYounger ? (
-                  <KidAvatar
-                    name={d.child.name}
-                    color={d.child.avatarColor}
-                    config={d.child.avatarConfig}
-                    size={56}
-                  />
-                ) : (
-                  <LevelRing level={level} size={64} stroke={4}>
+    <PullToRefresh onRefresh={refreshAll}>
+      <div className="space-y-6">
+        <PageHeader
+          title={
+            <span className="flex items-center gap-3">
+              <Tooltip label="Design your avatar">
+                <button
+                  type="button"
+                  onClick={() => setStudioOpen(true)}
+                  className="relative shrink-0 rounded-full hover:ring-2 hover:ring-brand-200 transition"
+                >
+                  {isYounger ? (
                     <KidAvatar
                       name={d.child.name}
                       color={d.child.avatarColor}
                       config={d.child.avatarConfig}
-                      size={52}
+                      size={56}
                     />
-                  </LevelRing>
-                )}
-                <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">
-                  ✏️
-                </span>
-              </button>
-            </Tooltip>
-            <span>
-              {greeting}, {d.child.name}!
-            </span>
-            {!isYounger && (
-              <span className="ml-1">
-                <LevelCard level={level} variant="compact" />
+                  ) : (
+                    <LevelRing level={level} size={64} stroke={4}>
+                      <KidAvatar
+                        name={d.child.name}
+                        color={d.child.avatarColor}
+                        config={d.child.avatarConfig}
+                        size={52}
+                      />
+                    </LevelRing>
+                  )}
+                  <span className="absolute -bottom-1 -right-1 bg-white rounded-full border border-slate-200 text-sm leading-none px-1 shadow-sm">
+                    ✏️
+                  </span>
+                </button>
+              </Tooltip>
+              <span>
+                {greeting}, {d.child.name}!
               </span>
-            )}
-          </span>
-        }
-        subtitle={
-          d.child.redemptionPaused
-            ? "Heads up: redemption is paused right now."
-            : "Earn credits and crush your day."
-        }
-      />
-
-      {isYounger ? (
-        <PetHero
-          petId={d.child.avatarConfig?.pet}
-          level={level}
-          childName={d.child.name}
-          bounceKey={petBounce}
-        />
-      ) : (
-        <LevelCard level={level} />
-      )}
-
-      {onVacation && <VacationBanner endsAt={vacation?.endsAt} note={vacation?.note} />}
-
-      {timer.timer && timerMode === "inline" && (
-        <ActiveTimerCard
-          timer={timer.timer}
-          timeLeft={timer.timeLeft}
-          expired={timer.expired}
-          onCancel={timer.cancel}
-          onExpand={() => setTimerMode("fullscreen")}
-        />
-      )}
-      {timer.timer && timerMode === "fullscreen" && (
-        <FullscreenTimer
-          timer={timer.timer}
-          timeLeft={timer.timeLeft}
-          expired={timer.expired}
-          onCancel={timer.cancel}
-          onMinimize={() => setTimerMode("inline")}
-        />
-      )}
-
-      {!onVacation && (
-        <StreakSaver
-          timezone={settings?.timezone ?? "America/Phoenix"}
-          streakDays={d.stats.streakDays}
-          openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
-          completionsToday={
-            d.todayTasks.filter((t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING")
-              .length
+              {!isYounger && (
+                <span className="ml-1">
+                  <LevelCard level={level} variant="compact" />
+                </span>
+              )}
+            </span>
+          }
+          subtitle={
+            d.child.redemptionPaused
+              ? "Heads up: redemption is paused right now."
+              : "Earn credits and crush your day."
           }
         />
-      )}
 
-      {d.child.savingsGoalRewardId && (
-        <SavingsGoal
-          rewardId={d.child.savingsGoalRewardId}
-          balance={d.child.balance}
-          weekEarned={d.stats.weekEarned}
-        />
-      )}
-
-      {challengesQ.data && (
-        <ChallengeSection rows={challengesQ.data} variant={isYounger ? "YOUNGER" : "OLDER"} />
-      )}
-
-      <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card
-          id="tile-balance"
-          className="bg-gradient-to-br from-brand-500 to-indigo-700 text-white border-0"
-          info={{
-            title: "Balance",
-            body: "Credits you have available to spend on rewards. Earn more by finishing tasks and getting initiative approved.",
-            tone: "onDark",
-          }}
-        >
-          <div className="text-sm opacity-80">Balance</div>
-          <div className="text-5xl font-bold">{d.child.balance}</div>
-          <div className="text-sm opacity-80 mt-1">credits</div>
-        </Card>
-        <Card
-          id="tile-week"
-          info={{
-            title: "This week",
-            body: "Credits earned (green) and spent (red) since Sunday in your family's timezone. Resets each Sunday.",
-          }}
-        >
-          <div className="text-xs text-slate-500">This week</div>
-          <div className="text-2xl font-bold mt-1">+{d.stats.weekEarned}</div>
-          <div className="text-xs text-slate-500">earned</div>
-          <div className="text-sm text-rose-700 mt-2">-{d.stats.weekSpent} spent</div>
-        </Card>
-        <Card
-          id="tile-streak"
-          info={{
-            title: "Streak",
-            body: "Consecutive days you've finished at least one task. Hit 3 in a row to earn the 'On a Roll' badge. Today won't break the streak until midnight.",
-          }}
-        >
-          <div className="text-xs text-slate-500">Streak</div>
-          <div className="text-2xl font-bold mt-1">🔥 {d.stats.streakDays}</div>
-          <div className="text-xs text-slate-500">{d.stats.streakDays === 1 ? "day" : "days"} in a row</div>
-        </Card>
-        <Card
-          id="tile-initiative"
-          info={{
-            title: "Initiative",
-            body: "5 points for each above-and-beyond task a parent approved in the last 30 days. Get 3 approvals for the 'Initiative Star' badge.",
-          }}
-        >
-          <div className="text-xs text-slate-500">Initiative</div>
-          <div className="text-2xl font-bold mt-1">🪙 {d.stats.initiativeScore}</div>
-          <div className="text-xs text-slate-500">{d.stats.aboveAndBeyondCount} above-and-beyond</div>
-        </Card>
-      </section>
-
-      {d.stats.badges.length > 0 && (
-        <Card
-          id="tile-badges"
-          info={{
-            title: "Badges",
-            body: "Earned automatically as you hit milestones. Saver = 50+ credits saved. On a Roll = 3-day streak. Initiative Star = 3 approvals in 30 days. Above & Beyond = 5 lifetime initiative approvals.",
-          }}
-        >
-          <div className="text-sm font-medium mb-2">Badges</div>
-          <div className="flex flex-wrap gap-2">
-            {d.stats.badges.map((b) => (
-              <Badge key={b} color="amber">
-                🏅 {b}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card
-        id="tile-today-tasks"
-        info={{
-          title: "Today's tasks",
-          body: "Chores scheduled for today. Tap 'Mark done' to submit; some need a photo or notes as proof. A parent reviews before credits are awarded.",
-        }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Today's tasks</h3>
-          <Link to="/me/initiative" className="text-sm text-brand-700 font-medium">
-            + Suggest initiative
-          </Link>
-        </div>
-        {d.todayTasks.length === 0 ? (
-          <EmptyState title="Nothing scheduled — enjoy the day!" />
+        {isYounger ? (
+          <PetHero
+            petId={d.child.avatarConfig?.pet}
+            level={level}
+            childName={d.child.name}
+            bounceKey={petBounce}
+          />
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {d.todayTasks.map((occ) => (
-              <li
-                key={`${occ.task.id}-${occ.occurrenceDate}-${occ.slotIndex}`}
-                className="py-3 flex flex-wrap items-center gap-3"
-              >
-                <div className="flex-1 min-w-[150px]">
-                  <div className="font-medium">
-                    {occ.task.title}
-                    {occ.slotLabel && (
-                      <span className="ml-2 text-xs text-slate-500 font-normal">· {occ.slotLabel}</span>
+          <LevelCard level={level} />
+        )}
+
+        {onVacation && <VacationBanner endsAt={vacation?.endsAt} note={vacation?.note} />}
+
+        {timer.timer && timerMode === "inline" && (
+          <ActiveTimerCard
+            timer={timer.timer}
+            timeLeft={timer.timeLeft}
+            expired={timer.expired}
+            onCancel={timer.cancel}
+            onExpand={() => setTimerMode("fullscreen")}
+          />
+        )}
+        {timer.timer && timerMode === "fullscreen" && (
+          <FullscreenTimer
+            timer={timer.timer}
+            timeLeft={timer.timeLeft}
+            expired={timer.expired}
+            onCancel={timer.cancel}
+            onMinimize={() => setTimerMode("inline")}
+          />
+        )}
+
+        {!onVacation && (
+          <StreakSaver
+            timezone={settings?.timezone ?? "America/Phoenix"}
+            streakDays={d.stats.streakDays}
+            openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
+            completionsToday={
+              d.todayTasks.filter(
+                (t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING",
+              ).length
+            }
+          />
+        )}
+
+        {d.child.savingsGoalRewardId && (
+          <SavingsGoal
+            rewardId={d.child.savingsGoalRewardId}
+            balance={d.child.balance}
+            weekEarned={d.stats.weekEarned}
+          />
+        )}
+
+        {challengesQ.data && (
+          <ChallengeSection rows={challengesQ.data} variant={isYounger ? "YOUNGER" : "OLDER"} />
+        )}
+
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card
+            id="tile-balance"
+            className="bg-gradient-to-br from-brand-500 to-indigo-700 text-white border-0"
+            info={{
+              title: "Balance",
+              body: "Credits you have available to spend on rewards. Earn more by finishing tasks and getting initiative approved.",
+              tone: "onDark",
+            }}
+          >
+            <div className="text-sm opacity-80">Balance</div>
+            <div className="text-5xl font-bold">{d.child.balance}</div>
+            <div className="text-sm opacity-80 mt-1">credits</div>
+          </Card>
+          <Card
+            id="tile-week"
+            info={{
+              title: "This week",
+              body: "Credits earned (green) and spent (red) since Sunday in your family's timezone. Resets each Sunday.",
+            }}
+          >
+            <div className="text-xs text-slate-500">This week</div>
+            <div className="text-2xl font-bold mt-1">+{d.stats.weekEarned}</div>
+            <div className="text-xs text-slate-500">earned</div>
+            <div className="text-sm text-rose-700 mt-2">-{d.stats.weekSpent} spent</div>
+          </Card>
+          <Card
+            id="tile-streak"
+            info={{
+              title: "Streak",
+              body: "Consecutive days you've finished at least one task. Hit 3 in a row to earn the 'On a Roll' badge. Today won't break the streak until midnight.",
+            }}
+          >
+            <div className="text-xs text-slate-500">Streak</div>
+            <div className="text-2xl font-bold mt-1">🔥 {d.stats.streakDays}</div>
+            <div className="text-xs text-slate-500">{d.stats.streakDays === 1 ? "day" : "days"} in a row</div>
+          </Card>
+          <Card
+            id="tile-initiative"
+            info={{
+              title: "Initiative",
+              body: "5 points for each above-and-beyond task a parent approved in the last 30 days. Get 3 approvals for the 'Initiative Star' badge.",
+            }}
+          >
+            <div className="text-xs text-slate-500">Initiative</div>
+            <div className="text-2xl font-bold mt-1">🪙 {d.stats.initiativeScore}</div>
+            <div className="text-xs text-slate-500">{d.stats.aboveAndBeyondCount} above-and-beyond</div>
+          </Card>
+        </section>
+
+        {d.stats.badges.length > 0 && (
+          <Card
+            id="tile-badges"
+            info={{
+              title: "Badges",
+              body: "Earned automatically as you hit milestones. Saver = 50+ credits saved. On a Roll = 3-day streak. Initiative Star = 3 approvals in 30 days. Above & Beyond = 5 lifetime initiative approvals.",
+            }}
+          >
+            <div className="text-sm font-medium mb-2">Badges</div>
+            <div className="flex flex-wrap gap-2">
+              {d.stats.badges.map((b) => (
+                <Badge key={b} color="amber">
+                  🏅 {b}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        <Card
+          id="tile-today-tasks"
+          info={{
+            title: "Today's tasks",
+            body: "Chores scheduled for today. Tap 'Mark done' to submit; some need a photo or notes as proof. A parent reviews before credits are awarded.",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Today's tasks</h3>
+            <Link to="/me/initiative" className="text-sm text-brand-700 font-medium">
+              + Suggest initiative
+            </Link>
+          </div>
+          {d.todayTasks.length === 0 ? (
+            <EmptyState title="Nothing scheduled — enjoy the day!" />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {d.todayTasks.map((occ) => (
+                <li
+                  key={`${occ.task.id}-${occ.occurrenceDate}-${occ.slotIndex}`}
+                  className="py-3 flex flex-wrap items-center gap-3"
+                >
+                  <div className="flex-1 min-w-[150px]">
+                    <div className="font-medium">
+                      {occ.task.title}
+                      {occ.slotLabel && (
+                        <span className="ml-2 text-xs text-slate-500 font-normal">· {occ.slotLabel}</span>
+                      )}
+                    </div>
+                    {occ.task.description && (
+                      <div className="text-xs text-slate-500">{occ.task.description}</div>
                     )}
-                  </div>
-                  {occ.task.description && (
-                    <div className="text-xs text-slate-500">{occ.task.description}</div>
-                  )}
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {occ.task.assignmentMode === "UP_FOR_GRABS" && (
-                      <Badge color="amber">🙋 Up for Grabs</Badge>
-                    )}
-                    {occ.task.assignmentMode === "TEAM" && (
-                      <Badge color="brand">👥 Team ({occ.teamJoinerIds?.length ?? 0} joined)</Badge>
-                    )}
-                    {occ.task.dueByTime && (
-                      <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
-                    )}
-                    {occ.task.kind === "ONE_TIME" && occ.task.dueAt && (
-                      <Badge color="brand">
-                        Due{" "}
-                        {new Date(occ.task.dueAt).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </Badge>
-                    )}
-                    {occ.task.proofRequirement !== "NONE" &&
-                      occ.task.proofRequirement !== "NOTES_OPTIONAL" && (
-                        <Badge color="amber">
-                          Proof: {occ.task.proofRequirement.replace(/_/g, " ").toLowerCase()}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {occ.task.assignmentMode === "UP_FOR_GRABS" && (
+                        <Badge color="amber">🙋 Up for Grabs</Badge>
+                      )}
+                      {occ.task.assignmentMode === "TEAM" && (
+                        <Badge color="brand">👥 Team ({occ.teamJoinerIds?.length ?? 0} joined)</Badge>
+                      )}
+                      {occ.task.dueByTime && (
+                        <Badge color="brand">Due by {formatTimeOfDay(occ.task.dueByTime)}</Badge>
+                      )}
+                      {occ.task.kind === "ONE_TIME" && occ.task.dueAt && (
+                        <Badge color="brand">
+                          Due{" "}
+                          {new Date(occ.task.dueAt).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
                         </Badge>
                       )}
+                      {occ.task.proofRequirement !== "NONE" &&
+                        occ.task.proofRequirement !== "NOTES_OPTIONAL" && (
+                          <Badge color="amber">
+                            Proof: {occ.task.proofRequirement.replace(/_/g, " ").toLowerCase()}
+                          </Badge>
+                        )}
+                    </div>
                   </div>
-                </div>
-                <CreditChip amount={occ.task.creditValue} />
-                {occ.completionStatus === "PENDING" ? (
-                  <Badge color="amber">Awaiting approval</Badge>
-                ) : occ.completionStatus === "APPROVED" ? (
-                  <Badge color="emerald">✓ Done</Badge>
-                ) : occ.task.assignmentMode === "TEAM" && !occ.joined ? (
-                  <TeamJoinButton occ={occ} />
-                ) : (
-                  <>
-                    <StartTimerButton
-                      taskId={occ.task.id}
-                      taskTitle={occ.task.title}
-                      defaultMinutes={occ.task.defaultDurationMinutes ?? null}
-                      disabled={!!timer.timer || onVacation}
-                      onStart={(durationMs) => {
-                        setTimerMode("fullscreen");
-                        timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs });
-                      }}
-                    />
-                    <Tooltip
-                      label={
-                        onVacation
-                          ? "Vacation mode is on — enjoy the break!"
-                          : d.child.earningPaused
-                            ? "Earning is paused — ask a parent"
-                            : "Submit this task for parent approval"
-                      }
-                    >
-                      <Button
-                        size="sm"
-                        onClick={() => setCompleting(occ)}
-                        disabled={d.child.earningPaused || onVacation}
+                  <CreditChip amount={occ.task.creditValue} />
+                  {occ.completionStatus === "PENDING" ? (
+                    <Badge color="amber">Awaiting approval</Badge>
+                  ) : occ.completionStatus === "APPROVED" ? (
+                    <Badge color="emerald">✓ Done</Badge>
+                  ) : occ.task.assignmentMode === "TEAM" && !occ.joined ? (
+                    <TeamJoinButton occ={occ} />
+                  ) : (
+                    <>
+                      <StartTimerButton
+                        taskId={occ.task.id}
+                        taskTitle={occ.task.title}
+                        defaultMinutes={occ.task.defaultDurationMinutes ?? null}
+                        disabled={!!timer.timer || onVacation}
+                        onStart={(durationMs) => {
+                          setTimerMode("fullscreen");
+                          timer.start({ taskId: occ.task.id, taskTitle: occ.task.title, durationMs });
+                        }}
+                      />
+                      <Tooltip
+                        label={
+                          onVacation
+                            ? "Vacation mode is on — enjoy the break!"
+                            : d.child.earningPaused
+                              ? "Earning is paused — ask a parent"
+                              : "Submit this task for parent approval"
+                        }
                       >
-                        Mark done
-                      </Button>
-                    </Tooltip>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+                        <Button
+                          size="sm"
+                          onClick={() => setCompleting(occ)}
+                          disabled={d.child.earningPaused || onVacation}
+                        >
+                          Mark done
+                        </Button>
+                      </Tooltip>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <h3 className="font-semibold mb-3">Recent activity</h3>
+          {d.recentLedger.length === 0 ? (
+            <EmptyState title="Nothing yet." />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {d.recentLedger.slice(0, 8).map((e) => (
+                <li key={e.id} className="py-2 flex items-center gap-3 text-sm">
+                  <span className="flex-1 text-slate-700">{e.reason}</span>
+                  <CreditChip amount={e.amount} />
+                  <span className="text-xs text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        {completing && (
+          <CompleteModal
+            occurrence={completing}
+            onClose={() => setCompleting(null)}
+            onSubmitted={(credits) => {
+              if (timer.timer?.taskId === completing.task.id) timer.cancel();
+              setCompleting(null);
+              setCelebrate(credits);
+              void haptic("success");
+              fireCelebrate("task", { sound: d.child.soundEnabled });
+              setPetBounce((n) => n + 1);
+              qc.invalidateQueries({ queryKey: ["dashboard"] });
+              qc.invalidateQueries({ queryKey: ["children", meId, "level"] });
+              qc.invalidateQueries({ queryKey: ["challenges", "me"] });
+              setTimeout(() => setCelebrate(null), 2000);
+            }}
+          />
         )}
-      </Card>
 
-      <Card>
-        <h3 className="font-semibold mb-3">Recent activity</h3>
-        {d.recentLedger.length === 0 ? (
-          <EmptyState title="Nothing yet." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {d.recentLedger.slice(0, 8).map((e) => (
-              <li key={e.id} className="py-2 flex items-center gap-3 text-sm">
-                <span className="flex-1 text-slate-700">{e.reason}</span>
-                <CreditChip amount={e.amount} />
-                <span className="text-xs text-slate-400">{new Date(e.createdAt).toLocaleDateString()}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {completing && (
-        <CompleteModal
-          occurrence={completing}
-          onClose={() => setCompleting(null)}
-          onSubmitted={(credits) => {
-            if (timer.timer?.taskId === completing.task.id) timer.cancel();
-            setCompleting(null);
-            setCelebrate(credits);
-            fireCelebrate("task", { sound: d.child.soundEnabled });
-            setPetBounce((n) => n + 1);
-            qc.invalidateQueries({ queryKey: ["dashboard"] });
-            qc.invalidateQueries({ queryKey: ["children", meId, "level"] });
-            qc.invalidateQueries({ queryKey: ["challenges", "me"] });
-            setTimeout(() => setCelebrate(null), 2000);
-          }}
-        />
-      )}
-
-      {celebrate !== null && (
-        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
-          <div className="bg-white rounded-3xl shadow-2xl px-10 py-8 text-center animate-pop">
-            <div className="text-5xl">🎉</div>
-            <div className="text-xl font-bold mt-2">Submitted!</div>
-            <div className="text-sm text-slate-500">A grown-up will review it soon.</div>
+        {celebrate !== null && (
+          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+            <div className="bg-white rounded-3xl shadow-2xl px-10 py-8 text-center animate-pop">
+              <div className="text-5xl">🎉</div>
+              <div className="text-xl font-bold mt-2">Submitted!</div>
+              <div className="text-sm text-slate-500">A grown-up will review it soon.</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
+        {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
 
-      {settings?.missedOpportunityMode && settings.missedOpportunityMode !== "OFF" && (
-        <MissedOpportunityOverlay mode={settings.missedOpportunityMode} childId={meId} />
-      )}
-    </div>
+        {settings?.missedOpportunityMode && settings.missedOpportunityMode !== "OFF" && (
+          <MissedOpportunityOverlay mode={settings.missedOpportunityMode} childId={meId} />
+        )}
+      </div>
+    </PullToRefresh>
   );
 }
 

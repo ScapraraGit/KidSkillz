@@ -1,6 +1,6 @@
 # ChoreChampz Mobile — Capacitor Plan (iOS + Android)
 
-Status: proposal · Target: App Store + Google Play · Approach: wrap the existing `apps/web` build in a Capacitor native shell.
+Status: **Phases 0–3 complete (mobile half)** · Phase 4 UX overlay tracked in [10-mobile-ux.md](./10-mobile-ux.md) · Target: App Store + Google Play · Approach: wrap the existing `apps/web` build in a Capacitor native shell.
 
 ## Why Capacitor
 

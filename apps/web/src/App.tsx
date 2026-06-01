@@ -22,6 +22,7 @@ import { ChildDashboard } from "./pages/child/Dashboard";
 import { ChildRewards } from "./pages/child/Rewards";
 import { ChildInitiative } from "./pages/child/Initiative";
 import { ChildActivity } from "./pages/child/Activity";
+import { More } from "./pages/More";
 import {
   TermsOfService,
   PrivacyPolicy,
@@ -110,6 +111,8 @@ export default function App() {
           <Route path="/parent/settings" element={<ParentSettings />} />
           <Route path="/parent/members" element={<FamilyMembers />} />
           <Route path="/parent/challenges" element={<ParentChallenges />} />
+          {/* Native-only More tab destination; harmless on web (nothing links there). */}
+          <Route path="/more" element={<More />} />
           {/* Back-compat: old standalone Billing route now redirects into Settings. */}
           <Route path="/parent/billing" element={<Navigate to="/parent/settings#billing" replace />} />
           <Route path="/beta" element={<BetaWelcome />} />
@@ -135,6 +138,8 @@ export default function App() {
         <Route path="/me/rewards" element={<ChildRewards />} />
         <Route path="/me/initiative" element={<ChildInitiative />} />
         <Route path="/me/activity" element={<ChildActivity />} />
+        {/* Native-only More tab destination; harmless on web (nothing links there). */}
+        <Route path="/more" element={<More />} />
       </Route>
       <Route path="*" element={<Navigate to="/me" replace />} />
     </Routes>

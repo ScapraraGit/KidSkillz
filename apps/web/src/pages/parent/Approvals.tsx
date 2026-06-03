@@ -16,7 +16,7 @@ import {
 import { Tooltip } from "../../components/Tooltip";
 import { PhotoLightbox } from "../../components/PhotoLightbox";
 import { PullToRefresh } from "../../components/PullToRefresh";
-import { haptic } from "../../lib/native";
+import { haptic, isNative } from "../../lib/native";
 import type { InitiativeRequestDTO, RedemptionDTO, TaskCompletionDTO } from "@chorechampz/shared";
 
 export function ParentApprovals() {
@@ -166,6 +166,7 @@ function CompletionRow({
 }) {
   const [override, setOverride] = useState<string>("");
   const [kudos, setKudos] = useState<string>("");
+  const [expanded, setExpanded] = useState(false);
   const approve = useMutation({
     mutationFn: () => {
       const body: Record<string, unknown> = {};
@@ -198,6 +199,122 @@ function CompletionRow({
       <Badge color="emerald">On time</Badge>
     ) : null;
 
+  // Native: compact row with large ✓/✕ tap targets. Tap row to expand for
+  // override/kudos/photo. Web: full form always visible (unchanged).
+  if (isNative()) {
+    return (
+      <li className="py-2">
+        <button
+          type="button"
+          className="w-full flex items-center gap-3 text-left active:bg-slate-50 px-1 rounded-lg"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded ? "true" : "false"}
+        >
+          <Avatar name={completion.child!.name} color={completion.child!.avatarColor} size={40} />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">
+              {completion.child!.name} · {completion.task!.title}
+            </div>
+            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+              {tierBadge}
+              {completion.notes && (
+                <span className="text-xs text-slate-500 italic truncate max-w-[160px]">
+                  "{completion.notes}"
+                </span>
+              )}
+            </div>
+          </div>
+          <CreditChip amount={suggested?.credits ?? fullCredit} />
+          {/* Quick-approve: large 44px circular targets */}
+          <Tooltip label="Approve — award credits">
+            <button
+              type="button"
+              aria-label="Approve"
+              disabled={approve.isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                approve.mutate();
+              }}
+              className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center active:scale-90 transition disabled:opacity-50 shrink-0 text-lg font-bold"
+            >
+              ✓
+            </button>
+          </Tooltip>
+          <Tooltip label="Reject — no credits">
+            <button
+              type="button"
+              aria-label="Reject"
+              disabled={reject.isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                reject.mutate("");
+              }}
+              className="w-11 h-11 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center active:scale-90 transition disabled:opacity-50 shrink-0 text-lg font-bold"
+            >
+              ✕
+            </button>
+          </Tooltip>
+        </button>
+
+        {/* Expanded: photo, override, kudos, full approve/reject buttons */}
+        {expanded && (
+          <div className="mt-3 px-2 space-y-3">
+            {photoUrl && <PhotoLightbox src={photoUrl} alt={`Proof for ${completion.task!.title}`} thumb />}
+            {isReduced && (
+              <div className="text-xs text-slate-500">
+                Suggested: <strong>{suggested!.credits}</strong> (full: {fullCredit})
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Tooltip label="Override credit award (leave blank for suggested)">
+                <input
+                  className={`${inputCls} flex-1`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  placeholder={`Credits (${suggested?.credits ?? fullCredit})`}
+                  value={override}
+                  onChange={(e) => setOverride(e.target.value)}
+                  aria-label="Credit override"
+                />
+              </Tooltip>
+            </div>
+            <Tooltip label="Optional kudos message visible to the kid">
+              <input
+                className={`${inputCls} w-full`}
+                type="text"
+                maxLength={280}
+                placeholder="Nice job! 💬 (optional)"
+                value={kudos}
+                onChange={(e) => setKudos(e.target.value)}
+                aria-label="Kudos message"
+              />
+            </Tooltip>
+            <div className="flex gap-2">
+              <Button
+                variant="success"
+                className="flex-1"
+                onClick={() => approve.mutate()}
+                disabled={approve.isPending}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={() => reject.mutate("")}
+                disabled={reject.isPending}
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        )}
+      </li>
+    );
+  }
+
+  // Web: full form always visible
   return (
     <li className="py-3 flex flex-wrap items-center gap-3">
       <Tooltip label="Select for bulk approve">

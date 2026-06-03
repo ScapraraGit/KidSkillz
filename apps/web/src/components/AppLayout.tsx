@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../store/auth";
@@ -150,222 +151,232 @@ export function AppLayout({ role }: { role: "PARENT" | "CHILD" }) {
   );
 
   return (
-    <div className="min-h-full flex flex-col">
-      {user && <TermsGate user={user} />}
-      {user?.role === "PARENT" && me.data?.needsHouseholdAck && (
-        <HouseholdAckModal
-          open
-          onAcknowledged={() => {
-            me.refetch();
-          }}
-        />
-      )}
-      <UpgradePrompt />
-
-      {native ? (
-        <>
-          <NativeHeader title={screenTitle} role={role} />
-          {banners}
-        </>
-      ) : (
-        <>
-          {banners}
-          <header className="bg-white border-b border-slate-200">
-            <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🪙</span>
-                <span className="font-semibold text-slate-800">ChoreChampz</span>
-                <nav className="hidden sm:flex items-center gap-1 ml-4">
-                  {links.map((l) => (
-                    <Tooltip key={l.to} label={l.tip} side="bottom">
-                      <span className="inline-flex">
-                        <NavLink
-                          to={l.to}
-                          end={l.end}
-                          id={l.id}
-                          data-tour={l.id}
-                          className={({ isActive }) =>
-                            clsx(
-                              "px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                              isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
-                            )
-                          }
-                        >
-                          {l.label}
-                        </NavLink>
-                      </span>
-                    </Tooltip>
-                  ))}
-                </nav>
-              </div>
-              <div className="flex items-center gap-3">
-                <NotificationBell />
-                {role === "CHILD" && <SoundToggle />}
-                {user && (
-                  <>
-                    <Tooltip label="Account menu" side="bottom">
-                      <button
-                        ref={menuBtnRef}
-                        type="button"
-                        data-tour="account-menu"
-                        onClick={() => setMenuOpen((v) => !v)}
-                        className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
-                      >
-                        <KidAvatar
-                          name={user.name}
-                          color={user.avatarColor}
-                          config={user.avatarConfig}
-                          size={32}
-                        />
-                        <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
-                        <span className="hidden sm:inline text-xs text-slate-400">▾</span>
-                      </button>
-                    </Tooltip>
-                    <Popover
-                      open={menuOpen}
-                      onClose={() => setMenuOpen(false)}
-                      anchor={menuBtnRef.current}
-                      placement="bottom"
-                      className="p-1 min-w-[180px]"
-                    >
-                      <div className="flex flex-col">
-                        <FamilySwitcher onSwitched={() => setMenuOpen(false)} />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setStudioOpen(true);
-                          }}
-                          className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          Edit avatar
-                        </button>
-                        {role === "PARENT" && !isCaregiver && (
-                          <Link
-                            to="/parent/settings"
-                            id="nav-settings"
-                            data-tour="nav-settings"
-                            onClick={() => setMenuOpen(false)}
-                            className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                          >
-                            Settings
-                          </Link>
-                        )}
-                        {role === "PARENT" && !isCaregiver && me.data?.isBeta && (
-                          <Link
-                            to="/beta"
-                            onClick={() => setMenuOpen(false)}
-                            className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                          >
-                            Beta tester 💜
-                          </Link>
-                        )}
-                        <div className="my-1 h-px bg-slate-100" />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setMenuOpen(false);
-                            // Best-effort: tell the server to revoke this refresh token
-                            // so a stolen one can't outlive the sign-out click. Fire-and-forget.
-                            const rt = useAuth.getState().refreshToken;
-                            if (rt) {
-                              try {
-                                await api("/auth/logout", { body: { refreshToken: rt } });
-                              } catch {
-                                /* ignore — logging out locally regardless */
-                              }
-                            }
-                            logout();
-                            nav("/login");
-                          }}
-                          className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          Sign out
-                        </button>
-                      </div>
-                    </Popover>
-                  </>
-                )}
-              </div>
-            </div>
-            {/* Web mobile: horizontal scroll-strip below the top bar. The native
-                shell uses the fixed bottom tab bar instead — this whole header is
-                web-only now. */}
-            <nav className="sm:hidden border-t border-slate-100 px-2 py-1 flex gap-1 overflow-x-auto">
-              {links.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  end={l.end}
-                  data-tour={l.id}
-                  className={({ isActive }) =>
-                    clsx(
-                      "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium",
-                      isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
-                    )
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-            </nav>
-          </header>
-        </>
-      )}
-
-      <main
-        className={clsx(
-          "flex-1 max-w-6xl mx-auto w-full px-4 py-6",
-          // Web: subtle upward-nudge entry. Native tab switch: cross-fade (same
-          // level). Native drill-in: slide from right (push feel).
-          !native && "animate-page-in",
-          native && isTabNav && "animate-fade-in",
-          native && !isTabNav && "animate-slide-in-right",
-          // Reserve space for the fixed bottom tab bar (h-16) plus the home
-          // indicator safe area so scrollable content doesn't hide under it.
-          native && "pb-[calc(4rem+env(safe-area-inset-bottom))]",
+    <>
+      <div className="min-h-full flex flex-col overflow-x-hidden">
+        {user && <TermsGate user={user} />}
+        {user?.role === "PARENT" && me.data?.needsHouseholdAck && (
+          <HouseholdAckModal
+            open
+            onAcknowledged={() => {
+              me.refetch();
+            }}
+          />
         )}
-        key={loc.pathname}
-      >
-        <Outlet context={outletCtx} />
-      </main>
-      {!native && <LegalFooter />}
-      {native && (
-        <nav
-          aria-label="Primary"
-          className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 pb-safe"
-        >
-          <ul className="flex items-stretch justify-around h-16">
-            {tabDefs.map((l) => (
-              <li key={l.to} className="flex-1">
-                <NavLink
-                  to={l.to}
-                  end={l.end}
-                  data-tour={l.id}
-                  onClick={() => void haptic("light")}
-                  className={({ isActive }) =>
-                    clsx(
-                      "h-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                      isActive ? "text-brand-700" : "text-slate-500",
-                    )
-                  }
-                >
-                  {({ isActive }) => (
+        <UpgradePrompt />
+
+        {native ? (
+          <>
+            <NativeHeader title={screenTitle} role={role} />
+            {banners}
+          </>
+        ) : (
+          <>
+            {banners}
+            <header className="bg-white border-b border-slate-200">
+              <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🪙</span>
+                  <span className="font-semibold text-slate-800">ChoreChampz</span>
+                  <nav className="hidden sm:flex items-center gap-1 ml-4">
+                    {links.map((l) => (
+                      <Tooltip key={l.to} label={l.tip} side="bottom">
+                        <span className="inline-flex">
+                          <NavLink
+                            to={l.to}
+                            end={l.end}
+                            id={l.id}
+                            data-tour={l.id}
+                            className={({ isActive }) =>
+                              clsx(
+                                "px-3 py-1.5 rounded-lg text-sm font-medium transition",
+                                isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
+                              )
+                            }
+                          >
+                            {l.label}
+                          </NavLink>
+                        </span>
+                      </Tooltip>
+                    ))}
+                  </nav>
+                </div>
+                <div className="flex items-center gap-3">
+                  <NotificationBell />
+                  {role === "CHILD" && <SoundToggle />}
+                  {user && (
                     <>
-                      <NavIcon to={l.to} active={isActive} size={24} />
-                      <span>{l.label}</span>
+                      <Tooltip label="Account menu" side="bottom">
+                        <button
+                          ref={menuBtnRef}
+                          type="button"
+                          data-tour="account-menu"
+                          onClick={() => setMenuOpen((v) => !v)}
+                          className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-brand-200 transition"
+                        >
+                          <KidAvatar
+                            name={user.name}
+                            color={user.avatarColor}
+                            config={user.avatarConfig}
+                            size={32}
+                          />
+                          <span className="hidden sm:inline text-sm text-slate-700">{user.name}</span>
+                          <span className="hidden sm:inline text-xs text-slate-400">▾</span>
+                        </button>
+                      </Tooltip>
+                      <Popover
+                        open={menuOpen}
+                        onClose={() => setMenuOpen(false)}
+                        anchor={menuBtnRef.current}
+                        placement="bottom"
+                        className="p-1 min-w-[180px]"
+                      >
+                        <div className="flex flex-col">
+                          <FamilySwitcher onSwitched={() => setMenuOpen(false)} />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              setStudioOpen(true);
+                            }}
+                            className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            Edit avatar
+                          </button>
+                          {role === "PARENT" && !isCaregiver && (
+                            <Link
+                              to="/parent/settings"
+                              id="nav-settings"
+                              data-tour="nav-settings"
+                              onClick={() => setMenuOpen(false)}
+                              className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                            >
+                              Settings
+                            </Link>
+                          )}
+                          {role === "PARENT" && !isCaregiver && me.data?.isBeta && (
+                            <Link
+                              to="/beta"
+                              onClick={() => setMenuOpen(false)}
+                              className="px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                            >
+                              Beta tester 💜
+                            </Link>
+                          )}
+                          <div className="my-1 h-px bg-slate-100" />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setMenuOpen(false);
+                              // Best-effort: tell the server to revoke this refresh token
+                              // so a stolen one can't outlive the sign-out click. Fire-and-forget.
+                              const rt = useAuth.getState().refreshToken;
+                              if (rt) {
+                                try {
+                                  await api("/auth/logout", { body: { refreshToken: rt } });
+                                } catch {
+                                  /* ignore — logging out locally regardless */
+                                }
+                              }
+                              logout();
+                              nav("/login");
+                            }}
+                            className="text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            Sign out
+                          </button>
+                        </div>
+                      </Popover>
                     </>
                   )}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-      {tourActive && (
-        <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
-      )}
-      {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
-    </div>
+                </div>
+              </div>
+              {/* Web mobile: horizontal scroll-strip below the top bar. The native
+                shell uses the fixed bottom tab bar instead — this whole header is
+                web-only now. */}
+              <nav className="sm:hidden border-t border-slate-100 px-2 py-1 flex gap-1 overflow-x-auto">
+                {links.map((l) => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    end={l.end}
+                    data-tour={l.id}
+                    className={({ isActive }) =>
+                      clsx(
+                        "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium",
+                        isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100",
+                      )
+                    }
+                  >
+                    {l.label}
+                  </NavLink>
+                ))}
+              </nav>
+            </header>
+          </>
+        )}
+
+        <main
+          className={clsx(
+            "flex-1 max-w-6xl mx-auto w-full px-4 py-6",
+            // Web: subtle upward-nudge entry. Native tab switch: cross-fade (same
+            // level). Native drill-in: slide from right (push feel).
+            !native && "animate-page-in",
+            native && isTabNav && "animate-fade-in",
+            native && !isTabNav && "animate-slide-in-right",
+            // Reserve space for the fixed bottom tab bar (h-16) plus the home
+            // indicator safe area so scrollable content doesn't hide under it.
+            native && "pb-[calc(4rem+env(safe-area-inset-bottom))]",
+          )}
+          key={loc.pathname}
+        >
+          <Outlet context={outletCtx} />
+        </main>
+        {!native && <LegalFooter />}
+        {tourActive && (
+          <OnboardingTour steps={role === "PARENT" ? parentTour : childTour} onDone={finishTour} />
+        )}
+        {studioOpen && user && <AvatarStudio user={user} onClose={() => setStudioOpen(false)} />}
+      </div>
+      {/* Portal the tab bar directly onto document.body. Rendering it inside the
+        flex container caused Android WebView to compute `position:fixed` relative
+        to the container's layout height on the initial render (a known bug with
+        fixed elements in tall min-height flex ancestors), making the bar invisible
+        or cut off until a scroll triggered a repaint. Portaling out of the React
+        tree avoids that entirely — fixed is always relative to the viewport. */}
+      {native &&
+        createPortal(
+          <nav
+            aria-label="Primary"
+            className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 pb-safe"
+          >
+            <ul className="flex items-stretch justify-around h-16">
+              {tabDefs.map((l) => (
+                <li key={l.to} className="flex-1">
+                  <NavLink
+                    to={l.to}
+                    end={l.end}
+                    data-tour={l.id}
+                    onClick={() => void haptic("light")}
+                    className={({ isActive }) =>
+                      clsx(
+                        "h-full flex flex-col items-center justify-center gap-0.5 text-xs font-medium",
+                        isActive ? "text-brand-700" : "text-slate-500",
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <NavIcon to={l.to} active={isActive} size={24} />
+                        <span>{l.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>,
+          document.body,
+        )}
+    </>
   );
 }

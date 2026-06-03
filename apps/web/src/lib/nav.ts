@@ -33,7 +33,7 @@ export const caregiverLinks: NavLinkDef[] = [
 export const childLinks: NavLinkDef[] = [
   { to: "/me", label: "My Day", end: true, tip: "Today's chores and your balance" },
   { to: "/me/rewards", label: "Rewards", tip: "Spend credits on rewards" },
-  { to: "/me/initiative", label: "Initiative", tip: "Log extra work you did on your own" },
+  { to: "/me/initiative", label: "Extras", tip: "Log extra work you did on your own" },
   { to: "/me/activity", label: "Activity", tip: "Your credit history" },
 ];
 

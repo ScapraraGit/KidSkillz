@@ -236,17 +236,6 @@ export function ChildDashboard() {
           }
         />
 
-        {isYounger ? (
-          <PetHero
-            petId={d.child.avatarConfig?.pet}
-            level={level}
-            childName={d.child.name}
-            bounceKey={petBounce}
-          />
-        ) : (
-          <LevelCard level={level} />
-        )}
-
         {onVacation && <VacationBanner endsAt={vacation?.endsAt} note={vacation?.note} />}
 
         {timer.timer && timerMode === "inline" && (
@@ -268,100 +257,7 @@ export function ChildDashboard() {
           />
         )}
 
-        {!onVacation && (
-          <StreakSaver
-            timezone={settings?.timezone ?? "America/Phoenix"}
-            streakDays={d.stats.streakDays}
-            openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
-            completionsToday={
-              d.todayTasks.filter(
-                (t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING",
-              ).length
-            }
-          />
-        )}
-
-        {d.child.savingsGoalRewardId && (
-          <SavingsGoal
-            rewardId={d.child.savingsGoalRewardId}
-            balance={d.child.balance}
-            weekEarned={d.stats.weekEarned}
-          />
-        )}
-
-        {challengesQ.data && (
-          <ChallengeSection rows={challengesQ.data} variant={isYounger ? "YOUNGER" : "OLDER"} />
-        )}
-
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card
-            id="tile-balance"
-            className="bg-gradient-to-br from-brand-500 to-indigo-700 text-white border-0"
-            info={{
-              title: "Balance",
-              body: "Credits you have available to spend on rewards. Earn more by finishing tasks and getting initiative approved.",
-              tone: "onDark",
-            }}
-          >
-            <div className="text-sm opacity-80">Balance</div>
-            <div className="text-5xl font-bold">{d.child.balance}</div>
-            <div className="text-sm opacity-80 mt-1">credits</div>
-          </Card>
-          <Card
-            id="tile-week"
-            info={{
-              title: "This week",
-              body: "Credits earned (green) and spent (red) since Sunday in your family's timezone. Resets each Sunday.",
-            }}
-          >
-            <div className="text-xs text-slate-500">This week</div>
-            <div className="text-2xl font-bold mt-1">+{d.stats.weekEarned}</div>
-            <div className="text-xs text-slate-500">earned</div>
-            <div className="text-sm text-rose-700 mt-2">-{d.stats.weekSpent} spent</div>
-          </Card>
-          <Card
-            id="tile-streak"
-            info={{
-              title: "Streak",
-              body: "Consecutive days you've finished at least one task. Hit 3 in a row to earn the 'On a Roll' badge. Today won't break the streak until midnight.",
-            }}
-          >
-            <div className="text-xs text-slate-500">Streak</div>
-            <div className="text-2xl font-bold mt-1">🔥 {d.stats.streakDays}</div>
-            <div className="text-xs text-slate-500">{d.stats.streakDays === 1 ? "day" : "days"} in a row</div>
-          </Card>
-          <Card
-            id="tile-initiative"
-            info={{
-              title: "Initiative",
-              body: "5 points for each above-and-beyond task a parent approved in the last 30 days. Get 3 approvals for the 'Initiative Star' badge.",
-            }}
-          >
-            <div className="text-xs text-slate-500">Initiative</div>
-            <div className="text-2xl font-bold mt-1">🪙 {d.stats.initiativeScore}</div>
-            <div className="text-xs text-slate-500">{d.stats.aboveAndBeyondCount} above-and-beyond</div>
-          </Card>
-        </section>
-
-        {d.stats.badges.length > 0 && (
-          <Card
-            id="tile-badges"
-            info={{
-              title: "Badges",
-              body: "Earned automatically as you hit milestones. Saver = 50+ credits saved. On a Roll = 3-day streak. Initiative Star = 3 approvals in 30 days. Above & Beyond = 5 lifetime initiative approvals.",
-            }}
-          >
-            <div className="text-sm font-medium mb-2">Badges</div>
-            <div className="flex flex-wrap gap-2">
-              {d.stats.badges.map((b) => (
-                <Badge key={b} color="amber">
-                  🏅 {b}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-        )}
-
+        {/* TODAY'S TASKS — primary action, shown first so kids see their jobs immediately */}
         <Card
           id="tile-today-tasks"
           info={{
@@ -372,7 +268,7 @@ export function ChildDashboard() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Today's tasks</h3>
             <Link to="/me/initiative" className="text-sm text-brand-700 font-medium">
-              + Suggest initiative
+              + Suggest extras
             </Link>
           </div>
           {d.todayTasks.length === 0 ? (
@@ -384,7 +280,7 @@ export function ChildDashboard() {
                   key={`${occ.task.id}-${occ.occurrenceDate}-${occ.slotIndex}`}
                   className="py-3 flex flex-wrap items-center gap-3"
                 >
-                  <div className="flex-1 min-w-[150px]">
+                  <div className="flex-1 min-w-[120px]">
                     <div className="font-medium">
                       {occ.task.title}
                       {occ.slotLabel && (
@@ -467,6 +363,113 @@ export function ChildDashboard() {
           )}
         </Card>
 
+        {/* STAT TILES — balance visible right after tasks so kids see reward for completing */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card
+            id="tile-balance"
+            className="bg-gradient-to-br from-brand-500 to-indigo-700 text-white border-0"
+            info={{
+              title: "Balance",
+              body: "Credits you have available to spend on rewards. Earn more by finishing tasks and getting initiative approved.",
+              tone: "onDark",
+            }}
+          >
+            <div className="text-sm opacity-80">Balance</div>
+            <div className="text-5xl font-bold">{d.child.balance}</div>
+            <div className="text-sm opacity-80 mt-1">credits</div>
+          </Card>
+          <Card
+            id="tile-week"
+            info={{
+              title: "This week",
+              body: "Credits earned (green) and spent (red) since Sunday in your family's timezone. Resets each Sunday.",
+            }}
+          >
+            <div className="text-xs text-slate-500">This week</div>
+            <div className="text-2xl font-bold mt-1">+{d.stats.weekEarned}</div>
+            <div className="text-xs text-slate-500">earned</div>
+            <div className="text-sm text-rose-700 mt-2">-{d.stats.weekSpent} spent</div>
+          </Card>
+          <Card
+            id="tile-streak"
+            info={{
+              title: "Streak",
+              body: "Consecutive days you've finished at least one task. Hit 3 in a row to earn the 'On a Roll' badge. Today won't break the streak until midnight.",
+            }}
+          >
+            <div className="text-xs text-slate-500">Streak</div>
+            <div className="text-2xl font-bold mt-1">🔥 {d.stats.streakDays}</div>
+            <div className="text-xs text-slate-500">{d.stats.streakDays === 1 ? "day" : "days"} in a row</div>
+          </Card>
+          <Card
+            id="tile-initiative"
+            info={{
+              title: "Extras",
+              body: "5 points for each above-and-beyond task a parent approved in the last 30 days. Get 3 approvals for the 'Initiative Star' badge.",
+            }}
+          >
+            <div className="text-xs text-slate-500">Extras</div>
+            <div className="text-2xl font-bold mt-1">🪙 {d.stats.initiativeScore}</div>
+            <div className="text-xs text-slate-500">{d.stats.aboveAndBeyondCount} above-and-beyond</div>
+          </Card>
+        </section>
+
+        {/* PET / LEVEL — motivational, below the action + stats */}
+        {isYounger ? (
+          <PetHero
+            petId={d.child.avatarConfig?.pet}
+            level={level}
+            childName={d.child.name}
+            bounceKey={petBounce}
+          />
+        ) : (
+          <LevelCard level={level} />
+        )}
+
+        {!onVacation && (
+          <StreakSaver
+            timezone={settings?.timezone ?? "America/Phoenix"}
+            streakDays={d.stats.streakDays}
+            openTasksToday={d.todayTasks.filter((t) => !t.completionStatus).length}
+            completionsToday={
+              d.todayTasks.filter(
+                (t) => t.completionStatus === "APPROVED" || t.completionStatus === "PENDING",
+              ).length
+            }
+          />
+        )}
+
+        {d.child.savingsGoalRewardId && (
+          <SavingsGoal
+            rewardId={d.child.savingsGoalRewardId}
+            balance={d.child.balance}
+            weekEarned={d.stats.weekEarned}
+          />
+        )}
+
+        {challengesQ.data && (
+          <ChallengeSection rows={challengesQ.data} variant={isYounger ? "YOUNGER" : "OLDER"} />
+        )}
+
+        {d.stats.badges.length > 0 && (
+          <Card
+            id="tile-badges"
+            info={{
+              title: "Badges",
+              body: "Earned automatically as you hit milestones. Saver = 50+ credits saved. On a Roll = 3-day streak. Initiative Star = 3 approvals in 30 days. Above & Beyond = 5 lifetime initiative approvals.",
+            }}
+          >
+            <div className="text-sm font-medium mb-2">Badges</div>
+            <div className="flex flex-wrap gap-2">
+              {d.stats.badges.map((b) => (
+                <Badge key={b} color="amber">
+                  🏅 {b}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
         <Card>
           <h3 className="font-semibold mb-3">Recent activity</h3>
           {d.recentLedger.length === 0 ? (
@@ -505,7 +508,7 @@ export function ChildDashboard() {
 
         {celebrate !== null && (
           <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
-            <div className="bg-white rounded-3xl shadow-2xl px-10 py-8 text-center animate-pop">
+            <div className="bg-white rounded-3xl shadow-2xl px-6 py-8 text-center animate-pop max-w-[280px] w-full mx-4">
               <div className="text-5xl">🎉</div>
               <div className="text-xl font-bold mt-2">Submitted!</div>
               <div className="text-sm text-slate-500">A grown-up will review it soon.</div>
@@ -634,7 +637,7 @@ function CompleteModal({
           </Field>
         )}
         {photo && !hasPriorAck && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
             <div className="font-semibold">Before you send this photo</div>
             <p>
               Only show your chore — no selfies, no faces, no people in swimsuits, pajamas, or bathrooms. A

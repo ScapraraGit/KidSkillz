@@ -61,7 +61,7 @@ describe("registerPushForSession", () => {
   });
 
   it("requests permission when prompt-state, then registers", async () => {
-    checkPermissions.mockResolvedValueOnce({ receive: "prompt" });
+    checkPermissions.mockResolvedValueOnce({ receive: "prompt" as "granted" });
     requestPermissions.mockResolvedValueOnce({ receive: "granted" });
     await registerPushForSession();
     expect(requestPermissions).toHaveBeenCalledTimes(1);
@@ -69,7 +69,7 @@ describe("registerPushForSession", () => {
   });
 
   it("does not register when permission denied", async () => {
-    checkPermissions.mockResolvedValueOnce({ receive: "denied" });
+    checkPermissions.mockResolvedValueOnce({ receive: "denied" as "granted" });
     await registerPushForSession();
     expect(register).not.toHaveBeenCalled();
   });

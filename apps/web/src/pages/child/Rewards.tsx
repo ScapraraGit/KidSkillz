@@ -19,7 +19,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../store/auth";
 import { celebrate as fireCelebrate } from "../../lib/celebrate";
 import { haptic } from "../../lib/native";
-import type { ChildDTO, RewardDTO } from "@chorechampz/shared";
+import type { ChildDTO, RedemptionDTO, RewardDTO } from "@chorechampz/shared";
 
 export function ChildRewards() {
   const meId = useAuth((s) => s.user?.id);
@@ -33,6 +33,11 @@ export function ChildRewards() {
     queryKey: ["rewards"],
     queryFn: () => api<{ rewards: RewardDTO[] }>("/rewards"),
   });
+  const pendingQ = useQuery({
+    queryKey: ["redemptions", "PENDING", "child"],
+    queryFn: () => api<{ redemptions: RedemptionDTO[] }>("/redemptions?status=PENDING"),
+  });
+  const pendingRewardIds = new Set(pendingQ.data?.redemptions.map((r) => r.rewardId) ?? []);
   const [requesting, setRequesting] = useState<RewardDTO | null>(null);
   const qc = useQueryClient();
   const setGoal = useMutation({
@@ -48,6 +53,7 @@ export function ChildRewards() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["children"] }),
       qc.invalidateQueries({ queryKey: ["rewards"] }),
+      qc.invalidateQueries({ queryKey: ["redemptions", "PENDING", "child"] }),
     ]);
   }
 
@@ -111,23 +117,29 @@ export function ChildRewards() {
                       : `${r.creditCost - me.balance} more to go (${progressPct}%)`}
                   </div>
                 </div>
-                <Tooltip
-                  label={
-                    me.redemptionPaused
-                      ? "Redemption paused — ask a parent"
-                      : !affordable
-                        ? `Need ${r.creditCost - me.balance} more credits`
-                        : "Request this reward (parent approves)"
-                  }
-                >
-                  <Button
-                    className="w-full mt-3"
-                    disabled={!affordable || me.redemptionPaused || !r.isActive}
-                    onClick={() => setRequesting(r)}
+                {pendingRewardIds.has(r.id) ? (
+                  <div className="mt-3 w-full rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium text-center py-2.5">
+                    ⏳ Waiting for parent approval
+                  </div>
+                ) : (
+                  <Tooltip
+                    label={
+                      me.redemptionPaused
+                        ? "Redemption paused — ask a parent"
+                        : !affordable
+                          ? `Need ${r.creditCost - me.balance} more credits`
+                          : "Request this reward (parent approves)"
+                    }
                   >
-                    {affordable ? "Redeem" : "Keep saving"}
-                  </Button>
-                </Tooltip>
+                    <Button
+                      className="w-full mt-3"
+                      disabled={!affordable || me.redemptionPaused || !r.isActive}
+                      onClick={() => setRequesting(r)}
+                    >
+                      {affordable ? "Redeem" : "Keep saving"}
+                    </Button>
+                  </Tooltip>
+                )}
                 {(() => {
                   const isGoal = me.savingsGoalRewardId === r.id;
                   return (
